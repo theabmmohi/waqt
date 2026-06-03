@@ -1,0 +1,141 @@
+import {
+  useContext,
+  useState
+} from "react"
+import {
+  useLocation,
+  useNavigate,
+  Routes,
+  Route
+} from "react-router-dom"
+import {
+  ToggleButtonGroup,
+  ToggleButton,
+  IconButton,
+  Typography,
+  Divider,
+  Toolbar,
+  AppBar,
+  Avatar,
+  Button,
+  Drawer,
+  Stack,
+  Box
+} from "@mui/material"
+import { Theme } from "@/react"
+import Dashboard from "@page/dashboard"
+
+import PersonalVideoIcon from "@mui/icons-material/PersonalVideo"
+import DashboardIcon from "@mui/icons-material/Dashboard"
+import LightModeIcon from "@mui/icons-material/LightMode"
+import DarkModeIcon from "@mui/icons-material/DarkMode"
+import CodeOffIcon from "@mui/icons-material/CodeOff"
+import LogoutIcon from "@mui/icons-material/Logout"
+import CloseIcon from "@mui/icons-material/Close"
+import MenuIcon from "@mui/icons-material/Menu"
+
+export default function App() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  
+  const { dark, toggle } = useContext(Theme)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  
+  const openDrawer = () => setDrawerOpen(true)
+  const closeDrawer = () => setDrawerOpen(false)
+  const handleNav = (route) => navigate(route)
+  
+  const navs = [
+    { icon: <DashboardIcon/>,    label: "Dashboard",     route: "/"             }
+  ]
+  
+  return (
+    <Box sx={{ flexDirection: "column", height: "100dvh", display: "flex", width: "100vw" }}>
+      <AppBar position="sticky" elevation={0} color="default" sx={{ zIndex: (x) => x.zIndex.drawer + 1 }}>
+        <Toolbar>
+          <Stack sx={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 1 }}>
+            <Stack sx={{ backgroundColor: "primary.light", alignItems: "center", justifyContent: "center", borderRadius: 1, width: 44, height: 44, p: 1 }}>
+              <CodeOffIcon sx={{ color: "text.primary" }}/>
+            </Stack>
+            <Stack>
+              <Typography variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1 }}>Im ABM</Typography>
+              <Typography variant="caption" sx={{ color:"text.secondary", lineHeight: 1 }}>Im ABM</Typography>
+            </Stack>
+          </Stack>
+          <IconButton onClick={drawerOpen ? closeDrawer : openDrawer}>
+            <Box sx={{ position: "relative", width: 24, height: 24 }}>
+              <MenuIcon sx={{
+                top: 0, left: 0,
+                position: "absolute",
+                transition: "all 0.3s ease",
+                opacity: drawerOpen ? 0 : 1,
+                transform: drawerOpen ? "rotate(90deg)" : "rotate(0deg)"
+              }}/>
+              <CloseIcon sx={{
+                top: 0, left: 0,
+                position: "absolute",
+                transition: "all 0.3s ease",
+                opacity: drawerOpen ? 1 : 0,
+                transform: drawerOpen ? "rotate(0deg)" : "rotate(-90deg)"
+              }}/>
+            </Box>
+          </IconButton>
+        </Toolbar>
+      </AppBar>
+      <Divider/>
+      <Box sx={{ position: "relative", overflowY: "auto", flex: 1 }}>
+        <Drawer disableScrollLock anchor="left" open={drawerOpen} onClose={closeDrawer} sx={{ display: "flex", width: "50vw", "& .MuiDrawer-paper": { width: "50vw" } }}>
+          <Toolbar/>
+          <Divider/>
+          <Stack sx={{ overflowY: "auto", gap: 1, flex: 1, p: 2.5 }}>
+            {navs.map(item => {
+              const active = location.pathname === item.route
+              return (<Button
+                key={item.label}
+                fullWidth
+                variant={active? "contained" : "outlined"}
+                color={active? "primary" : "inherit"}
+                startIcon={item.icon}
+                onClick={() => { handleNav(item.route); closeDrawer() }}
+                sx={{ justifyContent: "flex-start" }}
+              >{item.label}</Button>)
+            }
+            )}
+          </Stack>
+          <Divider/>
+          <Stack sx={{ flexDirection: "row" }}>
+            <Stack sx={{ justifyContent: "center", alignItems: "center", flex: 1, px: 1 }}>
+              <ToggleButtonGroup fullWidth exclusive size="small" onChange={(_, val) => { if (val) toggle(val) }} value={dark}>
+                <ToggleButton value="light"><LightModeIcon/></ToggleButton>
+                <ToggleButton value="system"><PersonalVideoIcon/></ToggleButton>
+                <ToggleButton value="dark"><DarkModeIcon/></ToggleButton>
+              </ToggleButtonGroup>
+            </Stack>
+            <Divider orientation="vertical"/>
+            <Stack sx={{ p: 0.5, justifyContent: "center" }}>
+              <IconButton>
+                <LogoutIcon/>
+              </IconButton>
+            </Stack>
+          </Stack>
+          <Divider/>
+          <Stack sx={{ flexDirection: "row" }}>
+            <Stack sx={{ p: 1, justifyContent: "center" }}>
+              <Avatar>A</Avatar>
+            </Stack>
+            <Divider orientation="vertical"/>
+            <Stack sx={{ justifyContent: "center", overflowX: "hidden", p: 1 }}>
+              <Typography noWrap variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1 }}>Im ABM</Typography>
+              <Typography noWrap variant="caption" sx={{ color:"text.secondary", lineHeight: 1 }}>theabmmjgvhvcucffufufufohi@gmail.com</Typography>
+            </Stack>
+          </Stack>
+        </Drawer>
+        <Box sx={{ height: "100%", position: "relative" }}>
+          <Routes>
+            <Route path="/" element={<Dashboard/>}/>
+          </Routes>
+        </Box>
+      </Box>
+    </Box>
+  )
+}
