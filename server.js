@@ -22,7 +22,11 @@ const mailer = nodemailer.createTransport({
 })
 
 server.use(cors())
-server.use(express.json())
+// server.use(express.json())
+server.use((req, res, next) => {
+  if (req.path === '/webhook/resend/email/received') return next()
+  express.json()(req, res, next)
+})
 
 
 
