@@ -24,6 +24,7 @@ export const Theme = createContext()
 
 function React() {
   const [ready, setReady] = useState(false)
+  const [leaving, setLeaving] = useState(false)
   const [mode, setMode] = useState(() => localStorage.getItem("AppTheme") || "system")
   const [dark, setDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches)
   
@@ -31,7 +32,10 @@ function React() {
     const start = Date.now()
     const done = () => {
       const remaining = Math.max(0, 1000 - (Date.now() - start))
-      setTimeout(() => setReady(true), remaining)
+      setTimeout(() => {
+        setLeaving(true)
+        setTimeout(() => setReady(true), 500)
+      }, remaining)
     }
     
     Promise.all([
@@ -58,7 +62,8 @@ function React() {
     <Theme.Provider value={{ dark: mode, toggle }}>
       <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
         <CssBaseline/>
-        { !ready ? <Preloader/> : (
+        {!ready && <Preloader leaving={leaving}/>}
+        {(leaving || ready) && (
         <BrowserRouter>
           <App/>
         </BrowserRouter>
