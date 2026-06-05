@@ -3,9 +3,6 @@ import nodemailer from "nodemailer"
 import express from "express"
 import cors from "cors"
 import {
-  Webhook
-} from "svix"
-import {
   createClient
 } from "@supabase/supabase-js"
 
@@ -22,11 +19,7 @@ const mailer = nodemailer.createTransport({
 })
 
 server.use(cors())
-// server.use(express.json())
-server.use((req, res, next) => {
-  if (req.path === '/webhook/resend/email/received') return next()
-  express.json()(req, res, next)
-})
+server.use(express.json())
 
 
 
@@ -73,20 +66,6 @@ async function notify (message) {
 
 server.get("/", async (req, res) => {
   res.type("text").send("Im Alive!")
-})
-
-server.post("/webhook/resend/email/received", express.raw({ type: 'application/json' }), async (req, res) => {
-  const webhook = new Webhook(process.env.RESEND_MRWH_SIGNINGSECRET)
-  try {
-    const data = webhook.verify(req.body, req.headers).data
-    const response = await fetch(`https://api.resend.com/emails/${data.email_id}`, { headers: { Authorization: `Bearer ${process.env.SMTP_PASS}` } })
-    const email = await response.json()
-    
-    await notify(email.text || email.html || "No Body")
-    res.sendStatus(200)
-  } catch {
-    res.sendStatus(400)
-  }
 })
 
 

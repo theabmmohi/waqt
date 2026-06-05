@@ -29,7 +29,7 @@ import PersonalVideoIcon from "@mui/icons-material/PersonalVideo"
 import DashboardIcon from "@mui/icons-material/Dashboard"
 import LightModeIcon from "@mui/icons-material/LightMode"
 import DarkModeIcon from "@mui/icons-material/DarkMode"
-import CodeOffIcon from "@mui/icons-material/CodeOff"
+import AcUnitIcon from "@mui/icons-material/AcUnit"
 import LogoutIcon from "@mui/icons-material/Logout"
 import CloseIcon from "@mui/icons-material/Close"
 import MenuIcon from "@mui/icons-material/Menu"
@@ -54,8 +54,8 @@ export default function App() {
       <AppBar position="sticky" elevation={0} color="default" sx={{ zIndex: (x) => x.zIndex.drawer + 1 }}>
         <Toolbar>
           <Stack sx={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 1 }}>
-            <Stack sx={{ backgroundColor: "primary.light", alignItems: "center", justifyContent: "center", borderRadius: 1, width: 44, height: 44, p: 1 }}>
-              <CodeOffIcon sx={{ color: "text.primary" }}/>
+            <Stack sx={{ borderColor: "divider", alignItems: "center", justifyContent: "center", borderRadius: 1, width: 44, height: 44, p: 1 }}>
+              <AcUnitIcon sx={{ color: "text.primary" }}/>
             </Stack>
             <Stack>
               <Typography variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1 }}>Im ABM</Typography>
@@ -91,8 +91,9 @@ export default function App() {
             {navs.map(item => {
               const active = location.pathname === item.route
               return (<Button
-                key={item.label}
                 fullWidth
+                disableElevation
+                key={item.label}
                 variant={active? "contained" : "outlined"}
                 color={active? "primary" : "inherit"}
                 startIcon={item.icon}

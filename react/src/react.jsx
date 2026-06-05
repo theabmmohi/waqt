@@ -19,6 +19,9 @@ import Preloader from "@asset/preloader"
 import App from "@/app"
 import "@/style.css"
 export const Theme = createContext()
+
+
+
 function React() {
   const [ready, setReady] = useState(false)
   const [mode, setMode] = useState(() => localStorage.getItem("AppTheme") || "system")
@@ -51,18 +54,20 @@ function React() {
     localStorage.setItem("AppTheme", x)
   }
   
-  if (!ready) return (<Preloader/>)
   return (
     <Theme.Provider value={{ dark: mode, toggle }}>
       <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
         <CssBaseline/>
+        { !ready ? <Preloader/> : (
         <BrowserRouter>
           <App/>
         </BrowserRouter>
+        )}
       </ThemeProvider>
     </Theme.Provider>
   )
 }
+
 createRoot(document.getElementById("app")).render(
   <StrictMode>
     <React/>
