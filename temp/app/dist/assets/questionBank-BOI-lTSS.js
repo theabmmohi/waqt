@@ -1,1 +1,0 @@
-import{t as e}from"./index-B4P96pxS.js";var t=e();function n(){return(0,t.jsx)(t.Fragment,{children:`Question Bank`})}export{n as default};

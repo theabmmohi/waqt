@@ -1,9 +1,0 @@
-*, *::before, *::after { 
-  -webkit-tap-highlight-color: transparent;
-  -webkit-overflow-scrolling: touch;
-  font-family: "Monospace";
-  box-sizing: border-box;
-  user-select: none;
-  padding: 0;
-  margin: 0;
-}
