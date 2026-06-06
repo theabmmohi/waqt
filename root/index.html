@@ -1,10 +1,323 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  </head>
-  <body>
-    Nothing Here !!
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Im ABM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --orange: #ea580c;
+  --orange-soft: #fb923c;
+  --orange-dim: rgba(234,88,12,0.12);
+  --orange-glow: rgba(234,88,12,0.25);
+  --bg: #fff7ed;
+  --bg2: #fff3e5;
+  --text: #1c0a00;
+  --text-sec: #92400e;
+  --border: rgba(234,88,12,0.15);
+  --radius: 20px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d0804;
+    --bg2: #130c06;
+    --text: #fff3e5;
+    --text-sec: #c2763a;
+    --border: rgba(234,88,12,0.2);
+    --orange-dim: rgba(234,88,12,0.1);
+  }
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "DM Sans", sans-serif;
+  font-weight: 300;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+/* ── noise grain overlay ── */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+/* ── ambient blobs ── */
+.blob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+  animation: drift 12s ease-in-out infinite alternate;
+}
+
+.blob-1 {
+  width: 320px;
+  height: 320px;
+  background: var(--orange-glow);
+  top: -80px;
+  right: -80px;
+  animation-delay: 0s;
+}
+
+.blob-2 {
+  width: 200px;
+  height: 200px;
+  background: rgba(234,88,12,0.12);
+  bottom: 10%;
+  left: -60px;
+  animation-delay: -6s;
+}
+
+@keyframes drift {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(20px, 30px) scale(1.1); }
+}
+
+/* ── layout ── */
+main {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  text-align: center;
+}
+
+/* ── badge ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--orange-dim);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin-bottom: 36px;
+  opacity: 0;
+  animation: fadeUp 0.6s ease forwards;
+  animation-delay: 0.1s;
+}
+
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--orange);
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── heading ── */
+h1 {
+  font-family: "Playfair Display", serif;
+  font-weight: 700;
+  font-size: clamp(52px, 14vw, 96px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+  opacity: 0;
+  animation: fadeUp 0.7s ease forwards;
+  animation-delay: 0.25s;
+}
+
+h1 em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--orange);
+}
+
+/* ── subheading ── */
+.sub {
+  font-size: clamp(13px, 3.5vw, 16px);
+  color: var(--text-sec);
+  max-width: 320px;
+  line-height: 1.7;
+  margin-bottom: 48px;
+  opacity: 0;
+  animation: fadeUp 0.7s ease forwards;
+  animation-delay: 0.4s;
+}
+
+/* ── CTA button ── */
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--orange);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 16px 28px;
+  font-family: "DM Sans", sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  opacity: 0;
+  animation: fadeUp 0.7s ease forwards;
+  animation-delay: 0.55s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 24px var(--orange-glow);
+}
+
+.cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.cta:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 12px var(--orange-glow);
+}
+
+.cta svg {
+  width: 18px;
+  height: 18px;
+  fill: #fff;
+  transition: transform 0.2s ease;
+}
+
+.cta:active svg {
+  transform: translateX(3px);
+}
+
+/* ── divider ── */
+.divider {
+  width: 40px;
+  height: 1px;
+  background: var(--border);
+  margin: 56px auto 40px;
+  opacity: 0;
+  animation: fadeUp 0.6s ease forwards;
+  animation-delay: 0.7s;
+}
+
+/* ── footer tags ── */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  max-width: 340px;
+  opacity: 0;
+  animation: fadeUp 0.6s ease forwards;
+  animation-delay: 0.85s;
+}
+
+.tag {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 7px 14px;
+  font-size: 12px;
+  color: var(--text-sec);
+  letter-spacing: 0.04em;
+}
+
+/* ── sig ── */
+.sig {
+  position: fixed;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--border);
+  letter-spacing: 0.1em;
+  z-index: 1;
+}
+
+/* ── animation ── */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+
+<main>
+  <div class="badge">
+    <span class="badge-dot"></span>
+    Something is brewing
+  </div>
+
+  <h1>Im <em>ABM</em></h1>
+
+  <p class="sub">
+    A personal space by @theabmmohi.<br>
+    Still figuring out what this becomes —<br>
+    but the app is already alive.
+  </p>
+
+  <button class="cta" onclick="goToApp()">
+    Open the App
+    <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+  </button>
+
+  <div class="divider"></div>
+
+  <div class="tags">
+    <span class="tag">Work in progress</span>
+    <span class="tag">Built with curiosity</span>
+    <span class="tag">More soon</span>
+  </div>
+</main>
+
+<p class="sig">@theabmmohi</p>
+
+<script>
+function goToApp() {
+  const url = new URL(window.location.href)
+  url.hostname = "app." + url.hostname
+  url.pathname = "/"
+  window.location.replace(url.toString())
+}
+</script>
+</body>
 </html>
