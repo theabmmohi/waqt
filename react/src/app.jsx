@@ -46,7 +46,8 @@ export default function App() {
   const handleNav = (route) => navigate(route)
   
   const navs = [
-    { icon: <DashboardIcon/>,    label: "Dashboard",     route: "/"             }
+    { icon: <DashboardIcon/>,    label: "Dashboard",     route: "/"             },
+    { }
   ]
   
   return (
@@ -58,8 +59,8 @@ export default function App() {
               <AcUnitIcon sx={{ color: "text.primary" }}/>
             </Stack>
             <Stack>
-              <Typography variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1 }}>Im ABM</Typography>
-              <Typography variant="caption" sx={{ color:"text.secondary", lineHeight: 1 }}>Im ABM</Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1 }}>Waqt</Typography>
+              <Typography variant="caption" sx={{ color:"text.secondary", lineHeight: 1 }}>Every Prayer, Right On Time</Typography>
             </Stack>
           </Stack>
           <IconButton onClick={drawerOpen ? closeDrawer : openDrawer}>
@@ -84,7 +85,7 @@ export default function App() {
       </AppBar>
       <Divider/>
       <Box sx={{ position: "relative", overflowY: "auto", flex: 1 }}>
-        <Drawer disableScrollLock anchor="left" open={drawerOpen} onClose={closeDrawer} sx={{ display: "flex", width: "50vw", "& .MuiDrawer-paper": { width: "50vw" } }}>
+        <Drawer disableScrollLock anchor="left" open={drawerOpen} onClose={closeDrawer} sx={{ display: "flex", minWidth: "25vw", maxWidth: "75vw", "& .MuiDrawer-paper": { minWidth: "25vw", maxWidth: "75vw" } }}>
           <Toolbar/>
           <Divider/>
           <Stack sx={{ overflowY: "auto", gap: 1, flex: 1, p: 2.5 }}>
@@ -127,7 +128,7 @@ export default function App() {
             <Divider orientation="vertical"/>
             <Stack sx={{ justifyContent: "center", overflowX: "hidden", p: 1 }}>
               <Typography noWrap variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1 }}>Im ABM</Typography>
-              <Typography noWrap variant="caption" sx={{ color:"text.secondary", lineHeight: 1 }}>theabmmjgvhvcucffufufufohi@gmail.com</Typography>
+              <Typography noWrap variant="caption" sx={{ color:"text.secondary", lineHeight: 1 }}>theablmmohi@gmail.com</Typography>
             </Stack>
           </Stack>
         </Drawer>

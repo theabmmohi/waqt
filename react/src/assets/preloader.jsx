@@ -22,7 +22,7 @@ export default function Preloader({ leaving }) {
         </Box>
       </Stack>
       <Stack sx={{ alignItems: "center", gap: 1, py: 5 }}>
-        <Typography variant="h6" sx={{ fontWeight: "bold", lineHeight: 1 }}>Im ABM</Typography>
+        <Typography variant="h6" sx={{ fontWeight: "bold", lineHeight: 1 }}>Waqt</Typography>
         <Typography variant="body2" sx={{ color: "text.secondary", lineHeight: 1 }}>by @theabmmohi</Typography>
       </Stack>
     </Stack>
