@@ -31,6 +31,7 @@ import PersonalVideoIcon from "@mui/icons-material/PersonalVideo"
 import DashboardIcon from "@mui/icons-material/Dashboard"
 import LightModeIcon from "@mui/icons-material/LightMode"
 import DarkModeIcon from "@mui/icons-material/DarkMode"
+import SettingsIcon from "@mui/icons-material/Settings"
 import AcUnitIcon from "@mui/icons-material/AcUnit"
 import LogoutIcon from "@mui/icons-material/Logout"
 import CloseIcon from "@mui/icons-material/Close"
@@ -119,8 +120,8 @@ export default function App() {
             </Stack>
             <Divider/>
             <Stack sx={{ flexDirection: "row" }}>
-              <Stack sx={{ justifyContent: "center", alignItems: "center", flex: 1, px: 1 }}>
-                <ToggleButtonGroup fullWidth exclusive size="small" onChange={(_, val) => { if (val) toggle(val) }} value={dark}>
+              <Stack sx={{ justifyContent: "center", alignItems: "center", flex: 1}}>
+                <ToggleButtonGroup fullWidth exclusive size="small" onChange={(_, val) => { if (val) toggle(val) }} value={dark} sx={{ borderRadius: 0, height: "100%", "& .MuiToggleButton-root": { borderRadius: 0, border: "none" }, "& .MuiToggleButtonGroup-grouped:not(:last-of-type)": { borderRight: "1px solid", borderColor: "divider" } }}>
                   <ToggleButton value="light"><LightModeIcon/></ToggleButton>
                   <ToggleButton value="system"><PersonalVideoIcon/></ToggleButton>
                   <ToggleButton value="dark"><DarkModeIcon/></ToggleButton>
@@ -135,17 +136,23 @@ export default function App() {
             </Stack>
             <Divider/>
             <Stack sx={{ flexDirection: "row" }}>
-              <Stack sx={{ p: 1, justifyContent: "center" }}>
+              <Stack sx={{ px: 0.5, justifyContent: "center" }}>
                 <Avatar>{user?.user_metadata?.full_name?.[0]?.toUpperCase() ?? "?"}</Avatar>
               </Stack>
               <Divider orientation="vertical"/>
-              <Stack sx={{ justifyContent: "center", overflowX: "hidden", p: 1 }}>
+              <Stack sx={{ justifyContent: "center", overflowX: "hidden", flex: 1, p: 1 }}>
                 <Typography noWrap variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1 }}>
                   {user?.user_metadata?.full_name ?? "User"}
                 </Typography>
                 <Typography noWrap variant="caption" sx={{ color: "text.secondary", lineHeight: 1 }}>
                   {user?.email ?? ""}
                 </Typography>
+              </Stack>
+              <Divider orientation="vertical"/>
+              <Stack sx={{ p: 0.5, justifyContent: "center" }}>
+                <IconButton onClick={handleLogout}>
+                  <SettingsIcon/>
+                </IconButton>
               </Stack>
             </Stack>
           </Drawer>
