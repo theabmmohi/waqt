@@ -23,7 +23,9 @@ import {
   Box
 } from "@mui/material"
 import { Theme } from "@/react"
+import { supabase } from "@/supabase"
 import Dashboard from "@page/dashboard"
+import Auth from "@page/auth"
 
 import PersonalVideoIcon from "@mui/icons-material/PersonalVideo"
 import DashboardIcon from "@mui/icons-material/Dashboard"
@@ -37,104 +39,122 @@ import MenuIcon from "@mui/icons-material/Menu"
 export default function App() {
   const navigate = useNavigate()
   const location = useLocation()
-  
-  const { dark, toggle } = useContext(Theme)
+
+  const { dark, toggle, user } = useContext(Theme)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  
-  const openDrawer = () => setDrawerOpen(true)
+
   const closeDrawer = () => setDrawerOpen(false)
-  const handleNav = (route) => navigate(route)
-  
+  const openDrawer = () => setDrawerOpen(true)
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    closeDrawer()
+  }
+
   const navs = [
-    { icon: <DashboardIcon/>,    label: "Dashboard",     route: "/"             },
-    { }
+    { icon: <DashboardIcon/>, label: "Dashboard", route: "/" }
   ]
-  
+
+  const isAuth = location.pathname === "/auth"
+
   return (
     <Box sx={{ flexDirection: "column", height: "100dvh", display: "flex", width: "100vw" }}>
-      <AppBar position="sticky" elevation={0} color="default" sx={{ zIndex: (x) => x.zIndex.drawer + 1 }}>
-        <Toolbar>
-          <Stack sx={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 1 }}>
-            <Stack sx={{ borderColor: "divider", alignItems: "center", justifyContent: "center", borderRadius: 1, width: 44, height: 44, p: 1 }}>
-              <AcUnitIcon sx={{ color: "text.primary" }}/>
-            </Stack>
-            <Stack>
-              <Typography variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1 }}>Waqt</Typography>
-              <Typography variant="caption" sx={{ color:"text.secondary", lineHeight: 1 }}>Every Prayer, Right On Time</Typography>
-            </Stack>
-          </Stack>
-          <IconButton onClick={drawerOpen ? closeDrawer : openDrawer}>
-            <Box sx={{ position: "relative", width: 24, height: 24 }}>
-              <MenuIcon sx={{
-                top: 0, left: 0,
-                position: "absolute",
-                transition: "all 0.3s ease",
-                opacity: drawerOpen ? 0 : 1,
-                transform: drawerOpen ? "rotate(90deg)" : "rotate(0deg)"
-              }}/>
-              <CloseIcon sx={{
-                top: 0, left: 0,
-                position: "absolute",
-                transition: "all 0.3s ease",
-                opacity: drawerOpen ? 1 : 0,
-                transform: drawerOpen ? "rotate(0deg)" : "rotate(-90deg)"
-              }}/>
-            </Box>
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-      <Divider/>
+
+      {!isAuth && (
+        <>
+          <AppBar position="sticky" elevation={0} color="default" sx={{ zIndex: (x) => x.zIndex.drawer + 1 }}>
+            <Toolbar>
+              <Stack sx={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 1 }}>
+                <Stack sx={{ borderColor: "divider", alignItems: "center", justifyContent: "center", borderRadius: 1, width: 44, height: 44, p: 1 }}>
+                  <AcUnitIcon sx={{ color: "text.primary" }}/>
+                </Stack>
+                <Stack>
+                  <Typography variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1 }}>Waqt</Typography>
+                  <Typography variant="caption" sx={{ color: "text.secondary", lineHeight: 1 }}>Every Prayer, Right On Time</Typography>
+                </Stack>
+              </Stack>
+              {user && <IconButton onClick={drawerOpen ? closeDrawer : openDrawer}>
+                <Box sx={{ position: "relative", width: 24, height: 24 }}>
+                  <MenuIcon sx={{
+                    top: 0, left: 0, position: "absolute",
+                    transition: "all 0.3s ease",
+                    opacity: drawerOpen ? 0 : 1,
+                    transform: drawerOpen ? "rotate(90deg)" : "rotate(0deg)"
+                  }}/>
+                  <CloseIcon sx={{
+                    top: 0, left: 0, position: "absolute",
+                    transition: "all 0.3s ease",
+                    opacity: drawerOpen ? 1 : 0,
+                    transform: drawerOpen ? "rotate(0deg)" : "rotate(-90deg)"
+                  }}/>
+                </Box>
+              </IconButton>}
+            </Toolbar>
+          </AppBar>
+          <Divider/>
+        </>
+      )}
+
       <Box sx={{ position: "relative", overflowY: "auto", flex: 1 }}>
-        <Drawer disableScrollLock anchor="left" open={drawerOpen} onClose={closeDrawer} sx={{ display: "flex", minWidth: "25vw", maxWidth: "75vw", "& .MuiDrawer-paper": { minWidth: "25vw", maxWidth: "75vw" } }}>
-          <Toolbar/>
-          <Divider/>
-          <Stack sx={{ overflowY: "auto", gap: 1, flex: 1, p: 2.5 }}>
-            {navs.map(item => {
-              const active = location.pathname === item.route
-              return (<Button
-                fullWidth
-                disableElevation
-                key={item.label}
-                variant={active? "contained" : "outlined"}
-                color={active? "primary" : "inherit"}
-                startIcon={item.icon}
-                onClick={() => { handleNav(item.route); closeDrawer() }}
-                sx={{ justifyContent: "flex-start" }}
-              >{item.label}</Button>)
-            }
-            )}
-          </Stack>
-          <Divider/>
-          <Stack sx={{ flexDirection: "row" }}>
-            <Stack sx={{ justifyContent: "center", alignItems: "center", flex: 1, px: 1 }}>
-              <ToggleButtonGroup fullWidth exclusive size="small" onChange={(_, val) => { if (val) toggle(val) }} value={dark}>
-                <ToggleButton value="light"><LightModeIcon/></ToggleButton>
-                <ToggleButton value="system"><PersonalVideoIcon/></ToggleButton>
-                <ToggleButton value="dark"><DarkModeIcon/></ToggleButton>
-              </ToggleButtonGroup>
+
+        {!isAuth && (
+          <Drawer disableScrollLock anchor="left" open={drawerOpen} onClose={closeDrawer} sx={{ display: "flex", minWidth: "25vw", maxWidth: "75vw", "& .MuiDrawer-paper": { minWidth: "25vw", maxWidth: "75vw" } }}>
+            <Toolbar/>
+            <Divider/>
+            <Stack sx={{ overflowY: "auto", gap: 1, flex: 1, p: 2.5 }}>
+              {navs.map(item => {
+                const active = location.pathname === item.route
+                return (
+                  <Button
+                    fullWidth disableElevation
+                    key={item.label}
+                    variant={active ? "contained" : "outlined"}
+                    color={active ? "primary" : "inherit"}
+                    startIcon={item.icon}
+                    onClick={() => { navigate(item.route); closeDrawer() }}
+                    sx={{ justifyContent: "flex-start" }}
+                  >{item.label}</Button>
+                )
+              })}
             </Stack>
-            <Divider orientation="vertical"/>
-            <Stack sx={{ p: 0.5, justifyContent: "center" }}>
-              <IconButton>
-                <LogoutIcon/>
-              </IconButton>
+            <Divider/>
+            <Stack sx={{ flexDirection: "row" }}>
+              <Stack sx={{ justifyContent: "center", alignItems: "center", flex: 1, px: 1 }}>
+                <ToggleButtonGroup fullWidth exclusive size="small" onChange={(_, val) => { if (val) toggle(val) }} value={dark}>
+                  <ToggleButton value="light"><LightModeIcon/></ToggleButton>
+                  <ToggleButton value="system"><PersonalVideoIcon/></ToggleButton>
+                  <ToggleButton value="dark"><DarkModeIcon/></ToggleButton>
+                </ToggleButtonGroup>
+              </Stack>
+              <Divider orientation="vertical"/>
+              <Stack sx={{ p: 0.5, justifyContent: "center" }}>
+                <IconButton onClick={handleLogout}>
+                  <LogoutIcon/>
+                </IconButton>
+              </Stack>
             </Stack>
-          </Stack>
-          <Divider/>
-          <Stack sx={{ flexDirection: "row" }}>
-            <Stack sx={{ p: 1, justifyContent: "center" }}>
-              <Avatar>A</Avatar>
+            <Divider/>
+            <Stack sx={{ flexDirection: "row" }}>
+              <Stack sx={{ p: 1, justifyContent: "center" }}>
+                <Avatar>{user?.user_metadata?.full_name?.[0]?.toUpperCase() ?? "?"}</Avatar>
+              </Stack>
+              <Divider orientation="vertical"/>
+              <Stack sx={{ justifyContent: "center", overflowX: "hidden", p: 1 }}>
+                <Typography noWrap variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1 }}>
+                  {user?.user_metadata?.full_name ?? "User"}
+                </Typography>
+                <Typography noWrap variant="caption" sx={{ color: "text.secondary", lineHeight: 1 }}>
+                  {user?.email ?? ""}
+                </Typography>
+              </Stack>
             </Stack>
-            <Divider orientation="vertical"/>
-            <Stack sx={{ justifyContent: "center", overflowX: "hidden", p: 1 }}>
-              <Typography noWrap variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1 }}>Im ABM</Typography>
-              <Typography noWrap variant="caption" sx={{ color:"text.secondary", lineHeight: 1 }}>theablmmohi@gmail.com</Typography>
-            </Stack>
-          </Stack>
-        </Drawer>
+          </Drawer>
+        )}
+
         <Box sx={{ height: "100%", position: "relative" }}>
           <Routes>
-            <Route path="/" element={<Dashboard/>}/>
+            <Route path="/auth" element={<Auth/>}/>
+            <Route path="/*" element={user ? <Dashboard/> : <Auth/>}/>
           </Routes>
         </Box>
       </Box>
