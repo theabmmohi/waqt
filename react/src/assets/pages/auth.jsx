@@ -22,7 +22,7 @@ import KeyIcon from "@mui/icons-material/Key"
 
 export default function Auth() {
   const navigate = useNavigate()
-
+  
   const [isSignUp, setIsSignUp] = useState(false)
   const [isPasskeySupported, setIsPasskeySupported] = useState(false)
   const [email, setEmail] = useState("")
@@ -31,10 +31,10 @@ export default function Auth() {
   const [showPass, setShowPass] = useState(false)
   const [snack, setSnack] = useState("")
   const [open, setOpen] = useState(false)
-
+  
   const show = (msg) => { setSnack(msg); setOpen(true) }
   const titleCase = (str) => str.replace(/\b\w/g, c => c.toUpperCase())
-
+  
   useEffect(() => {
     if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
       PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
@@ -42,16 +42,16 @@ export default function Auth() {
         .catch(() => setIsPasskeySupported(false))
     }
   }, [])
-
+  
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
-
+    
     const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     if (!email || !password) return show("Email and password are required")
     if (!validEmail) return show("Please enter a valid email address")
     if (isSignUp && !name.trim()) return show("Please enter your name")
-
+    
     try {
       if (isSignUp) {
         const { data, error } = await Supabase.auth.signUp({
@@ -75,7 +75,7 @@ export default function Auth() {
       show(titleCase(e.message))
     }
   }
-
+  
   const handlePasskey = async () => {
     try {
       const { error } = await Supabase.auth.signInWithPasskey()
@@ -85,7 +85,7 @@ export default function Auth() {
       show(titleCase(e.message))
     }
   }
-
+  
   const handleForgot = async () => {
     const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     if (!email) return show("Please enter your email address first")
@@ -98,27 +98,24 @@ export default function Auth() {
       show(titleCase(e.message))
     }
   }
-
+  
   return (
     <Box sx={{ maxWidth: 500, mx: "auto", p: 5 }}>
       <Typography variant="h5" sx={{ textAlign: "center", my: 2.5 }}>
         {isSignUp ? "Create Account" : "Sign In"}
       </Typography>
-
+      
       <Stack component="form" onSubmit={handleSubmit} spacing={2.5} sx={{ alignItems: "center" }}>
-
         {isSignUp && (
           <TextField
             fullWidth size="small" label="Full Name"
             value={name} onChange={e => setName(e.target.value)}
           />
         )}
-
         <TextField
           fullWidth size="small" label="Email" type="email"
           value={email} onChange={e => setEmail(e.target.value)}
         />
-
         <TextField
           fullWidth size="small" label="Password"
           type={showPass ? "text" : "password"}
@@ -133,7 +130,6 @@ export default function Auth() {
             }
           }}
         />
-
         <Stack direction="row" sx={{ width: "100%", justifyContent: "space-between" }}>
           {!isSignUp
             ? <Button onClick={handleForgot}>Forgot Password</Button>
@@ -143,11 +139,9 @@ export default function Auth() {
             {isSignUp ? "Sign In Instead" : "Create Account"}
           </Button>
         </Stack>
-
         <Button sx={{ width: "75%" }} type="submit" variant="contained">
           {isSignUp ? "Sign Up" : "Sign In"}
         </Button>
-
         {!isSignUp && isPasskeySupported && (
           <>
             <Divider sx={{ width: "100%" }}>Or Continue With</Divider>
@@ -163,7 +157,6 @@ export default function Auth() {
             </Stack>
           </>
         )}
-
         <Snackbar
           open={open}
           onClose={() => setOpen(false)}

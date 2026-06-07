@@ -22,10 +22,11 @@ import {
   Stack,
   Box
 } from "@mui/material"
-import { Theme } from "@/react"
-import Supabase from "@/supabase"
 import Dashboard from "@page/dashboard"
+import Supabase from "@/supabase"
+import { Theme } from "@/react"
 import Auth from "@page/auth"
+import api from "@/api"
 
 import PersonalVideoIcon from "@mui/icons-material/PersonalVideo"
 import DashboardIcon from "@mui/icons-material/Dashboard"
@@ -40,27 +41,26 @@ import MenuIcon from "@mui/icons-material/Menu"
 export default function App() {
   const navigate = useNavigate()
   const location = useLocation()
-
+  
   const { dark, toggle, user } = useContext(Theme)
   const [drawerOpen, setDrawerOpen] = useState(false)
-
+  
   const closeDrawer = () => setDrawerOpen(false)
   const openDrawer = () => setDrawerOpen(true)
-
+  
   const handleLogout = async () => {
     await Supabase.auth.signOut()
     closeDrawer()
   }
-
+  
   const navs = [
     { icon: <DashboardIcon/>, label: "Dashboard", route: "/" }
   ]
-
+  
   const isAuth = location.pathname === "/auth"
-
+  
   return (
     <Box sx={{ flexDirection: "column", height: "100dvh", display: "flex", width: "100vw" }}>
-
       {!isAuth && (
         <>
           <AppBar position="sticky" elevation={0} color="default" sx={{ zIndex: (x) => x.zIndex.drawer + 1 }}>
@@ -95,9 +95,7 @@ export default function App() {
           <Divider/>
         </>
       )}
-
       <Box sx={{ position: "relative", overflowY: "auto", flex: 1 }}>
-
         {!isAuth && (
           <Drawer disableScrollLock anchor="left" open={drawerOpen} onClose={closeDrawer} sx={{ display: "flex", minWidth: "25vw", maxWidth: "75vw", "& .MuiDrawer-paper": { minWidth: "25vw", maxWidth: "75vw" } }}>
             <Toolbar/>
@@ -150,14 +148,13 @@ export default function App() {
               </Stack>
               <Divider orientation="vertical"/>
               <Stack sx={{ p: 0.5, justifyContent: "center" }}>
-                <IconButton onClick={handleLogout}>
+                <IconButton onClick={api.post("/")}>
                   <SettingsIcon/>
                 </IconButton>
               </Stack>
             </Stack>
           </Drawer>
         )}
-
         <Box sx={{ height: "100%", position: "relative" }}>
           <Routes>
             <Route path="/auth" element={<Auth/>}/>
