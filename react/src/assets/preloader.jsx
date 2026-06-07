@@ -18,7 +18,7 @@ export default function Preloader({ leaving }) {
     }}>
       <Stack sx={{ justifyContent: "center", alignItems: "center", flex: 1 }}>
         <Box sx={{ backgroundColor: "action.hover", borderRadius: "50%", display: "flex", p: 1 }}>
-          <AcUnitIcon sx={{ fontSize: 64 }} />
+          <AcUnitIcon sx={{ fontSize: 96 }} />
         </Box>
       </Stack>
       <Stack sx={{ alignItems: "center", gap: 1, py: 5 }}>

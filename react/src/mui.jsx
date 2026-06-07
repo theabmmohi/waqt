@@ -32,7 +32,6 @@ export const lightTheme = createTheme({
     }
   }
 })
-
 export const darkTheme = createTheme({
   ...base,
   palette: {

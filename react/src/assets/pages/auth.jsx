@@ -14,7 +14,7 @@ import {
   Box
 } from "@mui/material"
 import { useNavigate } from "react-router-dom"
-import { supabase } from "@/supabase"
+import Supabase from "@/supabase"
 
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff"
 import VisibilityIcon from "@mui/icons-material/Visibility"
@@ -54,7 +54,7 @@ export default function Auth() {
 
     try {
       if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({
+        const { data, error } = await Supabase.auth.signUp({
           email, password,
           options: { data: { full_name: name.trim() } }
         })
@@ -67,7 +67,7 @@ export default function Auth() {
           show("Check your email to confirm your account!")
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        const { error } = await Supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
         navigate("/")
       }
@@ -78,7 +78,7 @@ export default function Auth() {
 
   const handlePasskey = async () => {
     try {
-      const { error } = await supabase.auth.signInWithPasskey()
+      const { error } = await Supabase.auth.signInWithPasskey()
       if (error) throw error
       navigate("/")
     } catch (e) {
@@ -91,7 +91,7 @@ export default function Auth() {
     if (!email) return show("Please enter your email address first")
     if (!validEmail) return show("Please enter a valid email address")
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email)
+      const { error } = await Supabase.auth.resetPasswordForEmail(email)
       if (error) throw error
       show("Password reset email sent!")
     } catch (e) {

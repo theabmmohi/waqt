@@ -23,7 +23,7 @@ import {
   Box
 } from "@mui/material"
 import { Theme } from "@/react"
-import { supabase } from "@/supabase"
+import Supabase from "@/supabase"
 import Dashboard from "@page/dashboard"
 import Auth from "@page/auth"
 
@@ -48,7 +48,7 @@ export default function App() {
   const openDrawer = () => setDrawerOpen(true)
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    await Supabase.auth.signOut()
     closeDrawer()
   }
 

@@ -15,8 +15,8 @@ import {
   lightTheme,
   darkTheme
 } from "@/mui"
-import { supabase } from "@/supabase"
 import Preloader from "@asset/preloader"
+import Supabase from "@/supabase"
 import App from "@/app"
 import "@/style.css"
 
@@ -28,7 +28,7 @@ function React() {
   const [user, setUser] = useState(null)
   const [mode, setMode] = useState(() => localStorage.getItem("AppTheme") || "system")
   const [dark, setDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches)
-
+  
   useEffect(() => {
     const start = Date.now()
     const done = () => {
@@ -38,38 +38,36 @@ function React() {
         setTimeout(() => setReady(true), 500)
       }, remaining)
     }
-
     Promise.all([
       document.fonts.ready,
       new Promise(res => {
         if (document.readyState === "complete") res()
         else window.addEventListener("load", res, { once: true })
       }),
-      supabase.auth.getUser().then(({ data }) => {
+      Supabase.auth.getUser().then(({ data }) => {
         setUser(data?.user ?? null)
       })
     ]).then(done)
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_, session) => {
+    const { data: listener } = Supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null)
     })
-
+    
     const query = window.matchMedia("(prefers-color-scheme: dark)")
     const handler = (e) => setDark(e.matches)
     query.addEventListener("change", handler)
-
+    
     return () => {
       query.removeEventListener("change", handler)
       listener.subscription.unsubscribe()
     }
   }, [])
-
+  
   const isDark = mode === "dark" || (mode === "system" && dark)
   const toggle = (x) => {
     setMode(x)
     localStorage.setItem("AppTheme", x)
   }
-
+  
   return (
     <Theme.Provider value={{ dark: mode, toggle, user }}>
       <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
