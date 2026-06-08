@@ -23,10 +23,10 @@ import {
   Box
 } from "@mui/material"
 import Dashboard from "@page/dashboard"
+import Settings from "@page/settings"
 import Supabase from "@/supabase"
 import { Theme } from "@/react"
 import Auth from "@page/auth"
-import api from "@/api"
 
 import PersonalVideoIcon from "@mui/icons-material/PersonalVideo"
 import DashboardIcon from "@mui/icons-material/Dashboard"
@@ -148,7 +148,7 @@ export default function App() {
               </Stack>
               <Divider orientation="vertical"/>
               <Stack sx={{ p: 0.5, justifyContent: "center" }}>
-                <IconButton onClick={api.post("/")}>
+                <IconButton onClick={() => {navigate("/settings"); closeDrawer() }} sx={{ backgroundColor: location.pathname.startsWith("/settings") ? "background.default" : "" }}>
                   <SettingsIcon/>
                 </IconButton>
               </Stack>
@@ -158,6 +158,7 @@ export default function App() {
         <Box sx={{ height: "100%", position: "relative" }}>
           <Routes>
             <Route path="/auth" element={<Auth/>}/>
+            <Route path="/settings/*" element={<Settings/>}/>
             <Route path="/*" element={user ? <Dashboard/> : <Auth/>}/>
           </Routes>
         </Box>
