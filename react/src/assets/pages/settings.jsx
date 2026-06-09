@@ -50,7 +50,7 @@ function useSnack() {
   const [snack, setSnack]   = useState("")
   const [open,  setOpen]    = useState(false)
   const show = (msg) => { setSnack(msg); setOpen(true) }
-  const titleCase = (str) => str.replace(/\b\w/g, c => c.toUpperCase())
+  const titleCase = (str) => (str ?? "Something went wrong").replace(/\b\w/g, c => c.toUpperCase())
   const SnackBar = (
     <Snackbar
       open={open}
@@ -127,7 +127,7 @@ function Profile() {
       setAvatar(data.publicUrl + "?t=" + Date.now())
       show("Avatar updated!")
     } catch (e) {
-      show(titleCase(e.message))
+      show(titleCase(e?.message))
     } finally {
       setUploading(false)
     }
@@ -143,7 +143,7 @@ function Profile() {
       if (error) throw error
       show("Profile saved!")
     } catch (e) {
-      show(titleCase(e.message))
+      show(titleCase(e?.message))
     } finally {
       setLoading(false)
     }
@@ -239,7 +239,7 @@ function Notifications() {
         show("Permission denied — check browser settings")
       }
     } catch (e) {
-      show(titleCase(e.message))
+      show(titleCase(e?.message))
     } finally {
       setPushLoading(false)
     }
@@ -254,7 +254,7 @@ function Notifications() {
       setTgEnabled(true)
       show("Telegram connected!")
     } catch (e) {
-      show(titleCase(e.message))
+      show(titleCase(e?.message))
     } finally {
       setTgLoading(false)
     }
@@ -269,7 +269,7 @@ function Notifications() {
       setTgEnabled(false)
       show("Telegram disconnected")
     } catch (e) {
-      show(titleCase(e.message))
+      show(titleCase(e?.message))
     } finally {
       setTgLoading(false)
     }
@@ -437,7 +437,7 @@ function Preferences() {
       if (error) throw error
       show("Preferences saved!")
     } catch (e) {
-      show(titleCase(e.message))
+      show(titleCase(e?.message))
     } finally {
       setLoading(false)
     }
@@ -520,12 +520,12 @@ function Security() {
   const { show, titleCase, SnackBar } = useSnack()
 
   // ── password change ──────────────────────────────────────────────────────
-  const [curPass,     setCurPass]     = useState("")
   const [newPass,     setNewPass]     = useState("")
   const [confirmPass, setConfirmPass] = useState("")
-  const [showCur,     setShowCur]     = useState(false)
   const [showNew,     setShowNew]     = useState(false)
   const [passLoading, setPassLoading] = useState(false)
+
+  const navigate = useNavigate()
 
   const handleChangePassword = async () => {
     if (!newPass)               return show("Please enter a new password")
@@ -538,7 +538,7 @@ function Security() {
       setCurPass(""); setNewPass(""); setConfirmPass("")
       show("Password updated successfully!")
     } catch (e) {
-      show(titleCase(e.message))
+      show(titleCase(e?.message))
     } finally {
       setPassLoading(false)
     }
@@ -546,9 +546,11 @@ function Security() {
 
   // ── passkeys ─────────────────────────────────────────────────────────────
   // Requires: supabase-js >= 2.105.0 + experimental.passkey: true in client
-  const [passkeys,    setPasskeys]    = useState([])
-  const [pkLoading,   setPkLoading]   = useState(false)
-  const [pkFetching,  setPkFetching]  = useState(true)
+  const [passkeys,   setPasskeys]   = useState([])
+  const [pkLoading,  setPkLoading]  = useState(false)
+  const [pkFetching, setPkFetching] = useState(true)
+  const [renamingId, setRenamingId] = useState(null)
+  const [renameVal,  setRenameVal]  = useState("")
 
   useEffect(() => {
     const fetchPasskeys = async () => {
@@ -571,11 +573,24 @@ function Security() {
       const { data, error } = await Supabase.auth.registerPasskey()
       if (error) throw error
       setPasskeys(prev => [...prev, data])
-      show("Passkey registered!")
+      show(`Passkey added — ${data?.friendly_name ?? "registered"}`)
     } catch (e) {
-      show(titleCase(e.message))
+      show(titleCase(e?.message))
     } finally {
       setPkLoading(false)
+    }
+  }
+
+  const handleRenamePasskey = async (passkeyId) => {
+    if (!renameVal.trim()) return
+    try {
+      const { error } = await Supabase.auth.passkey.update({ passkeyId, friendlyName: renameVal.trim() })
+      if (error) throw error
+      setPasskeys(prev => prev.map(p => p.id === passkeyId ? { ...p, friendly_name: renameVal.trim() } : p))
+      setRenamingId(null)
+      show("Passkey renamed")
+    } catch (e) {
+      show(titleCase(e?.message))
     }
   }
 
@@ -586,7 +601,7 @@ function Security() {
       setPasskeys(prev => prev.filter(p => p.id !== passkeyId))
       show("Passkey removed")
     } catch (e) {
-      show(titleCase(e.message))
+      show(titleCase(e?.message))
     }
   }
 
@@ -615,9 +630,9 @@ function Security() {
     try {
       const { error } = await Supabase.auth.signOut({ scope: "global" })
       if (error) throw error
-      show("Signed out from all devices")
+      navigate("/")
     } catch (e) {
-      show(titleCase(e.message))
+      show(titleCase(e?.message))
     } finally {
       setSessLoading(false)
     }
@@ -628,8 +643,9 @@ function Security() {
     try {
       const { error } = await Supabase.auth.signOut({ scope: "local" })
       if (error) throw error
+      navigate("/")
     } catch (e) {
-      show(titleCase(e.message))
+      show(titleCase(e?.message))
       setSessLoading(false)
     }
   }
@@ -651,7 +667,7 @@ function Security() {
       if (!res.ok) throw new Error((await res.json()).message ?? "Delete failed")
       await Supabase.auth.signOut()
     } catch (e) {
-      show(titleCase(e.message))
+      show(titleCase(e?.message))
       setDelLoading(false)
     }
   }
@@ -659,44 +675,34 @@ function Security() {
   return (
     <Stack sx={{ gap: 4, p: 3, maxWidth: 520 }}>
 
-      {/* ── Change Password ── */}
       <Section title="Change Password">
-        <TextField fullWidth size="small" label="Current Password"
-          type={showCur ? "text" : "password"}
-          value={curPass} onChange={e => setCurPass(e.target.value)}
-          slotProps={{ input: { endAdornment: (
-            <InputAdornment position="end">
-              <IconButton size="small" onClick={() => setShowCur(v => !v)}>
-                {showCur ? <VisibilityOffIcon fontSize="small"/> : <VisibilityIcon fontSize="small"/>}
-              </IconButton>
-            </InputAdornment>
-          )}}}
-        />
-        <TextField fullWidth size="small" label="New Password"
-          type={showNew ? "text" : "password"}
-          value={newPass} onChange={e => setNewPass(e.target.value)}
-          helperText="Minimum 8 characters"
-          slotProps={{ input: { endAdornment: (
-            <InputAdornment position="end">
-              <IconButton size="small" onClick={() => setShowNew(v => !v)}>
-                {showNew ? <VisibilityOffIcon fontSize="small"/> : <VisibilityIcon fontSize="small"/>}
-              </IconButton>
-            </InputAdornment>
-          )}}}
-        />
-        <TextField fullWidth size="small" label="Confirm New Password"
-          type="password"
-          value={confirmPass} onChange={e => setConfirmPass(e.target.value)}
-        />
-        <Stack sx={{ alignItems: "flex-end" }}>
-          <Button variant="contained" disableElevation
-            startIcon={passLoading ? <CircularProgress size={14} color="inherit"/> : <KeyIcon/>}
-            onClick={handleChangePassword} disabled={passLoading}
-            sx={{ minWidth: 160 }}
-          >
-            {passLoading ? "Updating…" : "Update Password"}
-          </Button>
-        </Stack>
+        <form onSubmit={e => { e.preventDefault(); handleChangePassword() }}>
+          <Stack sx={{ gap: 2 }}>
+            <TextField fullWidth size="small" label="New Password"
+              type={showNew ? "text" : "password"}
+              value={newPass} onChange={e => setNewPass(e.target.value)}
+              slotProps={{ input: { endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setShowNew(v => !v)}>
+                    {showNew ? <VisibilityOffIcon fontSize="small"/> : <VisibilityIcon fontSize="small"/>}
+                  </IconButton>
+                </InputAdornment>
+              )}}}
+            />
+            <TextField fullWidth size="small" label="Confirm New Password"
+              type="password"
+              value={confirmPass} onChange={e => setConfirmPass(e.target.value)}
+            />
+            <Stack sx={{ alignItems: "flex-end" }}>
+              <Button type="submit" variant="contained" disableElevation
+                startIcon={passLoading ? <CircularProgress size={14} color="inherit"/> : <KeyIcon/>}
+                disabled={passLoading} sx={{ minWidth: 160 }}
+              >
+                {passLoading ? "Updating…" : "Update Password"}
+              </Button>
+            </Stack>
+          </Stack>
+        </form>
       </Section>
 
       <Divider/>
@@ -713,25 +719,49 @@ function Security() {
           <Stack sx={{ gap: 1 }}>
             {passkeys.map((pk, i) => (
               <Stack key={pk.id} sx={{
-                flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-                border: "1px solid", borderColor: "divider", borderRadius: 2.5, px: 2, py: 1.2
+                border: "1px solid", borderColor: "divider", borderRadius: 2.5, px: 2, py: 1.2, gap: 1
               }}>
-                <Stack sx={{ flexDirection: "row", alignItems: "center", gap: 1.5 }}>
-                  <KeyIcon sx={{ fontSize: 18, color: "text.secondary" }}/>
-                  <Stack>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      Passkey {i + 1}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                      Added {new Date(pk.created_at).toLocaleDateString()}
-                    </Typography>
+                {renamingId === pk.id ? (
+                  <Stack sx={{ flexDirection: "row", gap: 1, alignItems: "center" }}>
+                    <TextField
+                      size="small" fullWidth autoFocus
+                      value={renameVal} onChange={e => setRenameVal(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleRenamePasskey(pk.id); if (e.key === "Escape") setRenamingId(null) }}
+                      placeholder="New name"
+                    />
+                    <Button size="small" variant="contained" disableElevation
+                      onClick={() => handleRenamePasskey(pk.id)}>Save</Button>
+                    <Button size="small" onClick={() => setRenamingId(null)}>Cancel</Button>
                   </Stack>
-                </Stack>
-                <Tooltip title="Remove passkey">
-                  <IconButton size="small" color="error" onClick={() => handleRemovePasskey(pk.id)}>
-                    <DeleteIcon fontSize="small"/>
-                  </IconButton>
-                </Tooltip>
+                ) : (
+                  <Stack sx={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                    <Stack sx={{ flexDirection: "row", alignItems: "center", gap: 1.5 }}>
+                      <KeyIcon sx={{ fontSize: 18, color: "text.secondary" }}/>
+                      <Stack>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {pk.friendly_name || `Passkey ${i + 1}`}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                          Added {new Date(pk.created_at).toLocaleDateString()}
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                    <Stack sx={{ flexDirection: "row" }}>
+                      <Tooltip title="Rename">
+                        <IconButton size="small" onClick={() => { setRenamingId(pk.id); setRenameVal(pk.friendly_name ?? "") }}>
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                          </svg>
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Remove">
+                        <IconButton size="small" color="error" onClick={() => handleRemovePasskey(pk.id)}>
+                          <DeleteIcon fontSize="small"/>
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  </Stack>
+                )}
               </Stack>
             ))}
           </Stack>

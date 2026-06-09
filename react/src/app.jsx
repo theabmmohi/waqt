@@ -51,6 +51,7 @@ export default function App() {
   const handleLogout = async () => {
     await Supabase.auth.signOut()
     closeDrawer()
+    navigate("/")
   }
   
   const navs = [
