@@ -66,7 +66,7 @@ export default function App() {
           <AppBar position="sticky" elevation={0} color="default" sx={{ zIndex: (x) => x.zIndex.drawer + 1 }}>
             <Toolbar>
               <Stack sx={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 1 }}>
-                <Stack sx={{ borderColor: "divider", alignItems: "center", justifyContent: "center", borderRadius: 1, width: 44, height: 44, p: 1 }}>
+                <Stack onClick={() => navigate("/")} sx={{ borderColor: "divider", alignItems: "center", justifyContent: "center", borderRadius: 1, width: 44, height: 44, p: 1 }}>
                   <AcUnitIcon sx={{ color: "text.primary" }}/>
                 </Stack>
                 <Stack>
