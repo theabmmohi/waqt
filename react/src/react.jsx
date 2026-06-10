@@ -14,7 +14,7 @@ import {
 import {
   lightTheme,
   darkTheme
-} from "@/mui"
+} from "@/theme"
 import Preloader from "@asset/preloader"
 import Supabase from "@/supabase"
 import App from "@/app"

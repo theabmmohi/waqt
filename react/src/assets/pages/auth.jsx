@@ -3,6 +3,7 @@ import {
   useState
 } from "react"
 import {
+  FormControl,
   Typography,
   IconButton,
   TextField,
@@ -46,12 +47,10 @@ export default function Auth() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
-    
     const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     if (!email || !password) return show("Email and password are required")
     if (!validEmail) return show("Please enter a valid email address")
     if (isSignUp && !name.trim()) return show("Please enter your name")
-    
     try {
       if (isSignUp) {
         const { data, error } = await Supabase.auth.signUp({
@@ -101,70 +100,26 @@ export default function Auth() {
   
   return (
     <Box sx={{ maxWidth: 500, mx: "auto", p: 5 }}>
-      <Typography variant="h5" sx={{ textAlign: "center", my: 2.5 }}>
-        {isSignUp ? "Create Account" : "Sign In"}
-      </Typography>
-      
-      <Stack component="form" onSubmit={handleSubmit} spacing={2.5} sx={{ alignItems: "center" }}>
-        {isSignUp && (
-          <TextField
-            fullWidth size="small" label="Full Name"
-            value={name} onChange={e => setName(e.target.value)}
-          />
-        )}
-        <TextField
-          fullWidth size="small" label="Email" type="email"
-          value={email} onChange={e => setEmail(e.target.value)}
-        />
-        <TextField
-          fullWidth size="small" label="Password"
-          type={showPass ? "text" : "password"}
-          value={password} onChange={e => setPassword(e.target.value)}
-          slotProps={{
-            input: {
-              endAdornment: (
-                <IconButton size="small" onClick={() => setShowPass(!showPass)}>
-                  {showPass ? <VisibilityIcon/> : <VisibilityOffIcon/>}
-                </IconButton>
-              )
-            }
-          }}
-        />
+      <Typography variant="h5" sx={{ textAlign: "center", my: 2.5 }}>{isSignUp ? "Create Account" : "Sign In"}</Typography>
+      <FormControl component="form" onSubmit={handleSubmit} sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
+        {isSignUp && (<TextField fullWidth size="small" label="Full Name" value={name} onChange={e => setName(e.target.value)}/>)}
+        <TextField fullWidth size="small" label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)}/>
+        <TextField fullWidth size="small" label="Password" type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} slotProps={{ input: { endAdornment: (<IconButton size="small" onClick={() => setShowPass(!showPass)}>{showPass ? <VisibilityIcon/> : <VisibilityOffIcon/>}</IconButton>) } }}/>
         <Stack direction="row" sx={{ width: "100%", justifyContent: "space-between" }}>
-          {!isSignUp
-            ? <Button onClick={handleForgot}>Forgot Password</Button>
-            : <Box/>
-          }
-          <Button onClick={() => { setIsSignUp(!isSignUp); setPassword(""); setName("") }}>
-            {isSignUp ? "Sign In Instead" : "Create Account"}
-          </Button>
+          {!isSignUp ? <Button onClick={handleForgot}>Forgot Password</Button> : <Box/>}
+          <Button onClick={() => { setIsSignUp(!isSignUp); setPassword(""); setName("") }}>{isSignUp ? "Sign In Instead" : "Create Account"}</Button>
         </Stack>
-        <Button sx={{ width: "75%" }} type="submit" variant="contained">
-          {isSignUp ? "Sign Up" : "Sign In"}
-        </Button>
+        <Button sx={{ width: "75%" }} type="submit" variant="contained">{isSignUp ? "Sign Up" : "Sign In"}</Button>
         {!isSignUp && isPasskeySupported && (
           <>
             <Divider sx={{ width: "100%" }}>Or Continue With</Divider>
             <Stack sx={{ width: "75%" }}>
-              <Button
-                variant="outlined"
-                startIcon={<KeyIcon/>}
-                onClick={handlePasskey}
-                sx={{ color: "text.primary" }}
-              >
-                Sign In with Passkey
-              </Button>
+              <Button variant="outlined" startIcon={<KeyIcon/>} onClick={handlePasskey} sx={{ color: "text.primary" }}>Sign In with Passkey</Button>
             </Stack>
           </>
         )}
-        <Snackbar
-          open={open}
-          onClose={() => setOpen(false)}
-          message={snack}
-          autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500}
-          slots={{ transition: Slide }}
-        />
-      </Stack>
+        <Snackbar open={open} onClose={() => setOpen(false)} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }}/>
+      </FormControl>
     </Box>
   )
 }
