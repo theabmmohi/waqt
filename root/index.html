@@ -11,20 +11,20 @@
 *, *::before, *::after {
   -webkit-tap-highlight-color: transparent;
   box-sizing: border-box;
-  margin: 0;
   padding: 0;
+  margin: 0;
 }
 
 :root {
-  --orange: #f97316;
-  --orange-soft: #fdba74;
-  --orange-dim: rgba(249,115,22,0.1);
   --orange-glow: rgba(249,115,22,0.2);
-  --bg: #fffbf5;
-  --bg2: #fff7ee;
-  --text: #2d1200;
-  --text-sec: #a35c2a;
+  --orange-dim: rgba(249,115,22,0.1);
   --border: rgba(249,115,22,0.15);
+  --orange-soft: #fdba74;
+  --text-sec: #a35c2a;
+  --orange: #f97316;
+  --text: #2d1200;
+  --bg2: #fff7ee;
+  --bg: #fffbf5;
   --radius: 20px;
 }
 
@@ -397,7 +397,6 @@ h1 em {
 
 <script>
 const STATUS = "dev" // "live" | "dev"
-
 const badge = document.getElementById("badge-text")
 const dot = document.querySelector(".badge-dot")
 if (STATUS === "live") {
@@ -405,8 +404,9 @@ if (STATUS === "live") {
   dot.style.background = "#22c55e"
   dot.style.animation = "blink 2s ease-in-out infinite"
 } else {
-  badge.textContent = "Under Development"
+  badge.textContent = "Under Development 💔"
   dot.style.background = "#f97316"
+  alert("Sorry 💔, Ill back later 😔")
 }
 
 function goToApp() {
