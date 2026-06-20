@@ -1,6 +1,6 @@
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
-import { VitePWA } "vite-plugin-pwa"
+import { VitePWA } from "vite-plugin-pwa"
 
 
 export default defineConfig({
