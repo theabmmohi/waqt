@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { registerSW } from "virtual:pwa-register"
 import { BrowserRouter } from "react-router-dom"
 import { createRoot } from "react-dom/client"
 import {
@@ -19,7 +20,6 @@ import Preloader from "@asset/preloader"
 import Supabase from "@/supabase"
 import App from "@/app"
 import "@/style.css"
-
 export const Theme = createContext()
 
 function React() {
@@ -28,7 +28,6 @@ function React() {
   const [user, setUser] = useState(null)
   const [mode, setMode] = useState(() => localStorage.getItem("AppTheme") || "system")
   const [dark, setDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches)
-  
   useEffect(() => {
     const start = Date.now()
     const done = () => {
@@ -51,23 +50,23 @@ function React() {
     const { data: listener } = Supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null)
     })
-    
     const query = window.matchMedia("(prefers-color-scheme: dark)")
     const handler = (e) => setDark(e.matches)
     query.addEventListener("change", handler)
-    
     return () => {
       query.removeEventListener("change", handler)
       listener.subscription.unsubscribe()
     }
   }, [])
-  
   const isDark = mode === "dark" || (mode === "system" && dark)
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute("content", isDark ? "#000000" : "#ffffff")
+  }, [isDark])
   const toggle = (x) => {
     setMode(x)
     localStorage.setItem("AppTheme", x)
   }
-  
   return (
     <Theme.Provider value={{ dark: mode, toggle, user }}>
       <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
@@ -88,3 +87,4 @@ createRoot(document.getElementById("app")).render(
     <React/>
   </StrictMode>
 )
+registerSW({ immediate: true })
