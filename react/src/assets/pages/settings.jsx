@@ -89,6 +89,7 @@ function Profile({setSnack}) {
           const file = e.target.files[0]
           if (!file) return
           if (file.size > 2 * 1048576) return setSnack("File Too Large, MAX 2 MB")
+          if (file.type === "image/heic" || file.type === "image/heif") return setSnack("HEIC/HEIF Images Not Supported")
           setAvatar(URL.createObjectURL(file))
           setFile(file)
         }}/>
