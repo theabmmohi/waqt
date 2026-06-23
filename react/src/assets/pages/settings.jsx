@@ -80,7 +80,7 @@ function Profile({setSnack}) {
   return (
     <FormControl sx={{ maxWidth: 600, gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", alignItems: "center" }}>
-        <Avatar src={avatar} onClick={() => fileRef.current.click()} sx={{ border: "2px solid", borderColor: "text.primary", cursor: "pointer", height: 72, width: 72 }}/>
+        <Avatar src={avatar} onClick={() => fileRef.current.click()} sx={{ border: "2px solid", borderColor: "text.primary", cursor: "pointer", height: 72, width: 72 }}>{user?.user_metadata?.full_name?.[0]?.toUpperCase() ?? "?"}</Avatar>
         <Stack sx={{ px: 2.5 }}>
           <Typography variant="body2" sx={{ fontWeight: 600 }}>Profile Photo</Typography>
           <Typography variant="caption" sx={{ color: "text.secondary" }}>Click to change | Max 2 MB</Typography>

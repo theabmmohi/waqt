@@ -136,7 +136,7 @@ export default function App() {
             <Divider/>
             <Stack sx={{ flexDirection: "row" }}>
               <Stack sx={{ px: 0.5, justifyContent: "center" }}>
-                <Avatar>{user?.user_metadata?.full_name?.[0]?.toUpperCase() ?? "?"}</Avatar>
+                <Avatar src={user?.user_metadata?.avatar_url}>{user?.user_metadata?.full_name?.[0]?.toUpperCase() ?? "?"}</Avatar>
               </Stack>
               <Divider orientation="vertical"/>
               <Stack sx={{ justifyContent: "center", overflowX: "hidden", flex: 1, p: 1 }}>
