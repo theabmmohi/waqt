@@ -78,7 +78,7 @@ function Profile({setSnack}) {
     } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setSaving(false)}
   }
   return (
-    <FormControl sx={{ maxWidth: 600, gap: 2.5, p: 2.5 }}>
+    <FormControl sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", alignItems: "center" }}>
         <Avatar src={avatar} onClick={() => fileRef.current.click()} sx={{ border: "2px solid", borderColor: "text.primary", cursor: "pointer", height: 72, width: 72 }}>{user?.user_metadata?.full_name?.[0]?.toUpperCase() ?? "?"}</Avatar>
         <Stack sx={{ px: 2.5 }}>
@@ -105,9 +105,32 @@ function Profile({setSnack}) {
 }
 
 function Notifications({setSnack}) {
-useEffect(() => setSnack("notifications"), [])
+  const [browEnabled, setBrowEnabled] = useState(false)
+  const [browLoading, setBrowLoading] = useState(false)
   return (
-    <>notifications</>
+    <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
+      <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 2.5, p: 2.5 }}>
+        <Stack sx={{ flex: 1 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>Browser Notifications</Typography>
+          <Typography variant="caption" sx={{ color: "text.secondary" }}>
+            {browEnabled? "Notifications are enabled" : "Allow Waqt sending reminders from browser"}
+          </Typography>
+        </Stack>
+        <Stack sx={{ justifyContent: "center" }}>
+          {browLoading ?
+            <CircularProgress size={25}/> :
+            <Switch checked={browEnabled} onChange={e => setBrowEnabled(!browEnabled)}/>
+          }
+        </Stack>
+      </Stack>
+      <Divider/>
+      <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2.5, p: 2.5 }}>
+        
+      </Stack>
+      <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2.5, p: 2.5 }}>
+        
+      </Stack>
+    </Stack>
   )
 }
 
@@ -128,9 +151,7 @@ useEffect(() => setSnack("security"), [])
 export default function Settings() {
   const navigate = useNavigate()
   const location = useLocation()
-  
   const [snack, setSnack] = useState("")
-  
   const active = ["profile", "notifications", "preferences", "security"].find(x => location.pathname.includes(x)) ?? "profile"
   const mobile = useMediaQuery(useTheme().breakpoints.down("sm"))
   
