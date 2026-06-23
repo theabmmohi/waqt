@@ -65,12 +65,10 @@ function Profile({setSnack}) {
     try {
       let avatar_url = avatar
       if (file) {
-        const ext = file.name.split(".").pop()
-        const pth = `${user.id}.${ext}`
-        const { error } = await Supabase.storage.from("avatar").upload(pth, file, { upsert: true })
+        const { error } = await Supabase.storage.from("avatar").upload(user.id, file, { upsert: true, contentType: file.type })
         if (error) throw error
-        const { data } = Supabase.storage.from("avatar").getPublicUrl(pth)
-        avatar_url = data.publicUrl
+        const { data } = Supabase.storage.from("avatar").getPublicUrl(user.id)
+        avatar_url = `${data.publicUrl}?ts=${Date.now()}`
         setAvatar(avatar_url)
         setFile(null)
       }
