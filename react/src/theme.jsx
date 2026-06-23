@@ -2,7 +2,7 @@ import { createTheme } from "@mui/material"
 
 const base = {
   shape: {
-    borderRadius: 16
+    borderRadius: 12
   },
   components: {
     MuiButton: {

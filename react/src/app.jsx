@@ -23,7 +23,7 @@ import {
   Box
 } from "@mui/material"
 import Dashboard from "@page/dashboard"
-import Settings from "@page/setting"
+import Settings from "@page/settings"
 import Supabase from "@/supabase"
 import { Theme } from "@/react"
 import Auth from "@page/auth"
