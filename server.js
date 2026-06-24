@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
 import nodemailer from "nodemailer"
+import webpush from "web-push"
 import express from "express"
 import cors from "cors"
 import "dotenv/config"
@@ -18,6 +19,11 @@ const mailer = nodemailer.createTransport({
 
 server.use(cors())
 server.use(express.json())
+webpush.setVapidDetails(
+  process.env.VAPID_MAILTO,
+  process.env.VAPID_PUBLIC,
+  process.env.VAPID_PRIVATE
+)
 
 
 
@@ -82,6 +88,31 @@ server.post("/webhook/telegram", async (req, res) => {
       })
     })
   } catch (err) {console.error("Error At /webhook/telegram: ", err)}
+})
+
+server.post("/settings/notifications/webPush/getPublic", async (req, res) => {
+  res.json({ key: process.env.VAPID_PUBLIC })
+})
+
+server.post("/settings/notifications/webPush/subscribe", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "")
+    if (!token) throw new Error("Unauthorized - Token Required")
+    const { data, error } = await supabase.auth.getUser(token)
+    if (error) throw new Error(error.message)
+    const { subscription } = req.body
+    if (!subscription) throw new Error("No subscription provided")
+    await supabase.auth.admin.updateUserById(data.user.id, {
+      user_metadata: { ...data.user.user_metadata, pushSubscription: subscription }
+    })
+    res.json({
+      success: true,
+      message: "WebPush Subscribed"
+    })
+  } catch (err) {res.json({
+    success: false,
+    message: err?.message ?? "Server Error"
+  })}
 })
 
 server.post("/settings/notifications/telegram/validateID", async (req, res) => {
