@@ -141,7 +141,6 @@ function Notifications({setSnack}) {
       try {
         const { error } = await Supabase.auth.updateUser({ data: { teleChatId: teleId.trim() } })
         if (error) throw error
-        setTeleLinked(true)
         const { data } = await api.post("/settings/notifications/telegram/validateID")
         if (!data.success) {
           await Supabase.auth.updateUser({ data: { teleChatId: null } })
@@ -149,6 +148,7 @@ function Notifications({setSnack}) {
           setTeleId("")
           throw new Error(data.message)
         }
+        setTeleLinked(true)
         setSnack(data.message)
       }
       catch (err) { setSnack(err?.message ?? "Something went wrong") }
