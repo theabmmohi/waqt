@@ -19,11 +19,11 @@ import Supabase from "@/supabase"
 
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff"
 import VisibilityIcon from "@mui/icons-material/Visibility"
+import GoogleIcon from "@mui/icons-material/Google"
 import KeyIcon from "@mui/icons-material/Key"
 
 export default function Auth() {
   const navigate = useNavigate()
-  
   const [isSignUp, setIsSignUp] = useState(false)
   const [isPasskeySupported, setIsPasskeySupported] = useState(false)
   const [email, setEmail] = useState("")
@@ -32,10 +32,8 @@ export default function Auth() {
   const [showPass, setShowPass] = useState(false)
   const [snack, setSnack] = useState("")
   const [open, setOpen] = useState(false)
-  
   const show = (msg) => { setSnack(msg); setOpen(true) }
   const titleCase = (str) => str.replace(/\b\w/g, c => c.toUpperCase())
-  
   useEffect(() => {
     if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
       PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
@@ -43,7 +41,6 @@ export default function Auth() {
         .catch(() => setIsPasskeySupported(false))
     }
   }, [])
-  
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
@@ -58,33 +55,16 @@ export default function Auth() {
           options: { data: { full_name: name.trim() } }
         })
         if (error) throw error
-        if (data.user?.identities?.length === 0) {
-          show("An account with this email already exists!")
-        } else if (data.user?.confirmed_at) {
-          show("Account already confirmed! Please sign in.")
-        } else {
-          show("Check your email to confirm your account!")
-        }
+        if (data.user?.identities?.length === 0) show("An account with this email already exists!")
+        else if (data.user?.confirmed_at) show("Account already confirmed! Please sign in.")
+        else show("Check your email to confirm your account!")
       } else {
         const { error } = await Supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
         navigate("/")
       }
-    } catch (e) {
-      show(titleCase(e.message))
-    }
+    } catch (e) {show(titleCase(e.message))}
   }
-  
-  const handlePasskey = async () => {
-    try {
-      const { error } = await Supabase.auth.signInWithPasskey()
-      if (error) throw error
-      navigate("/")
-    } catch (e) {
-      show(titleCase(e.message))
-    }
-  }
-  
   const handleForgot = async () => {
     const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     if (!email) return show("Please enter your email address first")
@@ -93,11 +73,24 @@ export default function Auth() {
       const { error } = await Supabase.auth.resetPasswordForEmail(email)
       if (error) throw error
       show("Password reset email sent!")
-    } catch (e) {
-      show(titleCase(e.message))
-    }
+    } catch (e) {show(titleCase(e.message))}
   }
-  
+  const handlePasskey = async () => {
+    try {
+      const { error } = await Supabase.auth.signInWithPasskey()
+      if (error) throw error
+      navigate("/")
+    } catch (e) {show(titleCase(e.message))}
+  }
+  const handleGoogle = async () => {
+    try {
+      const { error } = await Supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin }
+      })
+      if (error) throw error
+    } catch (e) {show(titleCase(e.message))}
+  }
   return (
     <Box sx={{ maxWidth: 500, mx: "auto", p: 5 }}>
       <Typography variant="h5" sx={{ textAlign: "center", my: 2.5 }}>{isSignUp ? "Create Account" : "Sign In"}</Typography>
@@ -110,14 +103,11 @@ export default function Auth() {
           <Button onClick={() => { setIsSignUp(!isSignUp); setPassword(""); setName("") }}>{isSignUp ? "Sign In Instead" : "Create Account"}</Button>
         </Stack>
         <Button sx={{ width: "75%" }} type="submit" variant="contained">{isSignUp ? "Sign Up" : "Sign In"}</Button>
-        {!isSignUp && isPasskeySupported && (
-          <>
-            <Divider sx={{ width: "100%" }}>Or Continue With</Divider>
-            <Stack sx={{ width: "75%" }}>
-              <Button variant="outlined" startIcon={<KeyIcon/>} onClick={handlePasskey} sx={{ color: "text.primary" }}>Sign In with Passkey</Button>
-            </Stack>
-          </>
-        )}
+        <Divider sx={{ width: "100%" }}>Or Continue With</Divider>
+        <Stack sx={{ width: "75%", gap: 2.5 }}>
+          <Button variant="outlined" startIcon={<GoogleIcon/>} onClick={handleGoogle} sx={{ color: "text.primary" }}>Google</Button>
+          {!isSignUp && isPasskeySupported && (<Button variant="outlined" startIcon={<KeyIcon/>} onClick={handlePasskey} sx={{ color: "text.primary" }}>Passkey</Button>)}
+        </Stack>
         <Snackbar open={open} onClose={() => setOpen(false)} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}/>
       </FormControl>
     </Box>
