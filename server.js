@@ -97,18 +97,20 @@ server.post("/settings/notifications/telegram/validateID", async (req, res) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: chatID,
-        text: `Your telegram is now connected with your Waqt account *_(${data.user.email})_*`,
+        text: `Your telegram is now connected with your Waqt account ${data.user.email}`,
         parse_mode: "Markdown"
       })
     })
     const tele = await resp.json()
+    const username = tele.result.chat.username
     if (!tele.ok) {
-      if (tele.error_code === 403) throw new Error("Bot Isn't Started Or Blocked By User")
+      if (tele.error_code === 400) throw new Error("Bot Isn't Started By User")
+      if (tele.error_code === 403) throw new Error("Bot Is Blocked By User")
       throw new Error(tele.description ?? "Telegram Error")
     }
     res.json({
       success: true,
-      message: `${tele.result.chat.username ?? "Your Telegram"} Is Linked With Your Waqt Account`
+      message: `${username ? `@${username}` : "Your Telegram"} Is Linked With Your Waqt Account`
     })
   } catch (err) {res.json({
     success: false,
