@@ -102,12 +102,12 @@ server.post("/settings/notifications/telegram/validateID", async (req, res) => {
       })
     })
     const tele = await resp.json()
-    const username = tele.result.chat.username
     if (!tele.ok) {
       if (tele.error_code === 400) throw new Error("Bot Isn't Started By User")
       if (tele.error_code === 403) throw new Error("Bot Is Blocked By User")
       throw new Error(tele.description ?? "Telegram Error")
     }
+    const username = tele.result.chat.username
     res.json({
       success: true,
       message: `${username ? `@${username}` : "Your Telegram"} Is Linked With Your Waqt Account`
