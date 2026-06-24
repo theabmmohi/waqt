@@ -174,7 +174,7 @@ function Notifications({setSnack}) {
       setTeleId(teleChatId)
     }
     setTeleLoading(false)
-  }, [user])
+  }, [])
   return (
     <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 2.5, p: 2.5, gap: 2.5 }}>
