@@ -64,6 +64,26 @@ server.get("/", async (req, res) => {
   res.type("text").send("Im Alive!")
 })
 
+server.post("/webhook/telegram", async (req, res) => {
+  if (req.headers["x-telegram-bot-api-secret-token"] !== process.env.TG_HOOK_SCRT) return res.sendStatus(403)
+  res.sendStatus(200)
+  try {
+    const { message } = req.body
+    if (!message) return
+    const chatId = message.chat.id
+    const text = message.text?.trim()
+    if (text === "/start") await fetch(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: `Welcome to Waqt Bot!\n\nYour Chat ID is:\n\`${chatId}\`\n\nCopy this and paste it in the Waqt app under Settings → Notifications → Telegram.`,
+        parse_mode: "Markdown"
+      })
+    })
+  } catch (err) {console.error("Error At /webhook/telegram: ", err)}
+})
+
 server.post("/settings/notifications/telegram/validateID", async (req, res) => {
   try {
     const token = req.headers.authorization?.replace("Bearer ", "")
