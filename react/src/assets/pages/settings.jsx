@@ -38,6 +38,7 @@ import useMediaQuery from "@mui/material/useMediaQuery"
 import { useTheme } from "@mui/material/styles"
 import Supabase from "@/supabase"
 import { Theme } from "@/react"
+import api from "@/api"
 
 import NotificationsIcon from "@mui/icons-material/Notifications"
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff"
@@ -141,7 +142,14 @@ function Notifications({setSnack}) {
         const { error } = await Supabase.auth.updateUser({ data: { teleChatId: teleId.trim() } })
         if (error) throw error
         setTeleLinked(true)
-        setSnack("Telegram Account Connected")
+        const { data } = await api.post("/settings/notifications/telegram/validateID")
+        if (!data.success) {
+          await Supabase.auth.updateUser({ data: { teleChatId: null } })
+          setTeleLinked(false)
+          setTeleId("")
+          throw new Error(data.message)
+        }
+        setSnack(data.message)
       }
       catch (err) { setSnack(err?.message ?? "Something went wrong") }
       finally { setTeleLinking(false) }

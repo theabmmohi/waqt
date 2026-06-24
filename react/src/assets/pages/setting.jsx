@@ -194,7 +194,7 @@ function Notifications() {
   }, [])
   
   const handlePushToggle = async () => {
-    if (!("Notification" in window)) return show("Push notifications not supported on this device")
+    if (!("Notification" in window)) return show("")
     if (pushEnabled) {
       show("To disable, clear site permissions in your browser settings")
       return
