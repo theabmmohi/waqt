@@ -61,22 +61,22 @@ function Profile({setSnack}) {
   const email = user?.email ?? ""
   const [name, setName]     = useState(user?.user_metadata?.full_name  ?? "")
   const [bio, setBio]       = useState(user?.user_metadata?.bio        ?? "")
-  const [avatar, setAvatar] = useState(user?.user_metadata?.picture ?? "")
+  const [avatar, setAvatar] = useState(user?.user_metadata?.avatar_url ?? "")
   const [saving, setSaving] = useState(false)
   const [file, setFile]     = useState(null)
   const save = async () => {
     setSaving(true)
     try {
-      let picture = avatar
+      let avatar_url = avatar
       if (file) {
         const { error } = await Supabase.storage.from("avatar").upload(user.id, file, { upsert: true, contentType: file.type })
         if (error) throw error
         const { data } = Supabase.storage.from("avatar").getPublicUrl(user.id)
-        picture = `${data.publicUrl}?ts=${Date.now()}`
-        setAvatar(picture)
+        avatar_url = `${data.publicUrl}?ts=${Date.now()}`
+        setAvatar(avatar_url)
         setFile(null)
       }
-      const { error } = await Supabase.auth.updateUser({ data: { full_name: name.trim(), bio: bio.trim(), picture } })
+      const { error } = await Supabase.auth.updateUser({ data: { full_name: name.trim(), bio: bio.trim(), avatar_url } })
       if (error) throw error
       setSnack("Profile Saved")
     }
