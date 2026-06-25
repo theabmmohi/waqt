@@ -13,17 +13,14 @@ import {
 import {
   ToggleButtonGroup,
   CircularProgress,
-  InputAdornment,
   Autocomplete,
   ToggleButton,
   FormControl,
   InputLabel,
   Typography,
-  IconButton,
   TextField,
   MenuItem,
   Snackbar,
-  Toolbar,
   Divider,
   Avatar,
   Select,
@@ -31,9 +28,7 @@ import {
   Switch,
   Slide,
   Stack,
-  Chip,
-  Link,
-  Box
+  Link
 } from "@mui/material"
 import useMediaQuery from "@mui/material/useMediaQuery"
 import { useTheme } from "@mui/material/styles"
@@ -42,19 +37,15 @@ import { Theme } from "@/react"
 import api from "@/api"
 
 import NotificationsIcon from "@mui/icons-material/Notifications"
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff"
 import MyLocationIcon from "@mui/icons-material/MyLocation"
-import VisibilityIcon from "@mui/icons-material/Visibility"
 import SecurityIcon from "@mui/icons-material/Security"
 import TelegramIcon from "@mui/icons-material/Telegram"
-import DevicesIcon from "@mui/icons-material/Devices"
 import WebhookIcon from "@mui/icons-material/Webhook"
 import LinkOffIcon from "@mui/icons-material/LinkOff"
 import PersonIcon from "@mui/icons-material/Person"
 import LinkIcon from "@mui/icons-material/Link"
 import SaveIcon from "@mui/icons-material/Save"
 import TuneIcon from "@mui/icons-material/Tune"
-import KeyIcon from "@mui/icons-material/Key"
 
 function Profile({setSnack}) {
   const { user } = useContext(Theme)
@@ -243,16 +234,35 @@ function Notifications({setSnack}) {
 }
 
 function Preferences({setSnack}) {
-  const [saving, setSaving] = useState(false)
-  const [calcMethod, setCalcMethod] = useState("")
   const [language, setLanguage] = useState("en")
   const [timeFormat, setTimeFormat] = useState("12h")
-  const [locationType, setLocationType] = useState("gps")
+  const [locationType, setLocationType] = useState("")
+  const [calcMethod, setCalcMethod] = useState("")
+  const [city, setCity] = useState(null)
+  const [coords, setCoords] = useState(null)
+  const [coordsLoading, setCoordsLoading] = useState(false)
   const [cityOpts, setCityOpts] = useState([])
   const [cityLoading, setCityLoading] = useState(false)
-  const [city, setCity] = useState(null)
   const [cityInput, setCityInput] = useState("")
+  const [saving, setSaving] = useState(false)
   const timerRef = useRef()
+  const getCoords = () => {
+    if (!navigator.geolocation) return setSnack("This Device Doesn't Support GPS")
+    setCoordsLoading(true)
+    navigate.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords({
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude
+        })
+        setCityLoading(false)
+      },
+      (err) => {
+        setSnack(err.message ?? "Failed To Get Location")
+        setCityLoading(false)
+      }
+    )
+  }
   const citySearch = (query) => {
     clearTimeout(timerRef.current)
     if (!query || query.length < 2) return setCityOpts([])
@@ -262,8 +272,8 @@ function Preferences({setSnack}) {
         const resp = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=10&language=en&format=json`)
         const data = await resp.json()
         setCityOpts(data.results ?? [])
-      } catch (err) {setCityOpts([])} finally {setCityLoading(false)}
-    }, 500)
+      } catch {setCityOpts([])} finally {setCityLoading(false)}
+    }, 250)
   }
   const save = async () => {
     
@@ -292,12 +302,15 @@ function Preferences({setSnack}) {
         </ToggleButtonGroup>
       </Stack>
       <Stack>
-        {locationType === "gps" ? (
+        {locationType === "gps" && (
           <Stack sx={{ flexDirection: "row", gap: 2.5 }}>
-            <TextField fullWidth size="small" label="Coordinates" disabled slotProps={{ input: { readOnly: true } }}></TextField>
-            <Button variant="contained" disableElevation startIcon={<MyLocationIcon/>}>Get</Button>
+            <TextField fullWidth size="small" label="Coordinates" disabled value={coords ? `${coords.lat}, ${coords.lon}` : ""} slotProps={{ input: { readOnly: true } }}></TextField>
+            <Button disableElevation onClick={getCoords} disabled={coordsLoading} variant={coordsLoading ? "outlined" : "contained"} startIcon={coordsLoading ? <CircularProgress size={14}/> : <MyLocationIcon/>}>
+              {coordsLoading ? "Getting..." : "Get"}
+            </Button>
           </Stack>
-        ) : (
+        )}
+        {locationType === "manual" && (
           <Autocomplete
             options={cityOpts}
             loading={cityLoading}

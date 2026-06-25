@@ -53,7 +53,7 @@ export default function App() {
         const sub = await reg.pushManager.getSubscription()
         if (sub) await sub.unsubscribe()
       }
-    } catch (err) {} finally {await Supabase.auth.signOut()}
+    } finally {await Supabase.auth.signOut()}
     closeDrawer()
     navigate("/")
   }
