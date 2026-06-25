@@ -242,8 +242,30 @@ function Notifications({setSnack}) {
 }
 
 function Preferences({setSnack}) {
+  const [saving, setSaving] = useState(false)
+  const save = async () => {
+    
+  }
   return (
-    <>preferences</>
+    <FormControl sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
+      <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
+        <Typography>Language:</Typography>
+        <ToggleButtonGroup size="small">
+          <ToggleButton>English</ToggleButton>
+          <ToggleButton>বাংলা</ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
+      <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
+        <Typography>Time Format:</Typography>
+        <ToggleButtonGroup size="small">
+          <ToggleButton>12H</ToggleButton>
+          <ToggleButton>24H</ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
+      <Button disableElevation onClick={save} disabled={saving} variant={saving ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={saving ? <CircularProgress size={14}/> : <SaveIcon/>}>
+        {saving ? "Saving..." : "Save"}
+      </Button>
+    </FormControl>
   )
 }
 

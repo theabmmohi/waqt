@@ -12,6 +12,14 @@ const base = {
           fontWeight: 600
         }
       }
+    },
+    MuiToggleButton: {
+      styleOverrides: {
+        root: {
+          textTransform: "none",
+          fontWeight: 600
+        }
+      }
     }
   }
 }
