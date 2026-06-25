@@ -61,27 +61,26 @@ function Profile({setSnack}) {
   const email = user?.email ?? ""
   const [name, setName]     = useState(user?.user_metadata?.full_name  ?? "")
   const [bio, setBio]       = useState(user?.user_metadata?.bio        ?? "")
-  const [avatar, setAvatar] = useState(user?.user_metadata?.avatar_url ?? "")
+  const [avatar, setAvatar] = useState(user?.user_metadata?.picture ?? "")
   const [saving, setSaving] = useState(false)
   const [file, setFile]     = useState(null)
   const save = async () => {
     setSaving(true)
     try {
-      let avatar_url = avatar
+      let picture = avatar
       if (file) {
         const { error } = await Supabase.storage.from("avatar").upload(user.id, file, { upsert: true, contentType: file.type })
         if (error) throw error
         const { data } = Supabase.storage.from("avatar").getPublicUrl(user.id)
-        avatar_url = `${data.publicUrl}?ts=${Date.now()}`
-        setAvatar(avatar_url)
+        picture = `${data.publicUrl}?ts=${Date.now()}`
+        setAvatar(picture)
         setFile(null)
       }
-      const { error } = await Supabase.auth.updateUser({ data: { full_name: name.trim(), bio: bio.trim(), avatar_url } })
+      const { error } = await Supabase.auth.updateUser({ data: { full_name: name.trim(), bio: bio.trim(), picture } })
       if (error) throw error
       setSnack("Profile Saved")
     }
-    catch (err) { setSnack(err?.message ?? "Sorry, Internal Error") }
-    finally { setSaving(false) }
+    catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setSaving(false)}
   }
   return (
     <FormControl sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
@@ -102,7 +101,7 @@ function Profile({setSnack}) {
       </Stack>
       <TextField size="small" label="Full Name" value={name} onChange={e => setName(e.target.value)}/>
       <TextField size="small" label="Email" value={email} disabled slotProps={{ input: { readOnly: true } }} helperText="Email cannot be changed"/>
-      <TextField size="small" label="Bio" value={bio} multiline rows={4} onChange={e => { if (e.target.value.length <= 160) setBio(e.target.value) }} helperText={bio.length !== 160 ? `${bio.length}/160` : "Max Character Limit Reached"}/>
+      <TextField size="small" label="Bio" value={bio} multiline rows={4} onChange={e => {if (e.target.value.length <= 160) setBio(e.target.value)}} helperText={bio.length !== 160 ? `${bio.length}/160` : "Max Character Limit Reached"}/>
       <Button disableElevation onClick={save} disabled={saving} variant={saving ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={saving ? <CircularProgress size={14}/> : <SaveIcon/>}>
         {saving ? "Saving..." : "Save"}
       </Button>
@@ -114,14 +113,13 @@ function Notifications({setSnack}) {
   const { user } = useContext(Theme)
   const [browEnabled, setBrowEnabled]     = useState(false)
   const [browLoading, setBrowLoading]     = useState(false)
-  const [teleLoading, setTeleLoading]     = useState(true)
+  const [teleLoading, setTeleLoading]     = useState(true )
   const [teleLinking, setTeleLinking]     = useState(false)
   const [teleUnLinking, setTeleUnLinking] = useState(false)
   const [teleLinked, setTeleLinked]       = useState(false)
   const [teleId, setTeleId]               = useState("")
   const toggleBrow = async () => {
-    if (!("Notification" in window) || !("serviceWorker" in navigator))
-      return setSnack("Push notifications not supported on this device")
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) return setSnack("Push notifications not supported on this device")
     setBrowLoading(true)
     try {
       if (browEnabled) {
@@ -165,7 +163,8 @@ function Notifications({setSnack}) {
         }
         setTeleLinked(true)
         setSnack(data.message)
-      } catch (err) { setSnack(err?.message ?? "Something went wrong") }
+      }
+      catch (err) { setSnack(err?.message ?? "Something went wrong") }
       finally { setTeleLinking(false) }
     } else {
       setTeleUnLinking(true)
@@ -175,7 +174,8 @@ function Notifications({setSnack}) {
         setTeleLinked(false)
         setTeleId("")
         setSnack("Telegram Account Disconnected")
-      } catch (err) { setSnack(err?.message ?? "Something went wrong") }
+      }
+      catch (err) { setSnack(err?.message ?? "Something went wrong") }
       finally { setTeleUnLinking(false) }
     }
   }
