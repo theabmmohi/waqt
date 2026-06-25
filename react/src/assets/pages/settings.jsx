@@ -82,8 +82,8 @@ function Profile({setSnack}) {
     }
     catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setSaving(false)}
   }
-  return (
-    <FormControl sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
+  return (<Stack sx={{ p: 2.5 }}>
+    <FormControl sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", alignItems: "center" }}>
         <Avatar src={avatar} onClick={() => fileRef.current.click()} sx={{ border: "2px solid", borderColor: "text.primary", cursor: "pointer", height: 72, width: 72 }}>{user?.user_metadata?.full_name?.[0]?.toUpperCase() ?? "?"}</Avatar>
         <Stack sx={{ px: 2.5 }}>
@@ -106,7 +106,7 @@ function Profile({setSnack}) {
         {saving ? "Saving..." : "Save"}
       </Button>
     </FormControl>
-  )
+  </Stack>)
 }
 
 function Notifications({setSnack}) {
@@ -196,7 +196,7 @@ function Notifications({setSnack}) {
   }, [])
   return (
     <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
-      <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 2.5, p: 2.5, gap: 2.5 }}>
+      <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
         <Stack sx={{ flex: 1 }}>
           <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><WebhookIcon sx={{ fontSize: 24 }}/>Browser Notifications</Typography>
           <Typography sx={{ color: "text.secondary" }}>
@@ -210,7 +210,7 @@ function Notifications({setSnack}) {
           }
         </Stack>
       </Stack>
-      <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2.5, p: 2.5, gap: 2.5 }}>
+      <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
         <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><TelegramIcon sx={{ fontSize: 24 }}/> Telegram Notifications</Typography>
         <Stack sx={{ "& .MuiTypography-root": { color: "text.secondary" } }}>
           {teleLoading ?
@@ -246,18 +246,18 @@ function Preferences({setSnack}) {
   const save = async () => {
     
   }
-  return (
-    <FormControl sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
+  return (<Stack sx={{ p: 2.5 }}>
+    <FormControl sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
-        <Typography>Language:</Typography>
-        <ToggleButtonGroup size="small">
+        <Typography sx={{ minWidth: "50%" }}>Language:</Typography>
+        <ToggleButtonGroup fullWidth size="small" sx={{ flex: 1 }}>
           <ToggleButton>English</ToggleButton>
           <ToggleButton>বাংলা</ToggleButton>
         </ToggleButtonGroup>
       </Stack>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
-        <Typography>Time Format:</Typography>
-        <ToggleButtonGroup size="small">
+        <Typography sx={{ minWidth: "50%" }}>Time Format:</Typography>
+        <ToggleButtonGroup fullWidth size="small" sx={{ flex: 1 }}>
           <ToggleButton>12H</ToggleButton>
           <ToggleButton>24H</ToggleButton>
         </ToggleButtonGroup>
@@ -266,7 +266,7 @@ function Preferences({setSnack}) {
         {saving ? "Saving..." : "Save"}
       </Button>
     </FormControl>
-  )
+  </Stack>)
 }
 
 function Security({setSnack}) {
