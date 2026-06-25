@@ -62,6 +62,14 @@ async function notify (message) {
   }
 }
 
+async function getUser(req) {
+  const token = req.headers.authorization?.replace("Bearer ", "")
+  if (!token) throw new Error("Unauthorized — Token Required")
+  const { data, error } = await supabase.auth.getUser(token)
+  if (error) throw new Error(error)
+  return data.user
+}
+
 
 
 
@@ -87,23 +95,20 @@ server.post("/webhook/telegram", async (req, res) => {
         parse_mode: "Markdown"
       })
     })
-  } catch (err) {console.error("Error At /webhook/telegram: ", err)}
+  } catch (err) { console.error("Error At /webhook/telegram: ", err) }
 })
 
-server.post("/settings/notifications/webPush/getPublic", async (req, res) => {
+server.post("/settings/notifications/webPush/getPublic", (req, res) => {
   res.json({ key: process.env.VAPID_PUBLIC })
 })
 
 server.post("/settings/notifications/webPush/subscribe", async (req, res) => {
   try {
-    const token = req.headers.authorization?.replace("Bearer ", "")
-    if (!token) throw new Error("Unauthorized - Token Required")
-    const { data, error } = await supabase.auth.getUser(token)
-    if (error) throw new Error(error.message)
+    const user = await getUser(req)
     const { subscription } = req.body
-    if (!subscription) throw new Error("No subscription provided")
-    await supabase.auth.admin.updateUserById(data.user.id, {
-      user_metadata: { ...data.user.user_metadata, pushSubscription: subscription }
+    if (!subscription) throw new Error("No Subscription Provided")
+    await supabase.auth.admin.updateUserById(user.id, {
+      user_metadata: { ...user.user_metadata, pushSubscription: subscription }
     })
     res.json({
       success: true,
@@ -115,20 +120,33 @@ server.post("/settings/notifications/webPush/subscribe", async (req, res) => {
   })}
 })
 
+server.post("/settings/notifications/webPush/unsubscribe", async (req, res) => {
+  try {
+    const user = await getUser(req)
+    await supabase.auth.admin.updateUserById(user.id, {
+      user_metadata: { ...user.user_metadata, pushSubscription: null }
+    })
+    res.json({
+      success: true,
+      message: "WebPush Unsubscribed"
+    })
+  } catch (err) {res.json({
+    success: false,
+    message: err?.message ?? "Server Error"
+  })}
+})
+
 server.post("/settings/notifications/telegram/validateID", async (req, res) => {
   try {
-    const token = req.headers.authorization?.replace("Bearer ", "")
-    if (!token) throw new Error("Unauthorized - Token Required")
-    const { data, error } = await supabase.auth.getUser(token)
-    if (error) throw new Error(error.message)
-    const chatID = data.user?.user_metadata?.teleChatId
-    if (!chatID) throw new Error("No Telegram Chat ID Provided In This Account")
+    const user = await getUser(req)
+    const chatID = user.user_metadata?.teleChatId
+    if (!chatID) throw new Error("No Telegram Chat ID Found In This Account")
     const resp = await fetch(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: chatID,
-        text: `Your telegram is now connected with your Waqt account ${data.user.email}`,
+        text: `Your Telegram is now connected with your Waqt account (${user.email})`,
         parse_mode: "Markdown"
       })
     })

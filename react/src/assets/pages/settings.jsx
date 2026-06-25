@@ -48,9 +48,9 @@ import SecurityIcon from "@mui/icons-material/Security"
 import TelegramIcon from "@mui/icons-material/Telegram"
 import DevicesIcon from "@mui/icons-material/Devices"
 import WebhookIcon from "@mui/icons-material/Webhook"
+import LinkOffIcon from "@mui/icons-material/LinkOff"
 import PersonIcon from "@mui/icons-material/Person"
 import LinkIcon from "@mui/icons-material/Link"
-import LinkOffIcon from "@mui/icons-material/LinkOff"
 import SaveIcon from "@mui/icons-material/Save"
 import TuneIcon from "@mui/icons-material/Tune"
 import KeyIcon from "@mui/icons-material/Key"
@@ -59,11 +59,11 @@ function Profile({setSnack}) {
   const { user } = useContext(Theme)
   const fileRef = useRef()
   const email = user?.email ?? ""
-  const [name, setName]       = useState(user?.user_metadata?.full_name  ?? "")
-  const [bio, setBio]         = useState(user?.user_metadata?.bio        ?? "")
-  const [avatar, setAvatar]   = useState(user?.user_metadata?.avatar_url ?? "")
+  const [name, setName]     = useState(user?.user_metadata?.full_name  ?? "")
+  const [bio, setBio]       = useState(user?.user_metadata?.bio        ?? "")
+  const [avatar, setAvatar] = useState(user?.user_metadata?.avatar_url ?? "")
   const [saving, setSaving] = useState(false)
-  const [file, setFile]       = useState(null)
+  const [file, setFile]     = useState(null)
   const save = async () => {
     setSaving(true)
     try {
@@ -79,7 +79,9 @@ function Profile({setSnack}) {
       const { error } = await Supabase.auth.updateUser({ data: { full_name: name.trim(), bio: bio.trim(), avatar_url } })
       if (error) throw error
       setSnack("Profile Saved")
-    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setSaving(false)}
+    }
+    catch (err) { setSnack(err?.message ?? "Sorry, Internal Error") }
+    finally { setSaving(false) }
   }
   return (
     <FormControl sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
@@ -100,7 +102,7 @@ function Profile({setSnack}) {
       </Stack>
       <TextField size="small" label="Full Name" value={name} onChange={e => setName(e.target.value)}/>
       <TextField size="small" label="Email" value={email} disabled slotProps={{ input: { readOnly: true } }} helperText="Email cannot be changed"/>
-      <TextField size="small" label="Bio" value={bio} multiline rows={4} onChange={e => {if (e.target.value.length <= 160) setBio(e.target.value)}} helperText={bio.length !== 160 ? `${bio.length}/160` : `Max Character Limit Reached`}/>
+      <TextField size="small" label="Bio" value={bio} multiline rows={4} onChange={e => { if (e.target.value.length <= 160) setBio(e.target.value) }} helperText={bio.length !== 160 ? `${bio.length}/160` : "Max Character Limit Reached"}/>
       <Button disableElevation onClick={save} disabled={saving} variant={saving ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={saving ? <CircularProgress size={14}/> : <SaveIcon/>}>
         {saving ? "Saving..." : "Save"}
       </Button>
@@ -112,26 +114,39 @@ function Notifications({setSnack}) {
   const { user } = useContext(Theme)
   const [browEnabled, setBrowEnabled]     = useState(false)
   const [browLoading, setBrowLoading]     = useState(false)
-  const [teleLoading, setTeleLoading]     = useState(true )
+  const [teleLoading, setTeleLoading]     = useState(true)
   const [teleLinking, setTeleLinking]     = useState(false)
   const [teleUnLinking, setTeleUnLinking] = useState(false)
   const [teleLinked, setTeleLinked]       = useState(false)
   const [teleId, setTeleId]               = useState("")
   const toggleBrow = async () => {
-    if (!("Notification" in window)) return setSnack("Browser notifications not supported")
+    if (!("Notification" in window) || !("serviceWorker" in navigator))
+      return setSnack("Push notifications not supported on this device")
+    setBrowLoading(true)
     try {
-      setBrowLoading(true)
-      if (browEnabled) setSnack("Disable notifications in your browser site settings")
-      else {
-        const result = await Notification.requestPermission()
-        if (result === "granted") {
-          setBrowEnabled(true)
-          setSnack("Browser notifications enabled")
-        } else setSnack("Permission denied — allow notifications in browser settings")
+      if (browEnabled) {
+        const reg = await navigator.serviceWorker.ready
+        const subscription = await reg.pushManager.getSubscription()
+        if (subscription) await subscription.unsubscribe()
+        await api.post("/settings/notifications/webPush/unsubscribe")
+        setBrowEnabled(false)
+        setSnack("Browser notifications disabled")
+      } else {
+        const { data: { key } } = await api.post("/settings/notifications/webPush/getPublic")
+        const reg = await navigator.serviceWorker.ready
+        const subscription = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: key
+        })
+        const { data } = await api.post("/settings/notifications/webPush/subscribe", { subscription })
+        if (!data.success) throw new Error(data.message)
+        setBrowEnabled(true)
+        setSnack("Browser notifications enabled")
       }
-    }
-    catch (err) { setSnack(err?.message ?? "Something went wrong") }
-    finally { setBrowLoading(false) }
+    } catch (err) {
+      if (err.name === "NotAllowedError") setSnack("Permission denied — allow notifications in browser settings")
+      else setSnack(err?.message ?? "Something went wrong")
+    } finally { setBrowLoading(false) }
   }
   const teleSubmit = async (e) => {
     e.preventDefault()
@@ -150,8 +165,7 @@ function Notifications({setSnack}) {
         }
         setTeleLinked(true)
         setSnack(data.message)
-      }
-      catch (err) { setSnack(err?.message ?? "Something went wrong") }
+      } catch (err) { setSnack(err?.message ?? "Something went wrong") }
       finally { setTeleLinking(false) }
     } else {
       setTeleUnLinking(true)
@@ -161,17 +175,22 @@ function Notifications({setSnack}) {
         setTeleLinked(false)
         setTeleId("")
         setSnack("Telegram Account Disconnected")
-      }
-      catch (err) { setSnack(err?.message ?? "Something went wrong") }
+      } catch (err) { setSnack(err?.message ?? "Something went wrong") }
       finally { setTeleUnLinking(false) }
     }
   }
   useEffect(() => {
     const teleChatId = user?.user_metadata?.teleChatId
-    if ("Notification" in window) setBrowEnabled(Notification.permission === "granted")
     if (teleChatId) {
       setTeleLinked(true)
       setTeleId(teleChatId)
+    }
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.pushManager.getSubscription().then(sub => {
+          setBrowEnabled(!!sub)
+        })
+      })
     }
     setTeleLoading(false)
   }, [])
@@ -181,7 +200,7 @@ function Notifications({setSnack}) {
         <Stack sx={{ flex: 1 }}>
           <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><WebhookIcon sx={{ fontSize: 24 }}/>Browser Notifications</Typography>
           <Typography sx={{ color: "text.secondary" }}>
-            {browEnabled? "Notifications are enabled." : "Allow Waqt sending reminders from browser."}
+            {browEnabled ? "Notifications are enabled." : "Allow Waqt sending reminders from browser."}
           </Typography>
         </Stack>
         <Stack sx={{ justifyContent: "center" }}>
@@ -209,7 +228,7 @@ function Notifications({setSnack}) {
                 </Stack>)
               }
               <FormControl component="form" onSubmit={teleSubmit} sx={{ flexDirection: "row", display: "flex", gap: 1 }}>
-                <TextField required size="small" label="Chat ID" type="number" disabled={teleLinked} value={teleId} onChange={e => setTeleId(e.target.value)}></TextField>
+                <TextField required size="small" label="Chat ID" type="number" disabled={teleLinked} value={teleId} onChange={e => setTeleId(e.target.value)}/>
                 <Button disableElevation type="submit" disabled={teleLinking || teleUnLinking} variant={(teleLinking || teleUnLinking) ? "outlined" : "contained"} startIcon={teleLinked ? (teleUnLinking ? <CircularProgress size={14}/> : <LinkOffIcon/>) : (teleLinking ? <CircularProgress size={14}/> : <LinkIcon/>)}>
                   {teleLinked ? (teleUnLinking ? "Unlinking..." : "Unlink") : (teleLinking ? "Linking..." : "Link")}
                 </Button>
@@ -223,14 +242,12 @@ function Notifications({setSnack}) {
 }
 
 function Preferences({setSnack}) {
-useEffect(() => setSnack("preferences"), [])
   return (
     <>preferences</>
   )
 }
 
 function Security({setSnack}) {
-useEffect(() => setSnack("security"), [])
   return (
     <>security</>
   )
@@ -245,7 +262,7 @@ export default function Settings() {
   return (
     <>
       <Stack direction={{ xs: "column", sm: "row" }} sx={{ height: "100%" }}>
-        <ToggleButtonGroup fullWidth={mobile} exclusive orientation={mobile ? "horizontal" : "vertical"} value={active} onChange={(_, x) => {if(x) navigate(`/settings/${x}`, { replace: !true })}} sx={{ "& .MuiToggleButton-root" : { borderRadius: 0 } }}>
+        <ToggleButtonGroup fullWidth={mobile} exclusive orientation={mobile ? "horizontal" : "vertical"} value={active} onChange={(_, x) => { if (x) navigate(`/settings/${x}`, { replace: true }) }} sx={{ "& .MuiToggleButton-root": { borderRadius: 0 } }}>
           <ToggleButton value="profile"><PersonIcon/></ToggleButton>
           <ToggleButton value="notifications"><NotificationsIcon/></ToggleButton>
           <ToggleButton value="preferences"><TuneIcon/></ToggleButton>
