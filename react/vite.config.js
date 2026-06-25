@@ -1,13 +1,14 @@
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 import { VitePWA } from "vite-plugin-pwa"
-
-
 export default defineConfig({
   plugins: [
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.js",
       includeAssets: [
         "favicon-16x16.png",
         "favicon-32x32.png",
@@ -34,14 +35,8 @@ export default defineConfig({
           }
         ]
       },
-      workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png,ico}"],
-        navigateFallback: "/index.html",
-        navigateFallbackDenylist: [/^\/api\//]
-      },
-      devOptions: {
-        enabled: false
-      }
+      injectManifest: { globPatterns: ["**/*.{js,css,html,svg,png,ico}"] },
+      devOptions: { enabled: false }
     })
   ],
   server: { port: 5000 },

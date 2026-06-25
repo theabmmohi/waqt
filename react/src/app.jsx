@@ -5,6 +5,7 @@ import {
 import {
   useLocation,
   useNavigate,
+  Navigate,
   Routes,
   Route
 } from "react-router-dom"
@@ -41,25 +42,25 @@ import MenuIcon from "@mui/icons-material/Menu"
 export default function App() {
   const navigate = useNavigate()
   const location = useLocation()
-  
   const { dark, toggle, user } = useContext(Theme)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  
   const closeDrawer = () => setDrawerOpen(false)
   const openDrawer = () => setDrawerOpen(true)
-  
   const handleLogout = async () => {
-    await Supabase.auth.signOut()
+    try {
+      if ("serviceWorker" in navigator) {
+        const reg = await navigator.serviceWorker.ready
+        const sub = await reg.pushManager.getSubscription()
+        if (sub) await sub.unsubscribe()
+      }
+    } catch (err) {} finally {await Supabase.auth.signOut()}
     closeDrawer()
     navigate("/")
   }
-  
   const navs = [
     { icon: <DashboardIcon/>, label: "Dashboard", route: "/" }
   ]
-  
   const isAuth = location.pathname === "/auth"
-  
   return (
     <Box sx={{ flexDirection: "column", height: "100dvh", display: "flex", width: "100vw" }}>
       {!isAuth && (
@@ -158,8 +159,8 @@ export default function App() {
         )}
         <Box sx={{ height: "100%", position: "relative" }}>
           <Routes>
-            <Route path="/auth" element={<Auth/>}/>
-            <Route path="/settings/*" element={<Settings/>}/>
+            <Route path="/auth" element={user ? <Navigate to="/" replace/> : <Auth/>}/>
+            <Route path="/settings/*" element={!user ? <Navigate to="/" replace/> : <Settings/>}/>
             <Route path="/*" element={user ? <Dashboard/> : <Auth/>}/>
           </Routes>
         </Box>

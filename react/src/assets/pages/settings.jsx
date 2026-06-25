@@ -262,7 +262,7 @@ export default function Settings() {
   return (
     <>
       <Stack direction={{ xs: "column", sm: "row" }} sx={{ height: "100%" }}>
-        <ToggleButtonGroup fullWidth={mobile} exclusive orientation={mobile ? "horizontal" : "vertical"} value={active} onChange={(_, x) => { if (x) navigate(`/settings/${x}`, { replace: true }) }} sx={{ "& .MuiToggleButton-root": { borderRadius: 0 } }}>
+        <ToggleButtonGroup fullWidth={mobile} exclusive orientation={mobile ? "horizontal" : "vertical"} value={active} onChange={(_, x) => { if (x) navigate(`/settings/${x}`, { replace: !true }) }} sx={{ "& .MuiToggleButton-root": { borderRadius: 0 } }}>
           <ToggleButton value="profile"><PersonIcon/></ToggleButton>
           <ToggleButton value="notifications"><NotificationsIcon/></ToggleButton>
           <ToggleButton value="preferences"><TuneIcon/></ToggleButton>
