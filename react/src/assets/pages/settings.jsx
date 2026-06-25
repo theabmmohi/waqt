@@ -14,6 +14,7 @@ import {
   ToggleButtonGroup,
   CircularProgress,
   InputAdornment,
+  Autocomplete,
   ToggleButton,
   FormControl,
   InputLabel,
@@ -83,7 +84,7 @@ function Profile({setSnack}) {
     catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setSaving(false)}
   }
   return (<Stack sx={{ p: 2.5 }}>
-    <FormControl sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
+    <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", alignItems: "center" }}>
         <Avatar src={avatar} onClick={() => fileRef.current.click()} sx={{ border: "2px solid", borderColor: "text.primary", cursor: "pointer", height: 72, width: 72 }}>{user?.user_metadata?.full_name?.[0]?.toUpperCase() ?? "?"}</Avatar>
         <Stack sx={{ px: 2.5 }}>
@@ -105,7 +106,7 @@ function Profile({setSnack}) {
       <Button disableElevation onClick={save} disabled={saving} variant={saving ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={saving ? <CircularProgress size={14}/> : <SaveIcon/>}>
         {saving ? "Saving..." : "Save"}
       </Button>
-    </FormControl>
+    </Stack>
   </Stack>)
 }
 
@@ -243,29 +244,87 @@ function Notifications({setSnack}) {
 
 function Preferences({setSnack}) {
   const [saving, setSaving] = useState(false)
+  const [calcMethod, setCalcMethod] = useState("")
+  const [language, setLanguage] = useState("en")
+  const [timeFormat, setTimeFormat] = useState("12h")
+  const [locationType, setLocationType] = useState("gps")
+  const [cityOpts, setCityOpts] = useState([])
+  const [cityLoading, setCityLoading] = useState(false)
+  const [city, setCity] = useState(null)
+  const [cityInput, setCityInput] = useState("")
+  const timerRef = useRef()
+  const citySearch = (query) => {
+    clearTimeout(timerRef.current)
+    if (!query || query.length < 2) return setCityOpts([])
+    timerRef.current = setTimeout(async() => {
+      setCityLoading(true)
+      try{
+        const resp = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=10&language=en&format=json`)
+        const data = await resp.json()
+        setCityOpts(data.results ?? [])
+      } catch (err) {setCityOpts([])} finally {setCityLoading(false)}
+    }, 500)
+  }
   const save = async () => {
     
   }
   return (<Stack sx={{ p: 2.5 }}>
-    <FormControl sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
+    <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
-        <Typography sx={{ minWidth: "50%" }}>Language:</Typography>
-        <ToggleButtonGroup fullWidth size="small" sx={{ flex: 1 }}>
-          <ToggleButton>English</ToggleButton>
-          <ToggleButton>বাংলা</ToggleButton>
+        <Typography sx={{ minWidth: "50%" }}>Language :</Typography>
+        <ToggleButtonGroup exclusive fullWidth size="small" sx={{ flex: 1 }} value={language} onChange={(_, v) => { if (v) setLanguage(v) }}>
+          <ToggleButton value="en">English</ToggleButton>
+          <ToggleButton value="bn">বাংলা</ToggleButton>
         </ToggleButtonGroup>
       </Stack>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
-        <Typography sx={{ minWidth: "50%" }}>Time Format:</Typography>
-        <ToggleButtonGroup fullWidth size="small" sx={{ flex: 1 }}>
-          <ToggleButton>12H</ToggleButton>
-          <ToggleButton>24H</ToggleButton>
+        <Typography sx={{ minWidth: "50%" }}>Time Format :</Typography>
+        <ToggleButtonGroup exclusive fullWidth size="small" sx={{ flex: 1 }} value={timeFormat} onChange={(_, v) => { if (v) setTimeFormat(v) }}>
+          <ToggleButton value="12h">12H</ToggleButton>
+          <ToggleButton value="24h">24H</ToggleButton>
         </ToggleButtonGroup>
       </Stack>
+      <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
+        <Typography sx={{ minWidth: "50%" }}>Location Type :</Typography>
+        <ToggleButtonGroup exclusive fullWidth size="small" sx={{ flex: 1 }} value={locationType} onChange={(_, v) => { if (v) setLocationType(v) }}>
+          <ToggleButton value="gps">GPS</ToggleButton>
+          <ToggleButton value="manual">Manual</ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
+      <Stack>
+        {locationType === "gps" ? (
+          <Stack sx={{ flexDirection: "row", gap: 2.5 }}>
+            <TextField fullWidth size="small" label="Coordinates" disabled slotProps={{ input: { readOnly: true } }}></TextField>
+            <Button variant="contained" disableElevation startIcon={<MyLocationIcon/>}>Get</Button>
+          </Stack>
+        ) : (
+          <Autocomplete
+            options={cityOpts}
+            loading={cityLoading}
+            value={city}
+            inputValue={cityInput}
+            onChange={(_, v) => setCity(v)}
+            onInputChange={(_, v, reason) => { setCityInput(v); if (reason === "input") citySearch(v) }}
+            getOptionLabel={(o) => [o.name, o.admin1, o.admin2, o.admin3, o.country_code].filter(Boolean).join(", ")}
+            getOptionKey={(o) => o.id}
+            isOptionEqualToValue={(o, v) => o.id === v.id}
+            filterOptions={(x) => x}
+            renderInput={(params) => <TextField {...params} size="small" label="Search City"/>}
+          />
+        )}
+      </Stack>
+      <FormControl>
+        <InputLabel id="calcMethodLabel">Calculation Method</InputLabel>
+        <Select labelId="calcMethodLabel" id="calcMethod" label="Calculation Method" value={calcMethod} onChange={(e) => setCalcMethod(e.target.value)}>
+          <MenuItem value="a">A</MenuItem>
+          <MenuItem value="b">B</MenuItem>
+          <MenuItem value="c">C</MenuItem>
+        </Select>
+      </FormControl>
       <Button disableElevation onClick={save} disabled={saving} variant={saving ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={saving ? <CircularProgress size={14}/> : <SaveIcon/>}>
         {saving ? "Saving..." : "Save"}
       </Button>
-    </FormControl>
+    </Stack>
   </Stack>)
 }
 
