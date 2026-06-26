@@ -273,10 +273,9 @@ function Preferences({setSnack}) {
     if (locationType && !coords) return setSnack("Plese Set Your Current Location. Required For Calculation")
     setSaving(true)
     try {
-      const cityName = locationType === "manual" && city ? [city.name, city.admin1, city.admin2, city.admin3, city.country_code].filter(Boolean).join(", ") : null
       const { error } = await Supabase.auth.updateUser({ data: {
         language, timeFormat, locationType,
-        coords, cityName, calcMethod, madhab
+        coords, city, calcMethod, madhab
       } })
       if (error) throw error
       setSnack("Preferences Saved")
@@ -289,9 +288,13 @@ function Preferences({setSnack}) {
     if (data.timeFormat)   setTimeFormat(data.timeFormat)
     if (data.locationType) setLocationType(data.locationType)
     if (data.coords)       setCoords(data.coords)
-    if (data.cityName)     setCityInput(data.cityName)
     if (data.calcMethod)   setCalcMethod(data.calcMethod)
     if (data.madhab)       setMadhab(data.madhab)
+    if (data.city) {
+      setCity(data.city)
+      setCityInput([data.city.name, data.city.admin1, data.city.admin2, data.city.admin3, data.city.country_code].filter(Boolean).join(", "))
+      if (data.coords) setCoords(data.coords)
+    }
   }, [])
   return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
