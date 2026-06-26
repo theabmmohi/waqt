@@ -309,8 +309,8 @@ function Preferences({setSnack}) {
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
         <Typography sx={{ minWidth: "50%" }}>Time Format :</Typography>
         <ToggleButtonGroup exclusive fullWidth size="small" sx={{ flex: 1 }} value={timeFormat} onChange={(_, v) => { if (v) setTimeFormat(v) }}>
-          <ToggleButton value="12h">12H</ToggleButton>
           <ToggleButton value="24h">24H</ToggleButton>
+          <ToggleButton value="12h">12H</ToggleButton>
         </ToggleButtonGroup>
       </Stack>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
