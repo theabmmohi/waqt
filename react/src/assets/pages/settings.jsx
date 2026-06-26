@@ -1,34 +1,16 @@
 import {
-  useLocation,
-  useNavigate,
-  Routes,
-  Route
+  useLocation, useNavigate,
+  Routes, Route
 } from "react-router-dom"
 import {
-  useContext,
-  useEffect,
-  useRef,
-  useState
+  useContext, useEffect,
+  useRef, useState
 } from "react"
 import {
-  ToggleButtonGroup,
-  CircularProgress,
-  Autocomplete,
-  ToggleButton,
-  FormControl,
-  InputLabel,
-  Typography,
-  TextField,
-  MenuItem,
-  Snackbar,
-  Divider,
-  Avatar,
-  Select,
-  Button,
-  Switch,
-  Slide,
-  Stack,
-  Link
+  ToggleButtonGroup, CircularProgress, Autocomplete,
+  ToggleButton, FormControl, InputLabel, Typography,
+  TextField, MenuItem, Snackbar, Divider, Avatar,
+  Select, Button, Switch, Slide, Stack, Link
 } from "@mui/material"
 import useMediaQuery from "@mui/material/useMediaQuery"
 import { useTheme } from "@mui/material/styles"
@@ -37,12 +19,16 @@ import { Theme } from "@/react"
 import api from "@/api"
 
 import NotificationsIcon from "@mui/icons-material/Notifications"
+import FingerprintIcon from "@mui/icons-material/Fingerprint"
+import AccessTimeIcon from "@mui/icons-material/AccessTime"
 import MyLocationIcon from "@mui/icons-material/MyLocation"
+import LockResetIcon from "@mui/icons-material/LockReset"
 import SecurityIcon from "@mui/icons-material/Security"
 import TelegramIcon from "@mui/icons-material/Telegram"
-import WebhookIcon from "@mui/icons-material/Webhook"
 import LinkOffIcon from "@mui/icons-material/LinkOff"
+import WebhookIcon from "@mui/icons-material/Webhook"
 import PersonIcon from "@mui/icons-material/Person"
+import LoginIcon from "@mui/icons-material/Login"
 import LinkIcon from "@mui/icons-material/Link"
 import SaveIcon from "@mui/icons-material/Save"
 import TuneIcon from "@mui/icons-material/Tune"
@@ -102,11 +88,11 @@ function Profile({setSnack}) {
 
 function Notifications({setSnack}) {
   const { user } = useContext(Theme)
+  const [teleUnLinking, setTeleUnLinking] = useState(false)
   const [browEnabled, setBrowEnabled]     = useState(false)
   const [browLoading, setBrowLoading]     = useState(false)
   const [teleLoading, setTeleLoading]     = useState(true )
   const [teleLinking, setTeleLinking]     = useState(false)
-  const [teleUnLinking, setTeleUnLinking] = useState(false)
   const [teleLinked, setTeleLinked]       = useState(false)
   const [teleId, setTeleId]               = useState("")
   const toggleBrow = async () => {
@@ -198,7 +184,7 @@ function Notifications({setSnack}) {
         </Stack>
       </Stack>
       <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
-        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><TelegramIcon sx={{ fontSize: 24 }}/> Telegram Notifications</Typography>
+        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><TelegramIcon sx={{ fontSize: 24 }}/>Telegram Notifications</Typography>
         <Stack sx={{ "& .MuiTypography-root": { color: "text.secondary" } }}>
           {teleLoading ?
             <CircularProgress size={50} sx={{ alignSelf: "center" }}/> :
@@ -381,7 +367,24 @@ function Preferences({setSnack}) {
 
 function Security({setSnack}) {
   return (
-    <>security</>
+    <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
+      <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
+        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><LockResetIcon sx={{ fontSize: 24 }}/>Change Password</Typography>
+        
+      </Stack>
+      <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
+        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><FingerprintIcon sx={{ fontSize: 24 }}/>Manage Passkeys</Typography>
+        
+      </Stack>
+      <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
+        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><LoginIcon sx={{ fontSize: 24 }}/>Manage Sign-Ins</Typography>
+        
+      </Stack>
+      <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
+        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><AccessTimeIcon sx={{ fontSize: 24 }}/>Manage Sessions</Typography>
+        
+      </Stack>
+    </Stack>
   )
 }
 
