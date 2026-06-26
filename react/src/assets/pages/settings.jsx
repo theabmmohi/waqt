@@ -71,8 +71,7 @@ function Profile({setSnack}) {
       const { error } = await Supabase.auth.updateUser({ data: { full_name: name.trim(), bio: bio.trim(), avatar_url } })
       if (error) throw error
       setSnack("Profile Saved")
-    }
-    catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setSaving(false)}
+    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setSaving(false)}
   }
   return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
@@ -155,9 +154,7 @@ function Notifications({setSnack}) {
         }
         setTeleLinked(true)
         setSnack(data.message)
-      }
-      catch (err) { setSnack(err?.message ?? "Something went wrong") }
-      finally { setTeleLinking(false) }
+      } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setTeleLinking(false)}
     } else {
       setTeleUnLinking(true)
       try {
@@ -166,9 +163,7 @@ function Notifications({setSnack}) {
         setTeleLinked(false)
         setTeleId("")
         setSnack("Telegram Account Disconnected")
-      }
-      catch (err) { setSnack(err?.message ?? "Something went wrong") }
-      finally { setTeleUnLinking(false) }
+      } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally { setTeleUnLinking(false) }
     }
   }
   useEffect(() => {
@@ -234,32 +229,31 @@ function Notifications({setSnack}) {
 }
 
 function Preferences({setSnack}) {
-  const [language, setLanguage] = useState("en")
-  const [timeFormat, setTimeFormat] = useState("12h")
-  const [locationType, setLocationType] = useState("")
-  const [calcMethod, setCalcMethod] = useState("")
-  const [city, setCity] = useState(null)
-  const [coords, setCoords] = useState(null)
+  const { user } = useContext(Theme)
+  const [locationType, setLocationType] =   useState("")
+  const [timeFormat, setTimeFormat] =       useState("12h")
+  const [calcMethod, setCalcMethod] =       useState("Karachi")
+  const [language, setLanguage] =           useState("en")
+  const [madhab, setMadhab] =               useState("hanafi")
+  const [coords, setCoords] =               useState(null)
   const [coordsLoading, setCoordsLoading] = useState(false)
-  const [cityOpts, setCityOpts] = useState([])
-  const [cityLoading, setCityLoading] = useState(false)
-  const [cityInput, setCityInput] = useState("")
-  const [saving, setSaving] = useState(false)
+  const [cityLoading, setCityLoading] =     useState(false)
+  const [cityInput, setCityInput] =         useState("")
+  const [cityOpts, setCityOpts] =           useState([])
+  const [saving, setSaving] =               useState(false)
+  const [city, setCity] =                   useState(null)
   const timerRef = useRef()
   const getCoords = () => {
     if (!navigator.geolocation) return setSnack("This Device Doesn't Support GPS")
     setCoordsLoading(true)
-    navigate.geolocation.getCurrentPosition(
+    navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setCoords({
-          lat: pos.coords.latitude,
-          lon: pos.coords.longitude
-        })
-        setCityLoading(false)
+        setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude })
+        setCoordsLoading(false)
       },
       (err) => {
         setSnack(err.message ?? "Failed To Get Location")
-        setCityLoading(false)
+        setCoordsLoading(false)
       }
     )
   }
@@ -276,8 +270,29 @@ function Preferences({setSnack}) {
     }, 250)
   }
   const save = async () => {
-    
+    if (locationType && !coords) return setSnack("Plese Set Your Current Location. Required For Calculation")
+    setSaving(true)
+    try {
+      const cityName = locationType === "manual" && city ? [city.name, city.admin1, city.admin2, city.admin3, city.country_code].filter(Boolean).join(", ") : null
+      const { error } = await Supabase.auth.updateUser({ data: {
+        language, timeFormat, locationType,
+        coords, cityName, calcMethod, madhab
+      } })
+      if (error) throw error
+      setSnack("Preferences Saved")
+    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setSaving(false)}
   }
+  useEffect(() => {
+    const data = user?.user_metadata
+    if (!data) return
+    if (data.language)     setLanguage(data.language)
+    if (data.timeFormat)   setTimeFormat(data.timeFormat)
+    if (data.locationType) setLocationType(data.locationType)
+    if (data.coords)       setCoords(data.coords)
+    if (data.cityName)     setCityInput(data.cityName)
+    if (data.calcMethod)   setCalcMethod(data.calcMethod)
+    if (data.madhab)       setMadhab(data.madhab)
+  }, [])
   return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
@@ -305,8 +320,8 @@ function Preferences({setSnack}) {
         {locationType === "gps" && (
           <Stack sx={{ flexDirection: "row", gap: 2.5 }}>
             <TextField fullWidth size="small" label="Coordinates" disabled value={coords ? `${coords.lat}, ${coords.lon}` : ""} slotProps={{ input: { readOnly: true } }}></TextField>
-            <Button disableElevation onClick={getCoords} disabled={coordsLoading} variant={coordsLoading ? "outlined" : "contained"} startIcon={coordsLoading ? <CircularProgress size={14}/> : <MyLocationIcon/>}>
-              {coordsLoading ? "Getting..." : "Get"}
+            <Button disableElevation onClick={getCoords} disabled={coordsLoading} variant={coordsLoading ? "outlined" : "contained"} sx={{ px: 2.5 }} startIcon={coordsLoading ? <CircularProgress size={14}/> : <MyLocationIcon/>}>
+              {coordsLoading ? "updating..." : "Update"}
             </Button>
           </Stack>
         )}
@@ -316,22 +331,40 @@ function Preferences({setSnack}) {
             loading={cityLoading}
             value={city}
             inputValue={cityInput}
-            onChange={(_, v) => setCity(v)}
             onInputChange={(_, v, reason) => { setCityInput(v); if (reason === "input") citySearch(v) }}
             getOptionLabel={(o) => [o.name, o.admin1, o.admin2, o.admin3, o.country_code].filter(Boolean).join(", ")}
             getOptionKey={(o) => o.id}
             isOptionEqualToValue={(o, v) => o.id === v.id}
             filterOptions={(x) => x}
-            renderInput={(params) => <TextField {...params} size="small" label="Search City"/>}
+            renderInput={(params) => <TextField {...params} size="small" label="Find City"/>}
+            onChange={(_, v) => {
+              setCity(v)
+              if (v) setCoords({ lat: v.latitude, lon: v.longitude })
+              else setCoords(null)
+            }}
           />
         )}
       </Stack>
       <FormControl>
         <InputLabel id="calcMethodLabel">Calculation Method</InputLabel>
         <Select labelId="calcMethodLabel" id="calcMethod" label="Calculation Method" value={calcMethod} onChange={(e) => setCalcMethod(e.target.value)}>
-          <MenuItem value="a">A</MenuItem>
-          <MenuItem value="b">B</MenuItem>
-          <MenuItem value="c">C</MenuItem>
+          <MenuItem value="MuslimWorldLeague">Muslim World League</MenuItem>
+          <MenuItem value="NorthAmerica">Islamic Society of North America</MenuItem>
+          <MenuItem value="Egyptian">Egyptian General Authority</MenuItem>
+          <MenuItem value="UmmAlQura">Umm al-Qura (Makkah)</MenuItem>
+          <MenuItem value="Karachi">Univ. of Islamic Sciences, Karachi</MenuItem>
+          <MenuItem value="Tehran">Institute of Geophysics, Tehran</MenuItem>
+          <MenuItem value="MoonsightingCommittee">Moonsighting Committee</MenuItem>
+          <MenuItem value="Singapore">Majlis Ugama Islam Singapura</MenuItem>
+        </Select>
+      </FormControl>
+      <FormControl>
+        <InputLabel id="madhabLabel">Madhab</InputLabel>
+        <Select labelId="madhabLabel" id="madhab" label="Madhab" value={madhab} onChange={(e) => setMadhab(e.target.value)}>
+          <MenuItem value="hanafi">Hanafi</MenuItem>
+          <MenuItem value="shafi">Shafi'i</MenuItem>
+          <MenuItem value="maliki">Maliki</MenuItem>
+          <MenuItem value="hanbali">Hanbali</MenuItem>
         </Select>
       </FormControl>
       <Button disableElevation onClick={save} disabled={saving} variant={saving ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={saving ? <CircularProgress size={14}/> : <SaveIcon/>}>

@@ -4,6 +4,9 @@ import webpush from "web-push"
 import express from "express"
 import cors from "cors"
 import "dotenv/config"
+import {
+  
+} from "adhan"
 
 const supabase = createClient(process.env.SB_URL, process.env.SB_SECRET)
 const server = express()
