@@ -270,7 +270,8 @@ function Preferences({setSnack}) {
     }, 250)
   }
   const save = async () => {
-    if (locationType && !coords) return setSnack("Plese Set Your Current Location. Required For Calculation")
+    if (locationType === "gps"    && !coords) return setSnack("Please set your current location. Required for calculation")
+    if (locationType === "manual" && !city  ) return setSnack("Please select a city. Required for calculation")
     setSaving(true)
     try {
       const { error } = await Supabase.auth.updateUser({ data: {
@@ -293,7 +294,7 @@ function Preferences({setSnack}) {
     if (data.madhab)       setMadhab(data.madhab)
     if (data.city) {
       setCity(data.city)
-      setCityInput([data.city.name, data.city.admin1, data.city.admin2, data.city.admin3, data.city.country_code].filter(Boolean).join(", "))
+      setCityInput([data.city.name, data.city.admin1, data.city.admin2, data.city.admin3, data.city.country].filter(Boolean).join(", "))
       if (data.coords) setCoords(data.coords)
     }
   }, [])
@@ -336,7 +337,7 @@ function Preferences({setSnack}) {
             value={city}
             inputValue={cityInput}
             onInputChange={(_, v, reason) => { setCityInput(v); if (reason === "input") citySearch(v) }}
-            getOptionLabel={(o) => [o.name, o.admin1, o.admin2, o.admin3, o.country_code].filter(Boolean).join(", ")}
+            getOptionLabel={(o) => [o.name, o.admin1, o.admin2, o.admin3, o.country].filter(Boolean).join(", ")}
             getOptionKey={(o) => o.id}
             isOptionEqualToValue={(o, v) => o.id === v.id}
             filterOptions={(x) => x}
