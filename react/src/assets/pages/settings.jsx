@@ -274,8 +274,9 @@ function Preferences({setSnack}) {
     setSaving(true)
     try {
       const { error } = await Supabase.auth.updateUser({ data: {
+        ...(locationType === "gps" ? {city: null} : {city}),
         language, timeFormat, locationType,
-        coords, city, calcMethod, madhab
+        coords, calcMethod, madhab
       } })
       if (error) throw error
       setSnack("Preferences Saved")
