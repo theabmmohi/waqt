@@ -230,7 +230,7 @@ function Notifications({setSnack}) {
 
 function Preferences({setSnack}) {
   const { user } = useContext(Theme)
-  const [locationType, setLocationType] =   useState("")
+  const [locationType, setLocationType] =   useState("gps")
   const [timeFormat, setTimeFormat] =       useState("12h")
   const [calcMethod, setCalcMethod] =       useState("Karachi")
   const [language, setLanguage] =           useState("en")
