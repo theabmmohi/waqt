@@ -30,6 +30,7 @@ import SecurityIcon from "@mui/icons-material/Security"
 import TelegramIcon from "@mui/icons-material/Telegram"
 import LinkOffIcon from "@mui/icons-material/LinkOff"
 import WebhookIcon from "@mui/icons-material/Webhook"
+import DeleteIcon from "@mui/icons-material/Delete"
 import PersonIcon from "@mui/icons-material/Person"
 import LoginIcon from "@mui/icons-material/Login"
 import LinkIcon from "@mui/icons-material/Link"
@@ -376,6 +377,7 @@ function Security({setSnack}) {
   const [seePass, setSeePass]           = useState(false)
   const [newPass, setNewPass]           = useState("")
   const [conPass, setConPass]           = useState("")
+  const [passkeys, setPasskeys]         = useState([])
   const updatePassword = async (e) => {
     e.preventDefault()
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
@@ -399,6 +401,18 @@ function Security({setSnack}) {
       setSnack(`Added Passkey${friendlyName ? `: ${friendlyName}` : ""}`)
     } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setPkAdding(false)}
   }
+  const removePasskey = async (id) => {
+    setSnack(id)
+  }
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data, error } = await Supabase.auth.passkey.list()
+        if (error) throw error
+        setPasskeys(data ?? [])
+      } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")}
+    })()
+  }, [])
   return (
     <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack component="form" onSubmit={updatePassword} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
@@ -417,7 +431,19 @@ function Security({setSnack}) {
       </Stack>
       <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
         <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><FingerprintIcon sx={{ fontSize: 24 }}/>Manage Passkeys</Typography>
-        
+        {passkeys.length === 0 ? (
+          <Typography>No Passkeys Added Yet</Typography>
+        ) : (
+          passkeys.map(passkey => (
+            <Stack key={passkey.id} sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5 }}>
+              <Stack sx={{ flex: 1 }}>
+                <Typography sx={{ fontWeight: 600 }}>{passkey.friendly_name}</Typography>
+                <Typography>Added:<span sx={{ fontFamily: "monospace" }}> {new Date(passkey.created_at).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"})} </span></Typography>
+              </Stack>
+              <IconButton onClick={() => removePasskey(passkey.id)} sx={{ alignSelf: "center" }}><DeleteIcon/></IconButton>
+            </Stack>
+          ))
+        )}
         <Button disableElevation onClick={addPasskey} disabled={pkAdding} variant={pkAdding ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={pkAdding ? <CircularProgress size={14}/> : <AddIcon/>}>
           {pkAdding ? "Adding..." : "Add Passkey"}
         </Button>
