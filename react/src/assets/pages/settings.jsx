@@ -399,8 +399,8 @@ function Security({setSnack}) {
     try {
       const { data, error } = await Supabase.auth.registerPasskey()
       if (error) throw error
-      const friendlyName = data?.friendly_name
-      setSnack(`Added Passkey${friendlyName ? `: ${friendlyName}` : ""}`)
+      setPasskeys(prev => [...prev, data])
+      setSnack(`Added Passkey${data?.friendlyName ? `: ${data.friendlyName}` : ""}`)
     } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setPkAdding(false)}
   }
   const renamePasskey = async () => {
