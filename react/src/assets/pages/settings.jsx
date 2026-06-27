@@ -7,11 +7,11 @@ import {
   useRef, useState
 } from "react"
 import {
-  ToggleButtonGroup, CircularProgress, InputAdornment,
-  Autocomplete, ToggleButton, FormControl, IconButton,
-  InputLabel, Typography, TextField, MenuItem,
-  Snackbar, Divider, Avatar, Select, Button,
-  Switch, Slide, Stack, Link
+  ToggleButtonGroup, CircularProgress, InputAdornment, DialogActions,
+  DialogContent, Autocomplete, ToggleButton, DialogTitle, Link,
+  FormControl, IconButton, InputLabel, Typography,
+  TextField, MenuItem, Snackbar, Divider, Avatar,
+  Dialog, Select, Button, Switch, Slide, Stack
 } from "@mui/material"
 import useMediaQuery from "@mui/material/useMediaQuery"
 import { useTheme } from "@mui/material/styles"
@@ -372,12 +372,13 @@ function Preferences({setSnack}) {
 }
 
 function Security({setSnack}) {
-  const [passUpdating, setPassUpdating] = useState(false)
-  const [pkAdding, setPkAdding]         = useState(false)
-  const [seePass, setSeePass]           = useState(false)
-  const [newPass, setNewPass]           = useState("")
-  const [conPass, setConPass]           = useState("")
-  const [passkeys, setPasskeys]         = useState([])
+  const [editingPasskey, setEditingPasskey] = useState(null)
+  const [passUpdating, setPassUpdating]     = useState(false)
+  const [pkAdding, setPkAdding]             = useState(false)
+  const [seePass, setSeePass]               = useState(false)
+  const [newPass, setNewPass]               = useState("")
+  const [conPass, setConPass]               = useState("")
+  const [passkeys, setPasskeys]             = useState([])
   const updatePassword = async (e) => {
     e.preventDefault()
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
@@ -440,13 +441,24 @@ function Security({setSnack}) {
                 <Typography sx={{ fontWeight: 600 }}>{passkey.friendly_name}</Typography>
                 <Typography>Added:<span sx={{ fontFamily: "monospace" }}> {new Date(passkey.created_at).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"})} </span></Typography>
               </Stack>
-              <IconButton onClick={() => removePasskey(passkey.id)} sx={{ alignSelf: "center" }}><DeleteIcon/></IconButton>
+              <IconButton onClick={() => setEditingPasskey(passkey)} sx={{ alignSelf: "center" }}><DeleteIcon/></IconButton>
             </Stack>
           ))
         )}
         <Button disableElevation onClick={addPasskey} disabled={pkAdding} variant={pkAdding ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={pkAdding ? <CircularProgress size={14}/> : <AddIcon/>}>
           {pkAdding ? "Adding..." : "Add Passkey"}
         </Button>
+        <Dialog open={Boolean(editingPasskey)} onClose={() => setEditingPasskey(null)}>
+          <DialogTitle>Edit Passkey</DialogTitle>
+          <DialogContent>
+            <TextField value={editingPasskey?.id}/>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditingPasskey(null)}>Cancel</Button>
+            <Button>Rename</Button>
+            <Button>Delete</Button>
+          </DialogActions>
+        </Dialog>
       </Stack>
       <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
         <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><LoginIcon sx={{ fontSize: 24 }}/>Manage Sign-Ins</Typography>
