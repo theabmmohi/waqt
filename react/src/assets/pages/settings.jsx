@@ -399,8 +399,9 @@ function Security({setSnack}) {
     try {
       const { data, error } = await Supabase.auth.registerPasskey()
       if (error) throw error
+      const fn = data?.friendly_name
       setPasskeys(prev => [...prev, data])
-      setSnack(`Added Passkey${data?.friendlyName ? `: ${data.friendlyName}` : ""}`)
+      setSnack(`Added Passkey${fn ? ` - ${fn}` : ""}`)
     } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setPkAdding(false)}
   }
   const renamePasskey = async () => {
@@ -470,7 +471,7 @@ function Security({setSnack}) {
         <Dialog component="form" open={Boolean(editingPasskey)} onClose={() => setEditingPasskey(null)} onSubmit={e => {e.preventDefault(); if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); renamePasskey()}}>
           <DialogTitle>Edit Passkey</DialogTitle>
           <DialogContent>
-            <TextField size="small" value={editingPasskey?.friendly_name} onChange={e => setEditingPasskey(prev => ({...prev, friendly_name: e.target.value}))}/>
+            <TextField label="Passkey Name" size="small" value={editingPasskey?.friendly_name} onChange={e => setEditingPasskey(prev => ({...prev, friendly_name: e.target.value}))}/>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setEditingPasskey(null)} disabled={pkRemoving}>Cancel</Button>
