@@ -157,6 +157,7 @@ function Notifications({setSnack}) {
     }
   }
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     const teleChatId = user?.user_metadata?.teleChatId
     if (teleChatId) {
       setTeleLinked(true)
@@ -170,6 +171,7 @@ function Notifications({setSnack}) {
       })
     }
     setTeleLoading(false)
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
@@ -274,6 +276,7 @@ function Preferences({setSnack}) {
     } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setSaving(false)}
   }
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     const data = user?.user_metadata
     if (!data) return
     if (data.language)     setLanguage(data.language)
@@ -287,6 +290,7 @@ function Preferences({setSnack}) {
       setCityInput([data.city.name, data.city.admin1, data.city.admin2, data.city.admin3, data.city.country].filter(Boolean).join(", "))
       if (data.coords) setCoords(data.coords)
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
