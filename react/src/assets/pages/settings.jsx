@@ -30,7 +30,7 @@ import SecurityIcon from "@mui/icons-material/Security"
 import TelegramIcon from "@mui/icons-material/Telegram"
 import LinkOffIcon from "@mui/icons-material/LinkOff"
 import WebhookIcon from "@mui/icons-material/Webhook"
-import DeleteIcon from "@mui/icons-material/Delete"
+import EditIcon from "@mui/icons-material/Edit"
 import PersonIcon from "@mui/icons-material/Person"
 import LoginIcon from "@mui/icons-material/Login"
 import LinkIcon from "@mui/icons-material/Link"
@@ -374,6 +374,7 @@ function Preferences({setSnack}) {
 function Security({setSnack}) {
   const [editingPasskey, setEditingPasskey] = useState(null)
   const [passUpdating, setPassUpdating]     = useState(false)
+  const [pkRemoving, setPkRemoving]         = useState(false)
   const [pkAdding, setPkAdding]             = useState(false)
   const [seePass, setSeePass]               = useState(false)
   const [newPass, setNewPass]               = useState("")
@@ -402,8 +403,26 @@ function Security({setSnack}) {
       setSnack(`Added Passkey${friendlyName ? `: ${friendlyName}` : ""}`)
     } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setPkAdding(false)}
   }
-  const removePasskey = async (id) => {
-    setSnack(id)
+  const renamePasskey = async () => {
+    try {
+      const { error } = await Supabase.auth.passkey.update({
+        friendlyName: editingPasskey.friendly_name,
+        passkeyId: editingPasskey.id
+      })
+      if (error) throw error
+      setPasskeys(prev => prev.map(passkey => passkey.id === editingPasskey.id ? {...passkey, friendly_name: editingPasskey.friendly_name} : passkey))
+      setSnack("Passkey Renamed")
+    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally{setEditingPasskey(null)}
+  }
+  const removePasskey = async () => {
+    setPkRemoving(true)
+    try {
+      const { error } = await Supabase.auth.passkey.delete({ passkeyId: editingPasskey.id })
+      if (error) throw error
+      setPasskeys(prev => prev.filter(passkey => passkey.id !== editingPasskey.id))
+      setEditingPasskey(null)
+      setSnack("Passkey Deleted")
+    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally{setPkRemoving(false)}
   }
   useEffect(() => {
     (async () => {
@@ -441,22 +460,24 @@ function Security({setSnack}) {
                 <Typography sx={{ fontWeight: 600 }}>{passkey.friendly_name}</Typography>
                 <Typography>Added:<span sx={{ fontFamily: "monospace" }}> {new Date(passkey.created_at).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"})} </span></Typography>
               </Stack>
-              <IconButton onClick={() => setEditingPasskey(passkey)} sx={{ alignSelf: "center" }}><DeleteIcon/></IconButton>
+              <IconButton onClick={() => {if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); setEditingPasskey(passkey)}} sx={{ alignSelf: "center" }}><EditIcon/></IconButton>
             </Stack>
           ))
         )}
         <Button disableElevation onClick={addPasskey} disabled={pkAdding} variant={pkAdding ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={pkAdding ? <CircularProgress size={14}/> : <AddIcon/>}>
           {pkAdding ? "Adding..." : "Add Passkey"}
         </Button>
-        <Dialog open={Boolean(editingPasskey)} onClose={() => setEditingPasskey(null)}>
+        <Dialog component="form" open={Boolean(editingPasskey)} onClose={() => setEditingPasskey(null)} onSubmit={e => {e.preventDefault(); if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); renamePasskey()}}>
           <DialogTitle>Edit Passkey</DialogTitle>
           <DialogContent>
-            <TextField value={editingPasskey?.id}/>
+            <TextField size="small" value={editingPasskey?.friendly_name} onChange={e => setEditingPasskey(prev => ({...prev, friendly_name: e.target.value}))}/>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setEditingPasskey(null)}>Cancel</Button>
-            <Button>Rename</Button>
-            <Button>Delete</Button>
+            <Button onClick={() => setEditingPasskey(null)} disabled={pkRemoving}>Cancel</Button>
+            <Button type="submit" disabled={pkRemoving}>Rename</Button>
+            <Button onClick={removePasskey} disabled={pkRemoving} sx={{ color: "error.main" }} startIcon={pkRemoving ? <CircularProgress size={14}/> : null}>
+              {pkRemoving ? "Deleting..." : "Delete"}
+            </Button>
           </DialogActions>
         </Dialog>
       </Stack>
