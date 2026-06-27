@@ -1,3 +1,4 @@
+/* global clients */
 import { precacheAndRoute } from "workbox-precaching"
 precacheAndRoute(self.__WB_MANIFEST)
 
@@ -12,14 +13,13 @@ self.addEventListener("push", (e) => {
   }
   e.waitUntil(self.registration.showNotification(title, options))
 })
-
 self.addEventListener("notificationclick", (e) => {
   e.notification.close()
   e.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
       const existing = list.find(c => c.url.includes(self.location.origin))
       if (existing) return existing.focus()
-      return self.clients.openWindow(e.notification.data?.url ?? "/")
+      return clients.openWindow(e.notification.data?.url ?? "/")
     })
   )
 })
