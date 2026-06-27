@@ -22,7 +22,6 @@ import api from "@/api"
 import NotificationsIcon from "@mui/icons-material/Notifications"
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff"
 import FingerprintIcon from "@mui/icons-material/Fingerprint"
-import AccessTimeIcon from "@mui/icons-material/AccessTime"
 import MyLocationIcon from "@mui/icons-material/MyLocation"
 import VisibilityIcon from "@mui/icons-material/Visibility"
 import LockResetIcon from "@mui/icons-material/LockReset"
@@ -30,9 +29,8 @@ import SecurityIcon from "@mui/icons-material/Security"
 import TelegramIcon from "@mui/icons-material/Telegram"
 import LinkOffIcon from "@mui/icons-material/LinkOff"
 import WebhookIcon from "@mui/icons-material/Webhook"
-import EditIcon from "@mui/icons-material/Edit"
 import PersonIcon from "@mui/icons-material/Person"
-import LoginIcon from "@mui/icons-material/Login"
+import EditIcon from "@mui/icons-material/Edit"
 import LinkIcon from "@mui/icons-material/Link"
 import LockIcon from "@mui/icons-material/Lock"
 import SaveIcon from "@mui/icons-material/Save"
@@ -172,7 +170,7 @@ function Notifications({setSnack}) {
       })
     }
     setTeleLoading(false)
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
@@ -289,7 +287,7 @@ function Preferences({setSnack}) {
       setCityInput([data.city.name, data.city.admin1, data.city.admin2, data.city.admin3, data.city.country].filter(Boolean).join(", "))
       if (data.coords) setCoords(data.coords)
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
@@ -433,7 +431,7 @@ function Security({setSnack}) {
         setPasskeys(data ?? [])
       } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")}
     })()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack component="form" onSubmit={updatePassword} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
@@ -481,14 +479,6 @@ function Security({setSnack}) {
             </Button>
           </DialogActions>
         </Dialog>
-      </Stack>
-      <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
-        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><LoginIcon sx={{ fontSize: 24 }}/>Manage Sign-Ins</Typography>
-        
-      </Stack>
-      <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
-        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><AccessTimeIcon sx={{ fontSize: 24 }}/>Manage Sessions</Typography>
-        
       </Stack>
     </Stack>
   )
