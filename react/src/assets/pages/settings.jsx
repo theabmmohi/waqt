@@ -471,7 +471,7 @@ function Security({setSnack}) {
         <Dialog component="form" open={Boolean(editingPasskey)} onClose={() => setEditingPasskey(null)} onSubmit={e => {e.preventDefault(); if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); renamePasskey()}}>
           <DialogTitle>Edit Passkey</DialogTitle>
           <DialogContent>
-            <TextField label="Passkey Name" size="small" value={editingPasskey?.friendly_name} onChange={e => setEditingPasskey(prev => ({...prev, friendly_name: e.target.value}))}/>
+            <TextField label="Passkey Name" size="small" value={editingPasskey?.friendly_name} onChange={e => setEditingPasskey(prev => ({...prev, friendly_name: e.target.value}))} sx={{ mt: 1 }}/>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setEditingPasskey(null)} disabled={pkRemoving}>Cancel</Button>
