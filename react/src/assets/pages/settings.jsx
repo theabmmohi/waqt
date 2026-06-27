@@ -7,10 +7,11 @@ import {
   useRef, useState
 } from "react"
 import {
-  ToggleButtonGroup, CircularProgress, Autocomplete,
-  ToggleButton, FormControl, InputLabel, Typography,
-  TextField, MenuItem, Snackbar, Divider, Avatar,
-  Select, Button, Switch, Slide, Stack, Link
+  ToggleButtonGroup, CircularProgress, InputAdornment,
+  Autocomplete, ToggleButton, FormControl, IconButton,
+  InputLabel, Typography, TextField, MenuItem,
+  Snackbar, Divider, Avatar, Select, Button,
+  Switch, Slide, Stack, Link
 } from "@mui/material"
 import useMediaQuery from "@mui/material/useMediaQuery"
 import { useTheme } from "@mui/material/styles"
@@ -19,9 +20,11 @@ import { Theme } from "@/react"
 import api from "@/api"
 
 import NotificationsIcon from "@mui/icons-material/Notifications"
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff"
 import FingerprintIcon from "@mui/icons-material/Fingerprint"
 import AccessTimeIcon from "@mui/icons-material/AccessTime"
 import MyLocationIcon from "@mui/icons-material/MyLocation"
+import VisibilityIcon from "@mui/icons-material/Visibility"
 import LockResetIcon from "@mui/icons-material/LockReset"
 import SecurityIcon from "@mui/icons-material/Security"
 import TelegramIcon from "@mui/icons-material/Telegram"
@@ -30,8 +33,10 @@ import WebhookIcon from "@mui/icons-material/Webhook"
 import PersonIcon from "@mui/icons-material/Person"
 import LoginIcon from "@mui/icons-material/Login"
 import LinkIcon from "@mui/icons-material/Link"
+import LockIcon from "@mui/icons-material/Lock"
 import SaveIcon from "@mui/icons-material/Save"
 import TuneIcon from "@mui/icons-material/Tune"
+import AddIcon from "@mui/icons-material/Add"
 
 function Profile({setSnack}) {
   const { user } = useContext(Theme)
@@ -149,7 +154,7 @@ function Notifications({setSnack}) {
         setTeleLinked(false)
         setTeleId("")
         setSnack("Telegram Account Disconnected")
-      } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally { setTeleUnLinking(false) }
+      } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setTeleUnLinking(false)}
     }
   }
   useEffect(() => {
@@ -366,15 +371,56 @@ function Preferences({setSnack}) {
 }
 
 function Security({setSnack}) {
+  const [passUpdating, setPassUpdating] = useState(false)
+  const [pkAdding, setPkAdding]         = useState(false)
+  const [seePass, setSeePass]           = useState(false)
+  const [newPass, setNewPass]           = useState("")
+  const [conPass, setConPass]           = useState("")
+  const updatePassword = async (e) => {
+    e.preventDefault()
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    if (!newPass) return setSnack("Please enter a new password")
+    if (newPass !== conPass) return setSnack("Passwords do not match")
+    setPassUpdating(true)
+    try {
+      const { error } = await Supabase.auth.updateUser({ password: newPass })
+      if (error) throw error
+      setNewPass("")
+      setConPass("")
+      setSnack("Password Updated Successfully")
+    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setPassUpdating(false)}
+  }
+  const addPasskey = async () => {
+    setPkAdding(true)
+    try {
+      const { data, error } = await Supabase.auth.registerPasskey()
+      if (error) throw error
+      const friendlyName = data?.friendly_name
+      setSnack(`Added Passkey${friendlyName ? `: ${friendlyName}` : ""}`)
+    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setPkAdding(false)}
+  }
   return (
     <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
-      <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
-        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><LockResetIcon sx={{ fontSize: 24 }}/>Change Password</Typography>
-        
+      <Stack component="form" onSubmit={updatePassword} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
+        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><LockResetIcon sx={{ fontSize: 24 }}/>Update Password</Typography>
+        <TextField fullWidth size="small" label="New password" type={seePass ? "text" : "password"} value={newPass} onChange={e => setNewPass(e.target.value)} slotProps={{ input: { endAdornment: (
+          <InputAdornment>
+            <IconButton onClick={() => setSeePass(!seePass)}>
+              {seePass ? <VisibilityOffIcon/> : <VisibilityIcon/>}
+            </IconButton>
+          </InputAdornment>
+        ) } }}/>
+        <TextField fullWidth size="small" label="Confirm password" type="password" value={conPass} onChange={e => setConPass(e.target.value)}/>
+        <Button disableElevation type="submit" disabled={passUpdating} variant={passUpdating ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={passUpdating ? <CircularProgress size={14}/> : <LockIcon/>}>
+          {passUpdating ? "Updating..." : "Update"}
+        </Button>
       </Stack>
       <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
         <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><FingerprintIcon sx={{ fontSize: 24 }}/>Manage Passkeys</Typography>
         
+        <Button disableElevation onClick={addPasskey} disabled={pkAdding} variant={pkAdding ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={pkAdding ? <CircularProgress size={14}/> : <AddIcon/>}>
+          {pkAdding ? "Adding..." : "Add Passkey"}
+        </Button>
       </Stack>
       <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
         <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><LoginIcon sx={{ fontSize: 24 }}/>Manage Sign-Ins</Typography>
