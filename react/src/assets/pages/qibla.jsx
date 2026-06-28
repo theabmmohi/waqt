@@ -10,7 +10,7 @@ import {
   Box
 } from "@mui/material"
 import { red, green, blue } from "@mui/material/colors"
-import { useTheme } from "@mui/material/styles"
+import { useTheme, alpha } from "@mui/material/styles"
 
 function getCardinal(deg) {
   const dirs = ["N","NE","E","SE","S","SW","W","NW"]
@@ -114,6 +114,9 @@ export default function Qibla() {
             <tspan fontSize={20} fontWeight={300} fill={textPrimary} dy={-5}>°</tspan>
           </text>
         </svg>
+        {false && (<Stack sx={{ position: "absolute", borderRadius: "50%", alignItems: "center", justifyContent: "center", backdropFilter: "blur(5px)", backgroundColor: alpha(textPrimary, 0.25), inset: 0 }}>
+          <Typography variant="h6" sx={{ textAlign: "center", width: "75%", textShadow: `0 0 2.5px ${bgPaper}`, fontWeight: 600 }}>Sorry, your device doesn't support compass</Typography>
+        </Stack>)}
       </Box>
     </Stack>
   </Stack>)
