@@ -1,5 +1,8 @@
 import { createTheme } from "@mui/material"
-
+import { orange, brown, grey} from "@mui/material/colors"
+const white = "#ffffff"
+const black = "#000000"
+const blark = "#1c0a00"
 const base = {
   shape: {
     borderRadius: 12
@@ -23,20 +26,19 @@ const base = {
     }
   }
 }
-
 export const lightTheme = createTheme({
   ...base,
   palette: {
     mode: "light",
-    primary:    { main: "#ea580c" },
-    secondary:  { main: "#fb923c" },
+    primary: { main: orange[700] },
+    secondary: { main: orange[400] },
     text: {
-      primary:   "#1c0a00",
-      secondary: "#78350f"
+      primary: blark,
+      secondary: brown[800]
     },
     background: {
-      default: "#fff7ed",
-      paper:   "#ffffff"
+      default: orange[50],
+      paper: white
     }
   }
 })
@@ -44,15 +46,15 @@ export const darkTheme = createTheme({
   ...base,
   palette: {
     mode: "dark",
-    primary:   { main: "#ffffff" },
-    secondary: { main: "#aaaaaa" },
+    primary: { main: white },
+    secondary: { main: grey[500] },
     text: {
-      primary:   "#ffffff",
-      secondary: "#aaaaaa"
+      primary: white,
+      secondary: grey[500]
     },
     background: {
-      default: "#000000",
-      paper:   "#111111"
+      default: black,
+      paper: grey[900]
     }
   }
 })

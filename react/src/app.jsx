@@ -26,6 +26,7 @@ import {
 import Dashboard from "@page/dashboard"
 import Settings from "@page/settings"
 import Supabase from "@/supabase"
+import Qibla from "@page/qibla"
 import { Theme } from "@/react"
 import Auth from "@page/auth"
 
@@ -33,6 +34,7 @@ import PersonalVideoIcon from "@mui/icons-material/PersonalVideo"
 import DashboardIcon from "@mui/icons-material/Dashboard"
 import LightModeIcon from "@mui/icons-material/LightMode"
 import DarkModeIcon from "@mui/icons-material/DarkMode"
+import GpsFixedIcon from "@mui/icons-material/GpsFixed"
 import SettingsIcon from "@mui/icons-material/Settings"
 import AcUnitIcon from "@mui/icons-material/AcUnit"
 import LogoutIcon from "@mui/icons-material/Logout"
@@ -58,7 +60,8 @@ export default function App() {
     navigate("/")
   }
   const navs = [
-    { icon: <DashboardIcon/>, label: "Dashboard", route: "/" }
+    { icon: <DashboardIcon/>, label: "Dashboard", route: "/" },
+    { icon: <GpsFixedIcon/>, label: "Qibla", route: "/qibla" }
   ]
   const isAuth = location.pathname === "/auth"
   return (
@@ -161,6 +164,7 @@ export default function App() {
           <Routes>
             <Route path="/auth" element={user ? <Navigate to="/" replace/> : <Auth/>}/>
             <Route path="/settings/*" element={!user ? <Navigate to="/" replace/> : <Settings/>}/>
+            <Route path="/qibla" element={<Qibla/>}/>
             <Route path="/*" element={user ? <Dashboard/> : <Auth/>}/>
           </Routes>
         </Box>
