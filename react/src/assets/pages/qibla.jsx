@@ -1,5 +1,8 @@
+const Kaaba = {lat: 21.422487, lon: 39.826206}
+
 import {
   useCallback,
+  useContext,
   useEffect,
   useState,
   useRef
@@ -7,14 +10,21 @@ import {
 import {
   CircularProgress,
   Typography,
+  Snackbar,
+  Divider,
   Button,
   Stack,
+  Slide,
   Box
 } from "@mui/material"
 import { red, green, blue } from "@mui/material/colors"
 import { useTheme, alpha } from "@mui/material/styles"
+import { Qibla as AQ, Coordinates } from "adhan"
+import { Theme } from "@/react"
 
+import StraightenIcon from "@mui/icons-material/Straighten"
 import ExploreIcon from "@mui/icons-material/Explore"
+import NearMeIcon from "@mui/icons-material/NearMe"
 import ErrorIcon from "@mui/icons-material/Error"
 
 function getCardinal(deg) {
@@ -22,23 +32,39 @@ function getCardinal(deg) {
   return dirs[Math.round(((deg % 360) + 360) % 360 / 45) % 8]
 }
 
+function haversine(lat1, lon1, lat2, lon2) {
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const rLat1 = lat1 * Math.PI / 180
+  const rLat2 = lat2 * Math.PI / 180
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(rLat1) * Math.cos(rLat2) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  const d = c * 6371
+  if (d >= 1) return(`${Math.round(d).toLocaleString()} km`)
+  else return (`${Math.round(d * 1000).toLocaleString()} m`)
+}
+
 export default function Qibla() {
+  const { user } = useContext(Theme)
   const theme = useTheme()
   const textPrimary   = theme.palette.text.primary
   const textSecondary = theme.palette.text.secondary
   const dividerColor  = theme.palette.divider
   const bgPaper       = theme.palette.background.paper
   const primary       = theme.palette.primary.main
-  // comStatus: "idle" | "measuring" | "supported" | "unsupported"
   const [comStatus, setComStatus]   = useState("idle")
   const [heading, setHeading]       = useState(0)
   const [qibla,   setQibla]         = useState(0)
+  const [dist, setDist]             = useState("0 km")
+  const [snack, setSnack]           = useState("")
   const hasAbsoluteRef = useRef(false)
   const smoothedRef    = useRef(null)
   const rafRef         = useRef(null)
   const rawRef         = useRef(null)
   const cleanupRef     = useRef(null)
-  const aligned = Math.abs(((heading - qibla + 540) % 360) - 180) < 2.5
+  const aligned = Math.abs(((heading - qibla + 540) % 360) - 180) < 1.5
   const S  = 280
   const CX = S / 2
   const CY = S / 2
@@ -64,7 +90,6 @@ export default function Qibla() {
     { angle: 180, label: "S", color: blue[500],     size: 13, weight: 800 },
     { angle: 270, label: "W", color: textSecondary, size: 13, weight: 700 },
   ]
-  useEffect(() => setQibla(280), [])/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   const startCompass = useCallback(() => {
     if (comStatus !== "idle" && comStatus !== "unsupported") return
     setComStatus("measuring")
@@ -130,6 +155,12 @@ export default function Qibla() {
     }
   }, [comStatus])
   useEffect(() => () => cleanupRef.current?.(), [])
+  useEffect(() => {
+    const coords = user?.user_metadata?.coords
+    if (!coords) setSnack("Set Your Location In Settings To Get Direction And Distance")
+    setQibla(Math.round(AQ(new Coordinates(coords.lat, coords.lon))))
+    setDist(haversine(Kaaba.lat, Kaaba.lon, coords.lat, coords.lon))
+  }, [])
   return (<Stack sx={{ gap: 2.5, p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", alignSelf: "center", width: "100%", borderRadius: 1, maxWidth: 600, gap: 2.5, p: 2.5 }}>
       <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: "50%", alignSelf: "center", position: "relative", width: S, height: S }}>
@@ -142,8 +173,8 @@ export default function Qibla() {
           <circle cx={CX} cy={CY} r={63} fill={bgPaper} stroke={aligned ? green[500]: primary} strokeWidth={2.5}/>
           <line x1={CX} y1={CY - 77} x2={CX} y2={CY - 63} stroke={aligned ? green[500] : primary} strokeWidth={2.5} strokeLinecap="round"/>
           <text x={CX} y={CY + 6} textAnchor="middle" dominantBaseline="middle" fontFamily="monospace">
-            <tspan fontSize={13} fontWeight={600} fill={primary}>{getCardinal(heading)}</tspan>
-            <tspan fontSize={36} fontWeight={300} fill={textPrimary}>{Math.round(((heading % 360) + 360) % 360)}</tspan>
+            <tspan fontSize={15} fontWeight={600} fill={primary} dy={+5}>{getCardinal(heading)}</tspan>
+            <tspan fontSize={35} fontWeight={300} fill={textPrimary} dy={-5} dx={+5}>{Math.round(((heading % 360) + 360) % 360)}</tspan>
             <tspan fontSize={20} fontWeight={300} fill={textPrimary} dy={-5}>°</tspan>
           </text>
         </svg>
@@ -165,8 +196,17 @@ export default function Qibla() {
         )}
       </Box>
     </Stack>
-    <Stack sx={{ border: "1px solid", borderColor: "divider", alignSelf: "center", width: "100%", borderRadius: 1, maxWidth: 600, gap: 2.5, p: 2.5 }}>
-      
+    <Stack sx={{ flexDirection: "row", justifyContent: "center", border: "1px solid", borderColor: "divider", alignSelf: "center", width: "100%", borderRadius: 1, maxWidth: 600, gap: 2.5, p: 2.5 }}>
+      <Stack sx={{ flexDirection: "row", gap: 1 }}>
+        <NearMeIcon/>
+        <Typography>{qibla}{"\u00B0"}</Typography>
+      </Stack>
+      <Stack sx={{ flexDirection: "row", gap: 1 }}>
+        <StraightenIcon/>
+        <Typography>{dist}</Typography>
+      </Stack>
     </Stack>
-  </Stack>)
+    <Snackbar open={!!snack} onClose={() => setSnack("")} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}/>
+  </Stack>
+  )
 }

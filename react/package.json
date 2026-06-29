@@ -15,6 +15,7 @@
     "@mui/icons-material": "^9.0.1",
     "@mui/material": "^9.0.1",
     "@supabase/supabase-js": "^2.107.0",
+    "adhan": "^4.4.4",
     "axios": "^1.17.0",
     "material-ui-popup-state": "^5.3.7",
     "react": "^19.2.6",
