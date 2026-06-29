@@ -157,7 +157,7 @@ export default function Qibla() {
   useEffect(() => () => cleanupRef.current?.(), [])
   useEffect(() => {
     const coords = user?.user_metadata?.coords
-    if (!coords) setSnack("Set Your Location In Settings To Get Direction And Distance")
+    if (!coords) return setSnack("Set Your Location In Settings To Get Direction And Distance")
     setQibla(Math.round(AQ(new Coordinates(coords.lat, coords.lon))))
     setDist(haversine(Kaaba.lat, Kaaba.lon, coords.lat, coords.lon))
   }, [])
