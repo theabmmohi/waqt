@@ -1,9 +1,11 @@
 import {
+  useCallback,
   useEffect,
   useState,
   useRef
 } from "react"
 import {
+  CircularProgress,
   Typography,
   Button,
   Stack,
@@ -11,6 +13,9 @@ import {
 } from "@mui/material"
 import { red, green, blue } from "@mui/material/colors"
 import { useTheme, alpha } from "@mui/material/styles"
+
+import ExploreIcon from "@mui/icons-material/Explore"
+import ErrorIcon from "@mui/icons-material/Error"
 
 function getCardinal(deg) {
   const dirs = ["N","NE","E","SE","S","SW","W","NW"]
@@ -24,12 +29,15 @@ export default function Qibla() {
   const dividerColor  = theme.palette.divider
   const bgPaper       = theme.palette.background.paper
   const primary       = theme.palette.primary.main
-  const [heading, setHeading] = useState(0)
-  const [qibla,   setQibla]   = useState(0)
+  // comStatus: "idle" | "measuring" | "supported" | "unsupported"
+  const [comStatus, setComStatus]   = useState("idle")
+  const [heading, setHeading]       = useState(0)
+  const [qibla,   setQibla]         = useState(0)
   const hasAbsoluteRef = useRef(false)
   const smoothedRef    = useRef(null)
   const rafRef         = useRef(null)
   const rawRef         = useRef(null)
+  const cleanupRef     = useRef(null)
   const aligned = Math.abs(((heading - qibla + 540) % 360) - 180) < 2.5
   const S  = 280
   const CX = S / 2
@@ -57,20 +65,36 @@ export default function Qibla() {
     { angle: 270, label: "W", color: textSecondary, size: 13, weight: 700 },
   ]
   useEffect(() => setQibla(280), [])/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  useEffect(() => {
+  const startCompass = useCallback(() => {
+    if (comStatus !== "idle" && comStatus !== "unsupported") return
+    setComStatus("measuring")
+    hasAbsoluteRef.current = false
+    rawRef.current         = null
+    smoothedRef.current    = null
     const ALPHA = 0.08
     const handleAbsolute = (e) => {
       if (e.alpha === null) return
+      if (!hasAbsoluteRef.current) setComStatus("supported")
       hasAbsoluteRef.current = true
-      const alpha = (e.alpha % 360 + 360) % 360
+      const a = (e.alpha % 360 + 360) % 360
       const faceDown = e.beta !== null && Math.abs(e.beta) > 90
-      rawRef.current = faceDown ? (540 - alpha) % 360 : (360 - alpha) % 360
+      rawRef.current = faceDown ? (540 - a) % 360 : (360 - a) % 360
     }
     const handleRelative = (e) => {
       if (hasAbsoluteRef.current) return
-      if (e.webkitCompassHeading != null) rawRef.current = e.webkitCompassHeading
-      else if (e.alpha !== null) rawRef.current = (360 - e.alpha + 360) % 360
+      if (e.webkitCompassHeading != null) {
+        if (!hasAbsoluteRef.current) setComStatus("supported")
+        hasAbsoluteRef.current = true
+        rawRef.current = e.webkitCompassHeading
+      } else if (e.absolute && e.alpha !== null) {
+        if (!hasAbsoluteRef.current) setComStatus("supported")
+        hasAbsoluteRef.current = true
+        rawRef.current = (360 - e.alpha + 360) % 360
+      }
     }
+    const unsupportedTimer = setTimeout(() => {
+      if (!hasAbsoluteRef.current) setComStatus("unsupported")
+    }, 2000)
     const tick = () => {
       if (rawRef.current !== null) {
         if (smoothedRef.current === null) smoothedRef.current = rawRef.current
@@ -89,15 +113,24 @@ export default function Qibla() {
       window.addEventListener("deviceorientationabsolute", handleAbsolute, true)
       window.addEventListener("deviceorientation",         handleRelative, true)
     }
-    if (typeof DeviceOrientationEvent?.requestPermission === "function") DeviceOrientationEvent.requestPermission().then(state => { if (state === "granted") attach() })
-    else attach()
-    return () => {
+    const detach = () => {
+      clearTimeout(unsupportedTimer)
       cancelAnimationFrame(rafRef.current)
       window.removeEventListener("deviceorientationabsolute", handleAbsolute, true)
       window.removeEventListener("deviceorientation",         handleRelative, true)
     }
-  }, [])
-  return (<Stack sx={{ p: 2.5 }}>
+    cleanupRef.current = detach
+    if (typeof DeviceOrientationEvent?.requestPermission === "function") {
+      DeviceOrientationEvent.requestPermission().then(state => {
+        if (state === "granted") attach()
+        else { clearTimeout(unsupportedTimer); setComStatus("unsupported") }
+      }).catch(() => { clearTimeout(unsupportedTimer); setComStatus("unsupported") })
+    } else {
+      attach()
+    }
+  }, [comStatus])
+  useEffect(() => () => cleanupRef.current?.(), [])
+  return (<Stack sx={{ gap: 2.5, p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", alignSelf: "center", width: "100%", borderRadius: 1, maxWidth: 600, gap: 2.5, p: 2.5 }}>
       <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: "50%", alignSelf: "center", position: "relative", width: S, height: S }}>
         <svg viewBox={`0 0 ${S} ${S}`} width={S} height={S}>
@@ -114,10 +147,26 @@ export default function Qibla() {
             <tspan fontSize={20} fontWeight={300} fill={textPrimary} dy={-5}>°</tspan>
           </text>
         </svg>
-        {false && (<Stack sx={{ position: "absolute", borderRadius: "50%", alignItems: "center", justifyContent: "center", backdropFilter: "blur(5px)", backgroundColor: alpha(textPrimary, 0.25), inset: 0 }}>
-          <Typography variant="h6" sx={{ textAlign: "center", width: "75%", textShadow: `0 0 2.5px ${bgPaper}`, fontWeight: 600 }}>Sorry, your device doesn't support compass</Typography>
-        </Stack>)}
+        {comStatus !== "supported" && (
+          <Stack onClick={comStatus === "idle" || comStatus === "unsupported" ? startCompass : undefined} sx={{ cursor: comStatus === "idle" || comStatus === "unsupported" ? "pointer" : "default", position: "absolute", borderRadius: "50%", alignItems: "center", justifyContent: "center", backdropFilter: "blur(5px)", backgroundColor: alpha(textPrimary, 0.25), inset: 0, gap: 2.5 }}>
+            {comStatus === "idle" && (<>
+              <ExploreIcon sx={{ fontSize: 64, color: bgPaper }} />
+              <Typography variant="h6" sx={{ textAlign: "center", width: "70%", color: bgPaper, fontWeight: 600, textShadow: `0 1px 4px ${alpha(textPrimary, 0.5)}` }}>Tap to enable compass</Typography>
+            </>)}
+            {comStatus === "measuring" && (<>
+              <CircularProgress size={32} sx={{ color: bgPaper }} />
+              <Typography variant="h6" sx={{ color: bgPaper, fontWeight: 600 }}>Detecting…</Typography>
+            </>)}
+            {comStatus === "unsupported" && (<>
+              <ErrorIcon sx={{ fontSize: 64, color: bgPaper }} />
+              <Typography variant="h6" sx={{ textAlign: "center", width: "70%", color: bgPaper, fontWeight: 600, textShadow: `0 1px 4px ${alpha(textPrimary, 0.5)}` }}>Compass not available. Tap to retry.</Typography>
+            </>)}
+          </Stack>
+        )}
       </Box>
+    </Stack>
+    <Stack sx={{ border: "1px solid", borderColor: "divider", alignSelf: "center", width: "100%", borderRadius: 1, maxWidth: 600, gap: 2.5, p: 2.5 }}>
+      
     </Stack>
   </Stack>)
 }
