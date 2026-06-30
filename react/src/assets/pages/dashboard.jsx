@@ -23,9 +23,9 @@ import {
 import { useTheme, alpha } from "@mui/material/styles"
 import { Theme } from "@/react"
 
+import WarningAmberIcon from "@mui/icons-material/WarningAmber"
 import WbTwilightIcon from "@mui/icons-material/WbTwilight"
 import WbSunnyIcon from "@mui/icons-material/WbSunny"
-import WarningAmberIcon from "@mui/icons-material/WarningAmber"
 
 export default function Dashboard() {
   const { user }   = useContext(Theme)
@@ -34,22 +34,15 @@ export default function Dashboard() {
   const fmt        = meta?.timeFormat ?? "12h"
   const [snack, setSnack] = useState("")
   const [now, setNow]     = useState(new Date())
-
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(id)
   }, [])
-
   useEffect(() => {
     if (!meta?.coords) setSnack("Set Your Location In Settings To Get Prayer Times")
   }, [])
-
-  const coords = meta?.coords
-    ? new Coordinates(meta.coords.lat, meta.coords.lon)
-    : null
-
+  const coords = meta?.coords ? new Coordinates(meta.coords.lat, meta.coords.lon) : null
   const madhab = meta?.madhab === "hanafi" ? Madhab.Hanafi : Madhab.Shafi
-
   const methodMap = {
     MuslimWorldLeague: CalculationMethod.MuslimWorldLeague,
     NorthAmerica: CalculationMethod.NorthAmerica,
@@ -62,10 +55,8 @@ export default function Dashboard() {
   }
   const params = (methodMap[meta?.calcMethod] ?? CalculationMethod.MuslimWorldLeague)()
   params.madhab = madhab
-
   const prayerTimes = coords ? new PrayerTimes(coords, now, params) : null
   const sunnahTimes = coords && prayerTimes ? new SunnahTimes(prayerTimes) : null
-
   const timeStr = (d) => {
     if (!d) return "--:--"
     const s = d.toLocaleTimeString([], fmt === "24h"
@@ -73,9 +64,7 @@ export default function Dashboard() {
       : { hour: "numeric", minute: "2-digit", hour12: true })
     return fmt === "24h" ? s : s.replace(/^(\d):/, "0$1:").replace(/:(\d)(?=\s)/, ":0$1").replace(/:(\d)(\D)/, ":0$1$2")
   }
-
   const tomorrowFajr = prayerTimes ? new PrayerTimes(coords, new Date(now.getTime() + 86400000), params).fajr : null
-
   const namedPrayers = prayerTimes ? [
     { name: "Fajr",    time: prayerTimes.fajr,    end: prayerTimes.sunrise },
     { name: "Dhuhr",   time: prayerTimes.dhuhr,   end: prayerTimes.asr },
@@ -83,19 +72,16 @@ export default function Dashboard() {
     { name: "Maghrib", time: prayerTimes.maghrib, end: prayerTimes.isha },
     { name: "Isha",    time: prayerTimes.isha,    end: tomorrowFajr }
   ] : []
-
   const forbiddenWindows = prayerTimes ? [
     { name: "Sunrise",  start: prayerTimes.sunrise, end: new Date(prayerTimes.sunrise.getTime() + 15 * 60000) },
     { name: "Zawal",    start: new Date(prayerTimes.dhuhr.getTime() - 10 * 60000), end: prayerTimes.dhuhr },
     { name: "Sunset",   start: new Date(prayerTimes.maghrib.getTime() - 15 * 60000), end: prayerTimes.maghrib }
   ] : []
   const activeForbidden = forbiddenWindows.find(w => now >= w.start && now < w.end) ?? null
-
   const mergedRows = prayerTimes ? [
     ...namedPrayers.map(p => ({ kind: "prayer", name: p.name, time: p.time, end: p.end })),
     ...forbiddenWindows.map(w => ({ kind: "forbidden", name: w.name, time: w.start, end: w.end }))
   ].sort((a, b) => a.time.getTime() - b.time.getTime()) : []
-
   let currentIndex = -1
   if (prayerTimes) {
     for (let i = namedPrayers.length - 1; i >= 0; i--) {
@@ -105,7 +91,6 @@ export default function Dashboard() {
   const fajrEnded = currentIndex === 0 && now >= prayerTimes?.sunrise
   const current = currentIndex >= 0 && !fajrEnded ? namedPrayers[currentIndex] : null
   const currentEnd = current ? current.end : null
-
   let next = null
   if (prayerTimes) {
     next = fajrEnded
@@ -114,16 +99,13 @@ export default function Dashboard() {
         ? namedPrayers[currentIndex + 1]
         : { name: "Fajr", time: tomorrowFajr })
   }
-
   const countdown = next ? Math.max(0, next.time.getTime() - now.getTime()) : 0
   const ch = Math.floor(countdown / 3600000)
   const cm = Math.floor((countdown % 3600000) / 60000)
   const cs = Math.floor((countdown % 60000) / 1000)
   const countdownStr = `${String(ch).padStart(2,"0")}:${String(cm).padStart(2,"0")}:${String(cs).padStart(2,"0")}`
-
   const [hijri, setHijri] = useState("Loading…")
   const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`
-
   useEffect(() => {
     const dd = String(now.getDate()).padStart(2, "0")
     const mm = String(now.getMonth() + 1).padStart(2, "0")
@@ -137,11 +119,8 @@ export default function Dashboard() {
       })
       .catch(() => setHijri(""))
   }, [todayKey])
-
   const gregorian = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric" }).format(now)
-
   const imsak = prayerTimes ? new Date(prayerTimes.fajr.getTime() - 10 * 60000) : null
-
   const [holidays, setHolidays] = useState([])
   useEffect(() => {
     if (!hijri) return
@@ -152,7 +131,6 @@ export default function Dashboard() {
       .then(data => setHolidays(Array.isArray(data?.data) ? data.data.slice(0, 3) : []))
       .catch(() => setHolidays([]))
   }, [hijri])
-
   return(<Stack sx={{ gap: 2.5, p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", alignSelf: "center", width: "100%", borderRadius: 1, overflow: "hidden", maxWidth: 600, p: 2.5 }}>
       <Typography variant="h6" sx={{ fontWeight: 700 }}>{gregorian}</Typography>
