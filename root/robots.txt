@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://abm.ami.bd/sitemap.xml
