@@ -1,4 +1,4 @@
-*, *::before, *::after { 
+*, *::before, *::after {
   -webkit-tap-highlight-color: transparent;
   -webkit-overflow-scrolling: touch;
   font-family: "Monospace";
@@ -7,3 +7,4 @@
   padding: 0;
   margin: 0;
 }
+.sk-widget-btn { opacity: 0; pointer-events: none; }

@@ -43,7 +43,6 @@ import CloseIcon from "@mui/icons-material/Close"
 import MenuIcon from "@mui/icons-material/Menu"
 
 export default function App() {
-  const widgetRoutes = ["/", "/qibla"]
   const navigate = useNavigate()
   const location = useLocation()
   const { dark, toggle, user } = useContext(Theme)
@@ -66,21 +65,37 @@ export default function App() {
     { icon: <GpsFixedIcon/>, label: "Qibla", route: "/qibla" }
   ]
   const isAuth = location.pathname === "/auth"
-  const showWidget = user && widgetRoutes.includes(location.pathname)
   useEffect(() => {
-    if (!showWidget) return
+    if (!user) return
+    document.querySelectorAll(".sk-widget-btn, .sk-widget-iframe-container, script[src*=\"supportkori\"]").forEach(el => el.remove())
     const script = document.createElement("script")
     script.src = "https://www.supportkori.com/widget.js"
     script.dataset.id = "theabmmohi"
-    script.dataset.message = "Support Waqt?"
+    script.dataset.message = "Cophi?"
     script.dataset.color = "#FFDD00"
     script.dataset.position = "right"
     document.body.appendChild(script)
     return () => {
       script.remove()
-      document.querySelectorAll("[data-supportkori], #supportkori-widget, .supportkori-widget").forEach(el => el.remove())
+      document.querySelectorAll(".sk-widget-btn, .sk-widget-iframe-container").forEach(el => el.remove())
     }
-  }, [showWidget])
+  }, [user])
+  useEffect(() => {
+    document.querySelectorAll(".sk-widget-btn").forEach(el => {
+      el.style.transition = "opacity 0.2s ease"
+      el.style.opacity = drawerOpen ? "1" : "0"
+      el.style.pointerEvents = drawerOpen ? "auto" : "none"
+    })
+    if (!drawerOpen) {
+      document.querySelectorAll(".sk-widget-iframe-container").forEach(el => {
+        el.style.display = "none"
+      })
+    } else {
+      document.querySelectorAll(".sk-widget-iframe-container").forEach(el => {
+        el.style.display = ""
+      })
+    }
+  }, [drawerOpen])
   return (
     <Box sx={{ flexDirection: "column", height: "100dvh", display: "flex", width: "100vw" }}>
       {!isAuth && (
