@@ -26,6 +26,7 @@ import {
 } from "@mui/material"
 import Dashboard from "@page/dashboard"
 import Settings from "@page/settings"
+import Verify from "@page/verify"
 import Supabase from "@/supabase"
 import Qibla from "@page/qibla"
 import { Theme } from "@/react"
@@ -71,7 +72,7 @@ export default function App() {
     const script = document.createElement("script")
     script.src = "https://www.supportkori.com/widget.js"
     script.dataset.id = "theabmmohi"
-    script.dataset.message = "Cophi?"
+    script.dataset.message = "CupHi?"
     script.dataset.color = "#FFDD00"
     script.dataset.position = "right"
     document.body.appendChild(script)
@@ -195,6 +196,7 @@ export default function App() {
         <Box sx={{ height: "100%", position: "relative" }}>
           <Routes>
             <Route path="/auth" element={user ? <Navigate to="/" replace/> : <Auth/>}/>
+            <Route path="/verify" element={<Verify/>}/>
             <Route path="/settings/*" element={!user ? <Navigate to="/" replace/> : <Settings/>}/>
             <Route path="/qibla" element={<Qibla/>}/>
             <Route path="/*" element={user ? <Dashboard/> : <Auth/>}/>

@@ -200,6 +200,5 @@ export default function Qibla() {
       </Stack>
     </Stack>
     <Snackbar open={!!snack} onClose={() => setSnack("")} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}/>
-  </Stack>
-  )
+  </Stack>)
 }
