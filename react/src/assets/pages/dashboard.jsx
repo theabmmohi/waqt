@@ -4,21 +4,17 @@ import {
   useState
 } from "react"
 import {
-  CircularProgress,
   Typography,
   Snackbar,
-  Divider,
   Slide,
-  Stack,
-  Box
+  Stack
 } from "@mui/material"
 import {
   CalculationMethod,
   PrayerTimes,
   Coordinates,
   SunnahTimes,
-  Madhab,
-  Qibla
+  Madhab
 } from "adhan"
 import { useTheme, alpha } from "@mui/material/styles"
 import { Theme } from "@/react"
