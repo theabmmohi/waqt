@@ -3,6 +3,7 @@ import {
   useState
 } from "react"
 import {
+  CircularProgress,
   FormControl,
   Typography,
   IconButton,
@@ -32,6 +33,10 @@ export default function Auth() {
   const [showPass, setShowPass] = useState(false)
   const [snack, setSnack] = useState("")
   const [open, setOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const show = (msg) => { setSnack(msg); setOpen(true) }
   const titleCase = (str) => str.replace(/\b\w/g, c => c.toUpperCase())
   useEffect(() => {
@@ -48,48 +53,59 @@ export default function Auth() {
     if (!email || !password) return show("Email and password are required")
     if (!validEmail) return show("Please enter a valid email address")
     if (isSignUp && !name.trim()) return show("Please enter your name")
+    setSubmitting(true)
     try {
       if (isSignUp) {
         const { data, error } = await Supabase.auth.signUp({
           email, password,
-          options: { data: { full_name: name.trim() } }
+          options: {
+            data: { full_name: name.trim() },
+            emailRedirectTo: undefined
+          }
         })
         if (error) throw error
-        if (data.user?.identities?.length === 0) show("An account with this email already exists!")
-        else if (data.user?.confirmed_at) show("Account already confirmed! Please sign in.")
-        else show("Check your email to confirm your account!")
+        if (data.user?.identities?.length === 0) return show("An account with this email already exists!")
+        if (data.user?.confirmed_at) return show("Account already confirmed! Please sign in.")
+        navigate("/verify", { state: {
+          email, type: "signup",
+          title: "Verify your Email",
+          desc: `We sent a 6-digit code to ${email}`
+        } })
       } else {
         const { error } = await Supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
         navigate("/")
       }
-    } catch (e) {show(titleCase(e.message))}
+    } catch (e) {show(titleCase(e.message))} finally {setSubmitting(false)}
   }
   const handleForgot = async () => {
     const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     if (!email) return show("Please enter your email address first")
     if (!validEmail) return show("Please enter a valid email address")
+    setForgotLoading(true)
     try {
       const { error } = await Supabase.auth.resetPasswordForEmail(email)
       if (error) throw error
       show("Password reset email sent!")
-    } catch (e) {show(titleCase(e.message))}
+    } catch (e) {show(titleCase(e.message))} finally {setForgotLoading(false)}
   }
   const handlePasskey = async () => {
+    setPasskeyLoading(true)
     try {
       const { error } = await Supabase.auth.signInWithPasskey()
       if (error) throw error
       navigate("/")
-    } catch (e) {show(titleCase(e.message))}
+    } catch (e) {show(titleCase(e.message))} finally {setPasskeyLoading(false)}
   }
   const handleGoogle = async () => {
+    setGoogleLoading(true)
     try {
       const { error } = await Supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: window.location.origin }
       })
       if (error) throw error
-    } catch (e) {show(titleCase(e.message))}
+    } catch (e) {show(titleCase(e.message))} finally {setGoogleLoading(false)}
   }
   return (
     <Box sx={{ maxWidth: 500, mx: "auto", p: 5 }}>
@@ -99,14 +115,16 @@ export default function Auth() {
         <TextField fullWidth size="small" label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)}/>
         <TextField fullWidth size="small" label="Password" type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} slotProps={{ input: { endAdornment: (<IconButton size="small" onClick={() => setShowPass(!showPass)}>{showPass ? <VisibilityIcon/> : <VisibilityOffIcon/>}</IconButton>) } }}/>
         <Stack direction="row" sx={{ width: "100%", justifyContent: "space-between" }}>
-          {!isSignUp ? <Button onClick={handleForgot}>Forgot Password</Button> : <Box/>}
+          {!isSignUp ? <Button onClick={handleForgot} disabled={forgotLoading} startIcon={forgotLoading ? <CircularProgress size={14}/> : null}>{forgotLoading ? "Sending..." : "Forgot Password"}</Button> : <Box/>}
           <Button onClick={() => { setIsSignUp(!isSignUp); setPassword(""); setName("") }}>{isSignUp ? "Sign In Instead" : "Create Account"}</Button>
         </Stack>
-        <Button sx={{ width: "75%" }} type="submit" variant="contained">{isSignUp ? "Sign Up" : "Sign In"}</Button>
+        <Button disableElevation sx={{ width: "75%" }} type="submit" disabled={submitting} variant={submitting ? "outlined" : "contained"} startIcon={submitting ? <CircularProgress size={14}/> : null}>
+          {submitting ? (isSignUp ? "Signing Up..." : "Signing In...") : (isSignUp ? "Sign Up" : "Sign In")}
+        </Button>
         <Divider sx={{ width: "100%" }}>Or Continue With</Divider>
         <Stack sx={{ width: "75%", gap: 2.5 }}>
-          <Button variant="outlined" startIcon={<GoogleIcon/>} onClick={handleGoogle} sx={{ color: "text.primary" }}>Google</Button>
-          {!isSignUp && isPasskeySupported && (<Button variant="outlined" startIcon={<KeyIcon/>} onClick={handlePasskey} sx={{ color: "text.primary" }}>Passkey</Button>)}
+          <Button variant="outlined" startIcon={googleLoading ? <CircularProgress size={14}/> : <GoogleIcon/>} onClick={handleGoogle} disabled={googleLoading} sx={{ color: "text.primary" }}>{googleLoading ? "Redirecting..." : "Google"}</Button>
+          {!isSignUp && isPasskeySupported && (<Button variant="outlined" startIcon={passkeyLoading ? <CircularProgress size={14}/> : <KeyIcon/>} onClick={handlePasskey} disabled={passkeyLoading} sx={{ color: "text.primary" }}>{passkeyLoading ? "Verifying..." : "Passkey"}</Button>)}
         </Stack>
         <Snackbar open={open} onClose={() => setOpen(false)} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}/>
       </FormControl>

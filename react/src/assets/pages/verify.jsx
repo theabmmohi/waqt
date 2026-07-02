@@ -8,52 +8,59 @@ import {
   useLocation
 } from "react-router-dom"
 import {
-  CircularProgress,
   Typography,
   Snackbar,
   Slide,
   Stack,
+  Link,
   Box
 } from "@mui/material"
+import Supabase from "@/supabase"
 
 const OTP_LENGTH = 6
-const COOLDOWN = 5 * 60
 
 export default function Verify() {
   const navigate = useNavigate()
   const { state } = useLocation()
-  const email = state?.email
-  const type = state?.type
   const [digits, setDigits] = useState(Array(OTP_LENGTH).fill(""))
   const [verifying, setVerifying] = useState(false)
   const [snack, setSnack] = useState("")
   const inputsRef = useRef([])
-  const [cooldown, setCooldown] = useState(0)
-  const cooldownRef = useRef(null)
-  //useEffect(() => { if (!email || !type) navigate("/auth", { replace: true }) }, [email, type, navigate])
-  useEffect(() => () => clearInterval(cooldownRef.current), [])
+  useEffect(() => {if (!state) navigate("/", { replace: true })}, [navigate])
   useEffect(() => {if (digits.every(d => d !== "") && !verifying) verify(digits.join(""))}, [digits])
-  const startCooldown = () => {
-    setCooldown(COOLDOWN)
-    clearInterval(cooldownRef.current)
-    cooldownRef.current = setInterval(() => setCooldown(prev => { if (prev <= 1) { clearInterval(cooldownRef.current); return 0 } return prev - 1 }), 1000)
-  }
-  const cooldownLabel = cooldown > 0 ? (() => { const m = Math.floor(cooldown / 60); const sec = cooldown % 60; return m > 0 ? `${m}:${String(sec).padStart(2, "0")}` : `${sec}s` })() : null
-  const verify = async () => {
+  const verify = async (otp) => {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
-    setSnack("submitted")
-
-
-
-
+    if (state?.type === "signup") try {
+      setVerifying(true)
+      const { error } = await Supabase.auth.verifyOtp({
+        email: state?.email,
+        type: state?.type,
+        token: otp
+      })
+      if (error) throw error
+      navigate("/", { replace: true })
+    } catch (err) {
+      setDigits(Array(OTP_LENGTH).fill(""))
+      setSnack(err.message)
+    } finally {setVerifying(false)}
   }
+  const resend = async () => {
+    if (state?.type === "signup") try {
+      const { error } = await Supabase.auth.resend({
+        email: state?.email,
+        type: state?.type
+      })
+      if (error) throw error
+      setSnack("Email Sent Successfully")
+    } catch (err) {setSnack(err.message)}
+  }
+  if (!state) return null
   return (<Stack sx={{ gap: 2.5, p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", alignSelf: "center", width: "100%", borderRadius: 1, maxWidth: 600, gap: 2.5, p: 2.5 }}>
-      <Stack sx={{ gap: 0.5 }}>
-        <Typography variant="h6" fontWeight="bold">{type === "recovery" ? "Reset Password" : "Verify Email"}</Typography>
-        <Typography variant="body2" color="text.secondary">Enter the 6-digit code sent to <strong>{email}</strong></Typography>
-      </Stack>
       <Stack>
+        <Typography variant="h6" fontWeight="bold">{state?.title}</Typography>
+        <Typography variant="body2" color="text.secondary">{state?.desc}</Typography>
+      </Stack>
         <Stack sx={{ flexDirection: "row", justifyContent: "center", opacity: verifying ? 0.5 : 1, transition: "opacity 0.2s" }}>
           {digits.map((digit, i) => (
             <Box key={i} component="input" inputMode="numeric"
@@ -110,16 +117,9 @@ export default function Verify() {
             />
           ))}
         </Stack>
-        {verifying && <Stack direction="row" sx={{ alignItems: "center", gap: 1, mt: 1.5 }}><CircularProgress size={14}/><Typography variant="caption" color="text.secondary">Verifying...</Typography></Stack>}
-      </Stack>
-      <Stack>
-        <Typography variant="caption" color="text.secondary">
-          Didn't receive it?{" "}
-        <Box component="span" onClick={cooldown === 0 ? startCooldown : undefined} sx={{ color: cooldown > 0 ? "text.disabled" : "primary.main", cursor: cooldown > 0 ? "default" : "pointer", textDecoration: cooldown > 0 ? "none" : "underline", textUnderlineOffset: 3 }}>
-          {cooldown > 0 ? `Resend in ${cooldownLabel}` : "Resend code"}
-        </Box>
-        </Typography>
-      </Stack>
+      <Typography sx={{ alignSelf: "end" }}>
+        <Link onClick={() => resend()}>Resend?</Link>
+      </Typography>
     </Stack>
     <Snackbar open={!!snack} onClose={() => setSnack("")} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}/>
   </Stack>)
