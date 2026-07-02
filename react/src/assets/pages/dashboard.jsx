@@ -28,14 +28,11 @@ export default function Dashboard() {
   const theme      = useTheme()
   const meta       = user?.user_metadata
   const fmt        = meta?.timeFormat ?? "12h"
-  const [snack, setSnack] = useState("")
+  const [snack, setSnack] = useState(() => !meta?.coords ? "Set Your Location In Settings To Get Prayer Times" : "")
   const [now, setNow]     = useState(new Date())
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(id)
-  }, [])
-  useEffect(() => {
-    if (!meta?.coords) setSnack("Set Your Location In Settings To Get Prayer Times")
   }, [])
   const coords = meta?.coords ? new Coordinates(meta.coords.lat, meta.coords.lon) : null
   const madhab = meta?.madhab === "hanafi" ? Madhab.Hanafi : Madhab.Shafi
@@ -103,9 +100,9 @@ export default function Dashboard() {
   const [hijri, setHijri] = useState("Loading…")
   const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`
   useEffect(() => {
-    const dd = String(now.getDate()).padStart(2, "0")
-    const mm = String(now.getMonth() + 1).padStart(2, "0")
-    const yyyy = now.getFullYear()
+    const [yyyy, month, day] = todayKey.split("-")
+    const dd = String(Number(day)).padStart(2, "0")
+    const mm = String(Number(month) + 1).padStart(2, "0")
     fetch(`https://api.aladhan.com/v1/gToH/${dd}-${mm}-${yyyy}`)
       .then(res => res.json())
       .then(data => {

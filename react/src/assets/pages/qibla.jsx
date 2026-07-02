@@ -54,9 +54,10 @@ export default function Qibla() {
   const primary       = theme.palette.primary.main
   const [comStatus, setComStatus]   = useState("idle")
   const [heading, setHeading]       = useState(0)
-  const [qibla,   setQibla]         = useState(0)
-  const [dist, setDist]             = useState("0 km")
-  const [snack, setSnack]           = useState("")
+  const [snack, setSnack]           = useState(() => !user?.user_metadata?.coords ? "Set Your Location In Settings To Get Direction And Distance" : "")
+  const coords = user?.user_metadata?.coords
+  const qibla = coords ? Math.round(AQ(new Coordinates(coords.lat, coords.lon))) : 0
+  const dist  = coords ? haversine(Kaaba.lat, Kaaba.lon, coords.lat, coords.lon) : "0 km"
   const hasAbsoluteRef = useRef(false)
   const smoothedRef    = useRef(null)
   const rafRef         = useRef(null)
@@ -153,12 +154,6 @@ export default function Qibla() {
     }
   }, [comStatus])
   useEffect(() => () => cleanupRef.current?.(), [])
-  useEffect(() => {
-    const coords = user?.user_metadata?.coords
-    if (!coords) return setSnack("Set Your Location In Settings To Get Direction And Distance")
-    setQibla(Math.round(AQ(new Coordinates(coords.lat, coords.lon))))
-    setDist(haversine(Kaaba.lat, Kaaba.lon, coords.lat, coords.lon))
-  }, [])
   return (<Stack sx={{ gap: 2.5, p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", alignSelf: "center", width: "100%", borderRadius: 1, maxWidth: 600, gap: 2.5, p: 2.5 }}>
       <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: "50%", alignSelf: "center", position: "relative", width: S, height: S }}>
