@@ -392,8 +392,10 @@ function Security({setSnack}) {
     if (newPass !== conPass) return setSnack("Passwords do not match")
     setPassUpdating(true)
     try {
-      const { error } = await Supabase.auth.updateUser({ password: newPass, currentPassword: oldPass })
+//    const { error } = await Supabase.auth.updateUser({ password: newPass, currentPassword: oldPass })
+      const { error } = await Supabase.auth.updateUser({ password: newPass, current_password: oldPass })
       if (error) throw error
+      setOldPass("")
       setNewPass("")
       setConPass("")
       setSnack("Password Updated Successfully")
