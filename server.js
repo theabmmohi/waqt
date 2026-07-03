@@ -20,7 +20,7 @@ const mailer = nodemailer.createTransport({
   secure: true
 })
 
-server.use(cors())
+server.use(cors({origin: "app.abm.ami.bd"}))
 server.use(express.json())
 webpush.setVapidDetails(
   process.env.VAPID_MAILTO,
