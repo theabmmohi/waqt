@@ -379,6 +379,7 @@ function Security({setSnack}) {
   const [pkRemoving, setPkRemoving]         = useState(false)
   const [pkAdding, setPkAdding]             = useState(false)
   const [seePass, setSeePass]               = useState(false)
+  const [oldPass, setOldPass]               = useState("")
   const [newPass, setNewPass]               = useState("")
   const [conPass, setConPass]               = useState("")
   const [passkeys, setPasskeys]             = useState([])
@@ -389,7 +390,7 @@ function Security({setSnack}) {
     if (newPass !== conPass) return setSnack("Passwords do not match")
     setPassUpdating(true)
     try {
-      const { error } = await Supabase.auth.updateUser({ password: newPass })
+      const { error } = await Supabase.auth.updateUser({ currentPassword: oldPass, password: newPass })
       if (error) throw error
       setNewPass("")
       setConPass("")
@@ -440,6 +441,13 @@ function Security({setSnack}) {
     <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack component="form" onSubmit={updatePassword} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
         <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><LockResetIcon sx={{ fontSize: 24 }}/>Update Password</Typography>
+        <TextField fullWidth size="small" label="Old password" type={seePass ? "text" : "password"} value={oldPass} onChange={e => setOldPass(e.target.value)} slotProps={{ input: { endAdornment: (
+          <InputAdornment>
+            <IconButton onClick={() => setSeePass(!seePass)}>
+              {seePass ? <VisibilityOffIcon/> : <VisibilityIcon/>}
+            </IconButton>
+          </InputAdornment>
+        ) } }}/>
         <TextField fullWidth size="small" label="New password" type={seePass ? "text" : "password"} value={newPass} onChange={e => setNewPass(e.target.value)} slotProps={{ input: { endAdornment: (
           <InputAdornment>
             <IconButton onClick={() => setSeePass(!seePass)}>
