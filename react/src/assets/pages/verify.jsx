@@ -15,6 +15,7 @@ import {
   Link,
   Box
 } from "@mui/material"
+import Turnstile from "@asset/turnstile"
 import Supabase from "@/supabase"
 
 const OTP_LENGTH = 6
@@ -25,7 +26,10 @@ export default function Verify() {
   const [digits, setDigits] = useState(Array(OTP_LENGTH).fill(""))
   const [verifying, setVerifying] = useState(false)
   const [snack, setSnack] = useState("")
+  const [captchaToken, setCaptchaToken] = useState(null)
   const inputsRef = useRef([])
+  const turnstileRef = useRef()
+  const resetCaptcha = () => { turnstileRef.current?.reset(); setCaptchaToken(null) }
   useEffect(() => {if (!state) navigate("/", { replace: true })}, [navigate])
   useEffect(() => {if (digits.every(d => d !== "") && !verifying) verify(digits.join(""))}, [digits])
   const verify = async (otp) => {
@@ -45,14 +49,16 @@ export default function Verify() {
     } finally {setVerifying(false)}
   }
   const resend = async () => {
+    if (!captchaToken) return setSnack("Please complete the CAPTCHA first")
     if (state?.type === "signup") try {
       const { error } = await Supabase.auth.resend({
         email: state?.email,
-        type: state?.type
+        type: state?.type,
+        options: { captchaToken }
       })
       if (error) throw error
       setSnack("Email Sent Successfully")
-    } catch (err) {setSnack(err.message)}
+    } catch (err) {setSnack(err.message)} finally {resetCaptcha()}
   }
   if (!state) return null
   return (<Stack sx={{ gap: 2.5, p: 2.5 }}>
@@ -116,6 +122,7 @@ export default function Verify() {
               }}
             />
           ))}
+        <Turnstile ref={turnstileRef} onVerify={setCaptchaToken} onError={() => setCaptchaToken(null)}/>
         </Stack>
       <Typography sx={{ alignSelf: "end" }}>
         <Link onClick={() => resend()}>Resend?</Link>

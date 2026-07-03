@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState
 } from "react"
 import {
@@ -19,7 +20,6 @@ import { useNavigate } from "react-router-dom"
 import Turnstile from "@asset/turnstile"
 import Supabase from "@/supabase"
 
-
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff"
 import VisibilityIcon from "@mui/icons-material/Visibility"
 import GoogleIcon from "@mui/icons-material/Google"
@@ -27,6 +27,7 @@ import KeyIcon from "@mui/icons-material/Key"
 
 export default function Auth() {
   const navigate = useNavigate()
+  const turnstileRef = useRef()
   const [isSignUp, setIsSignUp] = useState(false)
   const [isPasskeySupported, setIsPasskeySupported] = useState(false)
   const [email, setEmail] = useState("")
@@ -42,6 +43,7 @@ export default function Auth() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const show = (msg) => { setSnack(msg); setOpen(true) }
   const titleCase = (str) => str.replace(/\b\w/g, c => c.toUpperCase())
+  const resetCaptcha = () => { turnstileRef.current?.reset(); setCaptchaToken(null) }
   useEffect(() => {
     if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
       PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
@@ -81,7 +83,7 @@ export default function Auth() {
         if (error) throw error
         navigate("/")
       }
-    } catch (e) {show(titleCase(e.message))} finally {setSubmitting(false)}
+    } catch (e) {show(titleCase(e.message))} finally {setSubmitting(false); resetCaptcha()}
   }
   const handleForgot = async () => {
     const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -93,12 +95,13 @@ export default function Auth() {
       const { error } = await Supabase.auth.resetPasswordForEmail(email, { captchaToken })
       if (error) throw error
       show("Password reset email sent!")
-    } catch (e) {show(titleCase(e.message))} finally {setForgotLoading(false)}
+    } catch (e) {show(titleCase(e.message))} finally {setForgotLoading(false); resetCaptcha()}
   }
   const handlePasskey = async () => {
     setPasskeyLoading(true)
+    if(!captchaToken) return show("Please complete the CAPTCHA")
     try {
-      const { error } = await Supabase.auth.signInWithPasskey()
+      const { error } = await Supabase.auth.signInWithPasskey({ options: {captchaToken} })
       if (error) throw error
       navigate("/")
     } catch (e) {show(titleCase(e.message))} finally {setPasskeyLoading(false)}
@@ -124,7 +127,7 @@ export default function Auth() {
           {!isSignUp ? <Button onClick={handleForgot} disabled={forgotLoading} startIcon={forgotLoading ? <CircularProgress size={14}/> : null}>{forgotLoading ? "Sending..." : "Forgot Password"}</Button> : <Box/>}
           <Button onClick={() => { setIsSignUp(!isSignUp); setPassword(""); setName("") }}>{isSignUp ? "Sign In Instead" : "Create Account"}</Button>
         </Stack>
-        <Turnstile onVerify={setCaptchaToken} onError={() => setCaptchaToken(null)}/>
+        <Turnstile ref={turnstileRef} onVerify={setCaptchaToken} onError={() => setCaptchaToken(null)}/>
         <Button disableElevation sx={{ width: "75%" }} type="submit" disabled={submitting} variant={submitting ? "outlined" : "contained"} startIcon={submitting ? <CircularProgress size={14}/> : null}>
           {submitting ? (isSignUp ? "Signing Up..." : "Signing In...") : (isSignUp ? "Sign Up" : "Sign In")}
         </Button>
