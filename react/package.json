@@ -15,7 +15,7 @@
     "@marsidev/react-turnstile": "^1.5.3",
     "@mui/icons-material": "^9.0.1",
     "@mui/material": "^9.0.1",
-    "@supabase/supabase-js": "^2.107.0",
+    "@supabase/supabase-js": "^2.110.0",
     "adhan": "^4.4.4",
     "axios": "^1.17.0",
     "material-ui-popup-state": "^5.3.7",

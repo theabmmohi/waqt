@@ -378,7 +378,8 @@ function Security({setSnack}) {
   const [passUpdating, setPassUpdating]     = useState(false)
   const [pkRemoving, setPkRemoving]         = useState(false)
   const [pkAdding, setPkAdding]             = useState(false)
-  const [seePass, setSeePass]               = useState(false)
+  const [seOPass, setSeOPass]               = useState(false)
+  const [seNPass, setSeNPass]               = useState(false)
   const [oldPass, setOldPass]               = useState("")
   const [newPass, setNewPass]               = useState("")
   const [conPass, setConPass]               = useState("")
@@ -386,11 +387,12 @@ function Security({setSnack}) {
   const updatePassword = async (e) => {
     e.preventDefault()
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    if (!oldPass) return setSnack("Please enter your old password")
     if (!newPass) return setSnack("Please enter a new password")
     if (newPass !== conPass) return setSnack("Passwords do not match")
     setPassUpdating(true)
     try {
-      const { error } = await Supabase.auth.updateUser({ currentPassword: oldPass, password: newPass })
+      const { error } = await Supabase.auth.updateUser({ password: newPass, currentPassword: oldPass })
       if (error) throw error
       setNewPass("")
       setConPass("")
@@ -441,17 +443,17 @@ function Security({setSnack}) {
     <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack component="form" onSubmit={updatePassword} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
         <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><LockResetIcon sx={{ fontSize: 24 }}/>Update Password</Typography>
-        <TextField fullWidth size="small" label="Old password" type={seePass ? "text" : "password"} value={oldPass} onChange={e => setOldPass(e.target.value)} slotProps={{ input: { endAdornment: (
+        <TextField fullWidth size="small" label="Old password" type={seOPass ? "text" : "password"} value={oldPass} onChange={e => setOldPass(e.target.value)} slotProps={{ input: { endAdornment: (
           <InputAdornment>
-            <IconButton onClick={() => setSeePass(!seePass)}>
-              {seePass ? <VisibilityOffIcon/> : <VisibilityIcon/>}
+            <IconButton onClick={() => setSeOPass(!seOPass)}>
+              {seOPass ? <VisibilityOffIcon/> : <VisibilityIcon/>}
             </IconButton>
           </InputAdornment>
         ) } }}/>
-        <TextField fullWidth size="small" label="New password" type={seePass ? "text" : "password"} value={newPass} onChange={e => setNewPass(e.target.value)} slotProps={{ input: { endAdornment: (
+        <TextField fullWidth size="small" label="New password" type={seNPass ? "text" : "password"} value={newPass} onChange={e => setNewPass(e.target.value)} slotProps={{ input: { endAdornment: (
           <InputAdornment>
-            <IconButton onClick={() => setSeePass(!seePass)}>
-              {seePass ? <VisibilityOffIcon/> : <VisibilityIcon/>}
+            <IconButton onClick={() => setSeNPass(!seNPass)}>
+              {seNPass ? <VisibilityOffIcon/> : <VisibilityIcon/>}
             </IconButton>
           </InputAdornment>
         ) } }}/>
