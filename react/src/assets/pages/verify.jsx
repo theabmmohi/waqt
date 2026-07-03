@@ -67,66 +67,68 @@ export default function Verify() {
         <Typography variant="h6" fontWeight="bold">{state?.title}</Typography>
         <Typography variant="body2" color="text.secondary">{state?.desc}</Typography>
       </Stack>
-        <Stack sx={{ flexDirection: "row", justifyContent: "center", opacity: verifying ? 0.5 : 1, transition: "opacity 0.2s" }}>
-          {digits.map((digit, i) => (
-            <Box key={i} component="input" inputMode="numeric"
-              autoComplete={i === 0 ? "one-time-code" : "off"} value={digit}
-              ref={el => inputsRef.current[i] = el} disabled={verifying}
-              onChange={e => {
-                const text = e.target.value.replace(/\D/g, "")
-                if (text.length > 1) {
-                  const next = [...digits]
-                  text.split("").forEach((char, j) => { if (i + j < OTP_LENGTH) next[i + j] = char })
-                  setDigits(next)
-                  inputsRef.current[Math.min(i + text.length, OTP_LENGTH - 1)]?.focus()
-                  return
-                }
-                const char = text.slice(-1)
-                const next = [...digits]; next[i] = char; setDigits(next)
-                if (char && i < OTP_LENGTH - 1) inputsRef.current[i + 1]?.focus()
-              }}
-              onKeyDown={e => {
-                if (e.key === "Backspace") {
-                  if (digits[i]) { const next = [...digits]; next[i] = ""; setDigits(next) }
-                  else if (i > 0) { const next = [...digits]; next[i - 1] = ""; setDigits(next); inputsRef.current[i - 1]?.focus() }
-                  e.preventDefault()
-                }
-                if (e.key === "ArrowLeft" && i > 0) inputsRef.current[i - 1]?.focus()
-                if (e.key === "ArrowRight" && i < OTP_LENGTH - 1) inputsRef.current[i + 1]?.focus()
-              }}
-              onPaste={e => {
-                e.preventDefault()
-                const text = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "")
-                if (!text) return
+      <Stack sx={{ flexDirection: "row", justifyContent: "center", opacity: verifying ? 0.5 : 1, transition: "opacity 0.2s" }}>
+        {digits.map((digit, i) => (
+          <Box key={i} component="input" inputMode="numeric"
+            autoComplete={i === 0 ? "one-time-code" : "off"} value={digit}
+            ref={el => inputsRef.current[i] = el} disabled={verifying}
+            onChange={e => {
+              const text = e.target.value.replace(/\D/g, "")
+              if (text.length > 1) {
                 const next = [...digits]
                 text.split("").forEach((char, j) => { if (i + j < OTP_LENGTH) next[i + j] = char })
                 setDigits(next)
                 inputsRef.current[Math.min(i + text.length, OTP_LENGTH - 1)]?.focus()
-              }}
-              sx={{
-                width: 48, height: 52, backgroundColor: "transparent",
-                border: "1px solid",
-                borderColor: digits[i] ? "primary.main" : "divider",
-                marginLeft: i === 0 ? 0 : "-1px",
-                zIndex: digits[i] ? 1 : 0,
-                borderRadius: i === 0 ? "4px 0 0 4px" : i === OTP_LENGTH - 1 ? "0 4px 4px 0" : 0,
-                fontSize: 22, fontWeight: 700,
-                textAlign: "center", outline: "none",
-                caretColor: "transparent", cursor: verifying ? "not-allowed" : "text",
-                transition: "border-color 0.15s, background 0.15s",
-                position: "relative", color: "text.primary",
-                "&:focus": {
-                  borderColor: "primary.main",
-                  zIndex: 2, backgroundColor: "action.hover"
-                }
-              }}
-            />
-          ))}
-        <Turnstile ref={turnstileRef} onVerify={setCaptchaToken} onError={() => setCaptchaToken(null)}/>
-        </Stack>
+                return
+              }
+              const char = text.slice(-1)
+              const next = [...digits]; next[i] = char; setDigits(next)
+              if (char && i < OTP_LENGTH - 1) inputsRef.current[i + 1]?.focus()
+            }}
+            onKeyDown={e => {
+              if (e.key === "Backspace") {
+                if (digits[i]) { const next = [...digits]; next[i] = ""; setDigits(next) }
+                else if (i > 0) { const next = [...digits]; next[i - 1] = ""; setDigits(next); inputsRef.current[i - 1]?.focus() }
+                e.preventDefault()
+              }
+              if (e.key === "ArrowLeft" && i > 0) inputsRef.current[i - 1]?.focus()
+              if (e.key === "ArrowRight" && i < OTP_LENGTH - 1) inputsRef.current[i + 1]?.focus()
+            }}
+            onPaste={e => {
+              e.preventDefault()
+              const text = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "")
+              if (!text) return
+              const next = [...digits]
+              text.split("").forEach((char, j) => { if (i + j < OTP_LENGTH) next[i + j] = char })
+              setDigits(next)
+              inputsRef.current[Math.min(i + text.length, OTP_LENGTH - 1)]?.focus()
+            }}
+            sx={{
+              width: 48, height: 52, backgroundColor: "transparent",
+              border: "1px solid",
+              borderColor: digits[i] ? "primary.main" : "divider",
+              marginLeft: i === 0 ? 0 : "-1px",
+              zIndex: digits[i] ? 1 : 0,
+              borderRadius: i === 0 ? "4px 0 0 4px" : i === OTP_LENGTH - 1 ? "0 4px 4px 0" : 0,
+              fontSize: 22, fontWeight: 700,
+              textAlign: "center", outline: "none",
+              caretColor: "transparent", cursor: verifying ? "not-allowed" : "text",
+              transition: "border-color 0.15s, background 0.15s",
+              position: "relative", color: "text.primary",
+              "&:focus": {
+                borderColor: "primary.main",
+                zIndex: 2, backgroundColor: "action.hover"
+              }
+            }}
+          />
+        ))}
+      </Stack>
       <Typography sx={{ alignSelf: "end" }}>
         <Link onClick={() => resend()}>Resend?</Link>
       </Typography>
+    </Stack>
+    <Stack sx={{ alignItems: "center" }}>
+      <Turnstile ref={turnstileRef} onVerify={setCaptchaToken} onError={() => setCaptchaToken(null)}/>
     </Stack>
     <Snackbar open={!!snack} onClose={() => setSnack("")} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}/>
   </Stack>)

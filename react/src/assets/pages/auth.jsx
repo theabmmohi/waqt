@@ -98,8 +98,8 @@ export default function Auth() {
     } catch (e) {show(titleCase(e.message))} finally {setForgotLoading(false); resetCaptcha()}
   }
   const handlePasskey = async () => {
-    setPasskeyLoading(true)
     if(!captchaToken) return show("Please complete the CAPTCHA")
+    setPasskeyLoading(true)
     try {
       const { error } = await Supabase.auth.signInWithPasskey({ options: {captchaToken} })
       if (error) throw error
