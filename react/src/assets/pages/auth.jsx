@@ -16,7 +16,9 @@ import {
   Box
 } from "@mui/material"
 import { useNavigate } from "react-router-dom"
+import Turnstile from "@asset/turnstile"
 import Supabase from "@/supabase"
+
 
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff"
 import VisibilityIcon from "@mui/icons-material/Visibility"
@@ -33,6 +35,7 @@ export default function Auth() {
   const [showPass, setShowPass] = useState(false)
   const [snack, setSnack] = useState("")
   const [open, setOpen] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [forgotLoading, setForgotLoading] = useState(false)
   const [passkeyLoading, setPasskeyLoading] = useState(false)
@@ -53,6 +56,7 @@ export default function Auth() {
     if (!email || !password) return show("Email and password are required")
     if (!validEmail) return show("Please enter a valid email address")
     if (isSignUp && !name.trim()) return show("Please enter your name")
+    if (!captchaToken) return show("Please complete the CAPTCHA")
     setSubmitting(true)
     try {
       if (isSignUp) {
@@ -60,7 +64,8 @@ export default function Auth() {
           email, password,
           options: {
             data: { full_name: name.trim() },
-            emailRedirectTo: undefined
+            emailRedirectTo: undefined,
+            captchaToken
           }
         })
         if (error) throw error
@@ -72,7 +77,7 @@ export default function Auth() {
           desc: `We sent a 6-digit code to ${email}`
         } })
       } else {
-        const { error } = await Supabase.auth.signInWithPassword({ email, password })
+        const { error } = await Supabase.auth.signInWithPassword({ email, password, options: { captchaToken } })
         if (error) throw error
         navigate("/")
       }
@@ -82,9 +87,10 @@ export default function Auth() {
     const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     if (!email) return show("Please enter your email address first")
     if (!validEmail) return show("Please enter a valid email address")
+    if (!captchaToken) return show("Please complete the CAPTCHA")
     setForgotLoading(true)
     try {
-      const { error } = await Supabase.auth.resetPasswordForEmail(email)
+      const { error } = await Supabase.auth.resetPasswordForEmail(email, { captchaToken })
       if (error) throw error
       show("Password reset email sent!")
     } catch (e) {show(titleCase(e.message))} finally {setForgotLoading(false)}
@@ -118,6 +124,7 @@ export default function Auth() {
           {!isSignUp ? <Button onClick={handleForgot} disabled={forgotLoading} startIcon={forgotLoading ? <CircularProgress size={14}/> : null}>{forgotLoading ? "Sending..." : "Forgot Password"}</Button> : <Box/>}
           <Button onClick={() => { setIsSignUp(!isSignUp); setPassword(""); setName("") }}>{isSignUp ? "Sign In Instead" : "Create Account"}</Button>
         </Stack>
+        <Turnstile onVerify={setCaptchaToken} onError={() => setCaptchaToken(null)}/>
         <Button disableElevation sx={{ width: "75%" }} type="submit" disabled={submitting} variant={submitting ? "outlined" : "contained"} startIcon={submitting ? <CircularProgress size={14}/> : null}>
           {submitting ? (isSignUp ? "Signing Up..." : "Signing In...") : (isSignUp ? "Sign Up" : "Sign In")}
         </Button>
