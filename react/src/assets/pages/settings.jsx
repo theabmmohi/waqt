@@ -344,6 +344,9 @@ function Preferences({setSnack}) {
           />
         )}
       </Stack>
+      <Stack>
+      
+      </Stack>
       <FormControl>
         <InputLabel id="calcMethodLabel">Calculation Method</InputLabel>
         <Select labelId="calcMethodLabel" id="calcMethod" label="Calculation Method" value={calcMethod} onChange={(e) => setCalcMethod(e.target.value)}>

@@ -2,10 +2,14 @@ import { createClient } from "@supabase/supabase-js"
 import nodemailer from "nodemailer"
 import webpush from "web-push"
 import express from "express"
+import cron from "node-cron"
 import cors from "cors"
 import "dotenv/config"
 import {
-  
+  CalculationMethod,
+  Coordinates,
+  PrayerTimes,
+  Madhab
 } from "adhan"
 
 const supabase = createClient(process.env.SB_URL, process.env.SB_SECRET)
@@ -20,7 +24,7 @@ const mailer = nodemailer.createTransport({
   secure: true
 })
 
-server.use(cors({origin: "app.abm.ami.bd"}))
+server.use(cors({origin: "https://app.abm.ami.bd"}))
 server.use(express.json())
 webpush.setVapidDetails(
   process.env.VAPID_MAILTO,
@@ -77,9 +81,6 @@ async function getUser(req) {
 
 
 
-server.get("/", async (req, res) => {
-  res.type("text").send("Im Alive!")
-})
 
 server.post("/webhook/telegram", async (req, res) => {
   if (req.headers["x-telegram-bot-api-secret-token"] !== process.env.TG_HOOK_SCRT) return res.sendStatus(403)
@@ -174,4 +175,5 @@ server.post("/settings/notifications/telegram/validateID", async (req, res) => {
 
 
 
+server.get("/", (_, res) => res.type("text").send("Im Alive!"))
 server.listen(8000, () => console.log("Server Running On Port: 8000"))
