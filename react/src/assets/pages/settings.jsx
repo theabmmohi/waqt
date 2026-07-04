@@ -241,7 +241,9 @@ function Preferences({setSnack}) {
     setCoordsLoading(true)
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude })
+        const lat = pos.coords.latitude
+        const lon = pos.coords.longitude
+        setCoords({ lat, lon })
         try {
           const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&timezone=auto`)
           const { timezone } = await res.json()
