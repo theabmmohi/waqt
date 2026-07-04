@@ -28,6 +28,7 @@ export default function Dashboard() {
   const theme      = useTheme()
   const meta       = user?.user_metadata
   const fmt        = meta?.timeFormat ?? "12h"
+  const tz         = meta?.tz || Intl.DateTimeFormat().resolvedOptions().timeZone
   const [snack, setSnack] = useState(() => !meta?.coords ? "Set Your Location In Settings To Get Prayer Times" : "")
   const [now, setNow]     = useState(new Date())
   useEffect(() => {
@@ -53,11 +54,12 @@ export default function Dashboard() {
   const timeStr = (d) => {
     if (!d) return "--:--"
     const s = d.toLocaleTimeString([], fmt === "24h"
-      ? { hour: "2-digit", minute: "2-digit", hour12: false }
-      : { hour: "numeric", minute: "2-digit", hour12: true })
+      ? { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz }
+      : { hour: "numeric", minute: "2-digit", hour12: true, timeZone: tz })
     return fmt === "24h" ? s : s.replace(/^(\d):/, "0$1:").replace(/:(\d)(?=\s)/, ":0$1").replace(/:(\d)(\D)/, ":0$1$2")
   }
-  const tomorrowFajr = prayerTimes ? new PrayerTimes(coords, new Date(now.getTime() + 86400000), params).fajr : null
+  const tzDate       = new Date(now.toLocaleString("en-US", { timeZone: tz }))
+  const tomorrowFajr = prayerTimes ? new PrayerTimes(coords, new Date(tzDate.getTime() + 86400000), params).fajr : null
   const namedPrayers = prayerTimes ? [
     { name: "Fajr",    time: prayerTimes.fajr,    end: prayerTimes.sunrise },
     { name: "Dhuhr",   time: prayerTimes.dhuhr,   end: prayerTimes.asr },
@@ -98,7 +100,7 @@ export default function Dashboard() {
   const cs = Math.floor((countdown % 60000) / 1000)
   const countdownStr = `${String(ch).padStart(2,"0")}:${String(cm).padStart(2,"0")}:${String(cs).padStart(2,"0")}`
   const [hijri, setHijri] = useState("Loading…")
-  const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`
+  const todayKey = `${tzDate.getFullYear()}-${tzDate.getMonth()}-${tzDate.getDate()}`
   useEffect(() => {
     const [yyyy, month, day] = todayKey.split("-")
     const dd = String(Number(day)).padStart(2, "0")
@@ -112,7 +114,7 @@ export default function Dashboard() {
       })
       .catch(() => setHijri(""))
   }, [todayKey])
-  const gregorian = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric" }).format(now)
+  const gregorian = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric", timeZone: tz }).format(now)
   const imsak = prayerTimes ? new Date(prayerTimes.fajr.getTime() - 10 * 60000) : null
   const [holidays, setHolidays] = useState([])
   useEffect(() => {
