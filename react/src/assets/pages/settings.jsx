@@ -234,13 +234,19 @@ function Preferences({setSnack}) {
   const [cityOpts, setCityOpts] =           useState([])
   const [saving, setSaving] =               useState(false)
   const [city, setCity] =                   useState(null)
+  const [tz, setTz] =                       useState("")
   const timerRef = useRef()
   const getCoords = () => {
     if (!navigator.geolocation) return setSnack("This Device Doesn't Support GPS")
     setCoordsLoading(true)
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude })
+        try {
+          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&timezone=auto`)
+          const { timezone } = await res.json()
+          setTz(timezone)
+        } catch {setTz("")}
         setCoordsLoading(false)
       },
       (err) => {
@@ -269,7 +275,7 @@ function Preferences({setSnack}) {
       const { error } = await Supabase.auth.updateUser({ data: {
         ...(locationType === "gps" ? {city: null} : {city}),
         language, timeFormat, locationType,
-        coords, calcMethod, madhab
+        coords, calcMethod, madhab, tz
       } })
       if (error) throw error
       setSnack("Preferences Saved")
@@ -285,6 +291,7 @@ function Preferences({setSnack}) {
     if (data.coords)       setCoords(data.coords)
     if (data.calcMethod)   setCalcMethod(data.calcMethod)
     if (data.madhab)       setMadhab(data.madhab)
+    if (data.tz)           setTz(data.tz)
     if (data.city) {
       setCity(data.city)
       setCityInput([data.city.name, data.city.admin1, data.city.admin2, data.city.admin3, data.city.country].filter(Boolean).join(", "))
@@ -338,6 +345,7 @@ function Preferences({setSnack}) {
             renderInput={(params) => <TextField {...params} size="small" label="Find City"/>}
             onChange={(_, v) => {
               setCity(v)
+              setTz(v?.timezone ?? "")
               if (v) setCoords({ lat: v.latitude, lon: v.longitude })
               else setCoords(null)
             }}
@@ -345,7 +353,7 @@ function Preferences({setSnack}) {
         )}
       </Stack>
       <Stack>
-      
+        <TextField fullWidth size="small" label="Timezone" disabled value={tz} slotProps={{ input: { readOnly: true } }}></TextField>
       </Stack>
       <FormControl>
         <InputLabel id="calcMethodLabel">Calculation Method</InputLabel>
