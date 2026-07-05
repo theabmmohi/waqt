@@ -120,7 +120,7 @@ function Notifications({setSnack}) {
         const reg = await navigator.serviceWorker.ready
         const subscription = await reg.pushManager.getSubscription()
         if (subscription) await subscription.unsubscribe()
-        await api.post("/settings/notifications/webPush/unsubscribe")
+        await api.post("/settings/notifications/webPush/unsubscribe", { endpoint: subscription.endpoint })
         setBrowEnabled(false)
         setSnack("Browser notifications disabled")
       } else {

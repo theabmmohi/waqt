@@ -120,8 +120,10 @@ server.post("/settings/notifications/webPush/subscribe", async (req, res) => {
     const user = await getUser(req)
     const { subscription } = req.body
     if (!subscription) throw new Error("No Subscription Provided")
+    const existing = user.user_metadata?.pushSubscriptions ?? []
+    const pushSubscriptions = [...existing.filter(s => s.endpoint !== subscription.endpoint), subscription]
     await supabase.auth.admin.updateUserById(user.id, {
-      user_metadata: { ...user.user_metadata, pushSubscription: subscription }
+      user_metadata: { ...user.user_metadata, pushSubscriptions }
     })
     res.json({
       success: true,
@@ -136,8 +138,11 @@ server.post("/settings/notifications/webPush/subscribe", async (req, res) => {
 server.post("/settings/notifications/webPush/unsubscribe", async (req, res) => {
   try {
     const user = await getUser(req)
+    const { endpoint } = req.body
+    const existing = user.user_metadata?.pushSubscriptions ?? []
+    const pushSubscriptions = existing.filter(s => s.endpoint !== endpoint)
     await supabase.auth.admin.updateUserById(user.id, {
-      user_metadata: { ...user.user_metadata, pushSubscription: null }
+      user_metadata: { ...user.user_metadata, pushSubscriptions }
     })
     res.json({
       success: true,
