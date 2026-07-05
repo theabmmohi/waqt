@@ -99,6 +99,19 @@ function Notifications({setSnack}) {
   const [teleLinking, setTeleLinking]     = useState(false)
   const [teleLinked, setTeleLinked]       = useState(false)
   const [teleId, setTeleId]               = useState("")
+  const pollRef = useRef()
+  const startPolling = () => {
+    pollRef.current = setInterval(async () => {
+      const { data } = await Supabase.auth.getUser()
+      const chatId = data?.user?.user_metadata?.teleChatId
+      if (chatId) {
+        setTeleLinked(true)
+        setTeleId(chatId)
+        clearInterval(pollRef.current)
+      }
+    }, 3000)
+    setTimeout(() => clearInterval(pollRef.current), 120000)
+  }
   const toggleBrow = async () => {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) return setSnack("Push notifications not supported on this device")
     setBrowLoading(true)
@@ -198,7 +211,7 @@ function Notifications({setSnack}) {
               {!teleLinked ?
                 (<Stack sx={{ gap: 1 }}>
                   <Typography sx={{ fontWeight: 600 }}>How to connect your Telegram account:</Typography>
-                  <Typography>1. Open our official Telegram bot <Link href={`https://t.me/WaqtOfficialBot?start=${user?.id}`} target="_blank" rel="noopener noreferrer"><strong>@WaqtOfficialBot</strong></Link></Typography>
+                  <Typography>1. Open our official Telegram bot <Link href={`https://t.me/WaqtOfficialBot?start=${user?.id}`} target="_blank" rel="noopener noreferrer" onClick={startPolling}><strong>@WaqtOfficialBot</strong></Link></Typography>
                   <Typography>2. Start the bot — it will send your <strong>Chat ID</strong></Typography>
                   <Typography>3. Paste the Chat ID below and tap <strong>Link</strong></Typography>
                 </Stack>) :

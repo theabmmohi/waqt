@@ -90,7 +90,7 @@ server.post("/webhook/telegram", async (req, res) => {
     if (!message) return
     const chatId = message.chat.id
     const text = message.text?.trim()
-    if (text?.startsWith("/start ")) {
+    if (text?.startsWith("/start")) {
       const [, uid] = text.split(" ")
       const chatId = message.chat.id
       let reply = `Welcome to Waqt Bot!\n\nYour Chat ID is:\n\`${chatId}\`\n\nCopy this and paste it in the Waqt app under Settings → Notifications → Telegram.`
