@@ -172,7 +172,7 @@ function Notifications({setSnack}) {
     }
     setTeleLoading(false)
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
@@ -198,7 +198,7 @@ function Notifications({setSnack}) {
               {!teleLinked ?
                 (<Stack sx={{ gap: 1 }}>
                   <Typography sx={{ fontWeight: 600 }}>How to connect your Telegram account:</Typography>
-                  <Typography>1. Open our official Telegram bot <Link href="https://t.me/WaqtOfficialBot" target="_blank" rel="noopener noreferrer"><strong>@WaqtOfficialBot</strong></Link></Typography>
+                  <Typography>1. Open our official Telegram bot <Link href={`https://t.me/WaqtOfficialBot?start=${user?.id}`} target="_blank" rel="noopener noreferrer"><strong>@WaqtOfficialBot</strong></Link></Typography>
                   <Typography>2. Start the bot — it will send your <strong>Chat ID</strong></Typography>
                   <Typography>3. Paste the Chat ID below and tap <strong>Link</strong></Typography>
                 </Stack>) :
@@ -300,7 +300,7 @@ function Preferences({setSnack}) {
       if (data.coords) setCoords(data.coords)
     }
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
   return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>

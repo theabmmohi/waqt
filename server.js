@@ -90,15 +90,24 @@ server.post("/webhook/telegram", async (req, res) => {
     if (!message) return
     const chatId = message.chat.id
     const text = message.text?.trim()
-    if (text === "/start") await fetch(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: `Welcome to Waqt Bot!\n\nYour Chat ID is:\n\`${chatId}\`\n\nCopy this and paste it in the Waqt app under Settings → Notifications → Telegram.`,
-        parse_mode: "Markdown"
+    if (text?.startsWith("/start ")) {
+      const [, uid] = text.split(" ")
+      const chatId = message.chat.id
+      let reply = `Welcome to Waqt Bot!\n\nYour Chat ID is:\n\`${chatId}\`\n\nCopy this and paste it in the Waqt app under Settings → Notifications → Telegram.`
+      if (uid) {
+        const { data, error } = await supabase.auth.admin.updateUserById(uid, { user_metadata: {teleChatId: chatId} })
+        reply = error ? error.message : `Your Telegram is now connected with your Waqt account (${data.user.email})`
+      }
+      await fetch(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          parse_mode: "Markdown",
+          chat_id: chatId,
+          text: reply
+        })
       })
-    })
+    }
   } catch (err) { console.error("Error At /webhook/telegram: ", err) }
 })
 
