@@ -17,7 +17,7 @@ import {
   Madhab
 } from "adhan"
 import { useTheme, alpha } from "@mui/material/styles"
-import { Theme } from "@/react"
+import { Theme } from "@/main"
 
 import WarningAmberIcon from "@mui/icons-material/WarningAmber"
 import WbTwilightIcon from "@mui/icons-material/WbTwilight"

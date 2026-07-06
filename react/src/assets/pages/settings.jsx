@@ -16,7 +16,7 @@ import {
 import useMediaQuery from "@mui/material/useMediaQuery"
 import { useTheme } from "@mui/material/styles"
 import Supabase from "@/supabase"
-import { Theme } from "@/react"
+import { Theme } from "@/main"
 import api from "@/api"
 
 import NotificationsIcon from "@mui/icons-material/Notifications"

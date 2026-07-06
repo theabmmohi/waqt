@@ -18,7 +18,7 @@ import {
 import { red, green, blue } from "@mui/material/colors"
 import { useTheme, alpha } from "@mui/material/styles"
 import { Qibla as AQ, Coordinates } from "adhan"
-import { Theme } from "@/react"
+import { Theme } from "@/main"
 
 import StraightenIcon from "@mui/icons-material/Straighten"
 import ExploreIcon from "@mui/icons-material/Explore"

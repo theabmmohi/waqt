@@ -29,7 +29,7 @@ import Settings from "@page/settings"
 import Verify from "@page/verify"
 import Supabase from "@/supabase"
 import Qibla from "@page/qibla"
-import { Theme } from "@/react"
+import { Theme } from "@/main"
 import Auth from "@page/auth"
 
 import PersonalVideoIcon from "@mui/icons-material/PersonalVideo"

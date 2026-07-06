@@ -18,7 +18,7 @@ import {
 } from "@/theme"
 import Preloader from "@asset/preloader"
 import Supabase from "@/supabase"
-import App from "@/app"
+import App from "@/waqt"
 import "@/style.css"
 export const Theme = createContext()
 
@@ -82,7 +82,7 @@ function React() {
   )
 }
 
-createRoot(document.getElementById("app")).render(
+createRoot(document.getElementById("waqt")).render(
   <StrictMode>
     <React/>
   </StrictMode>

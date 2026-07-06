@@ -1,6 +1,6 @@
 import { Turnstile as TS } from "@marsidev/react-turnstile"
 import { useContext, forwardRef } from "react"
-import { Theme } from "@/react"
+import { Theme } from "@/main"
 const SITE_KEY = "0x4AAAAAADut2bR5XmgZEyqr"
 const Turnstile = forwardRef(function Turnstile({ onVerify, onError, onExpire }, ref) {
   const { dark } = useContext(Theme)
