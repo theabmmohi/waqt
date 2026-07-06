@@ -59,7 +59,7 @@ export default function App() {
         if (sub) await sub.unsubscribe()
         if (sub) await api.post("/settings/notifications/webPush/unsubscribe", { endpoint: sub.endpoint })
       }
-    } finally {await Supabase.auth.signOut()}
+    } finally {await Supabase.auth.signOut({ scope: "local" })}
     closeDrawer()
     navigate("/")
   }
