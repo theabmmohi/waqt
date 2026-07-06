@@ -140,7 +140,8 @@ server.post("/settings/notifications/webPush/unsubscribe", async (req, res) => {
     const user = await getUser(req)
     const { endpoint } = req.body
     const existing = user.user_metadata?.pushSubscriptions ?? []
-    const pushSubscriptions = existing.filter(s => s.endpoint !== endpoint)
+    const filtered = existing.filter(s => s.endpoint !== endpoint)
+    const pushSubscriptions = filtered.length ? filtered : null
     await supabase.auth.admin.updateUserById(user.id, {
       user_metadata: { ...user.user_metadata, pushSubscriptions }
     })

@@ -31,6 +31,7 @@ import Supabase from "@/supabase"
 import Qibla from "@page/qibla"
 import { Theme } from "@/main"
 import Auth from "@page/auth"
+import api from "@/api"
 
 import PersonalVideoIcon from "@mui/icons-material/PersonalVideo"
 import DashboardIcon from "@mui/icons-material/Dashboard"
@@ -56,6 +57,7 @@ export default function App() {
         const reg = await navigator.serviceWorker.ready
         const sub = await reg.pushManager.getSubscription()
         if (sub) await sub.unsubscribe()
+        if (sub) await api.post("/settings/notifications/webPush/unsubscribe", { endpoint: sub.endpoint })
       }
     } finally {await Supabase.auth.signOut()}
     closeDrawer()
