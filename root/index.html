@@ -4,18 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Waqt - Every prayer, right on time</title>
-    <meta name="description" content="Waqt is an Islamic prayer times and so on...">
-    <meta name="keywords" content="waqt app, waqt prayer app, waqt theabmmohi, theabmmohi">
+    <meta name="description" content="Waqt is an Islamic prayer times PWA. Get accurate Fajr, Dhuhr, Asr, Maghrib and Isha (Salah) times by GPS or city.">
+    <meta name="keywords" content="waqt app, prayer times app, salah times, namaz times, islamic prayer app, waqt theabmmohi, theabmmohi">
     <meta property="og:title" content="Waqt - Every prayer, right on time">
-    <meta property="og:description" content="Waqt is an Islamic prayer times and so on...">
+    <meta property="og:description" content="Islamic prayer times PWA with accurate Salah times.">
     <meta property="og:image" content="https://abm.ami.bd/og-image.png">
     <meta property="og:url" content="https://abm.ami.bd">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Waqt - Every prayer, right on time">
-    <meta name="twitter:description" content="Waqt is an Islamic prayer times and so on...">
+    <meta name="twitter:description" content="Islamic prayer times PWA with accurate Salah times.">
     <meta name="twitter:image" content="https://abm.ami.bd/og-image.png">
     <link rel="canonical" href="https://abm.ami.bd">
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Waqt",
+  "url": "https://abm.ami.bd",
+  "description": "Islamic prayer times PWA with accurate Salah times.",
+  "applicationCategory": "LifestyleApplication",
+  "operatingSystem": "Any",
+  "author": {
+    "@type": "Person",
+    "name": "theabmmohi"
+  }
+}
+    </script>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -60,7 +75,6 @@ body {
   font-weight: 300;
   min-height: 100dvh;
   overflow-x: hidden;
-
   & .skyline {
     position: fixed;
     bottom: 0;
@@ -75,7 +89,6 @@ body {
       opacity: 0.1;
     }
   }
-
   & .blob {
     position: fixed;
     border-radius: 50%;
@@ -99,7 +112,6 @@ body {
       animation-delay: -6s;
     }
   }
-
   & main {
     position: relative;
     z-index: 1;
@@ -111,7 +123,6 @@ body {
     padding: 60px 24px;
     text-align: center;
   }
-
   & .badge {
     display: inline-flex;
     align-items: center;
@@ -137,7 +148,6 @@ body {
       animation: blink 2s ease-in-out infinite;
     }
   }
-
   & h1 {
     font-family: "Playfair Display", serif;
     font-weight: 700;
@@ -154,7 +164,6 @@ body {
       color: var(--orange);
     }
   }
-
   & .tagline {
     font-size: clamp(12px, 3vw, 14px);
     color: var(--orange-soft);
@@ -164,7 +173,6 @@ body {
     animation: fadeUp 0.6s ease forwards;
     animation-delay: 0.35s;
   }
-
   & .sub {
     font-size: clamp(13px, 3.5vw, 15px);
     color: var(--text-sec);
@@ -175,7 +183,6 @@ body {
     animation: fadeUp 0.7s ease forwards;
     animation-delay: 0.45s;
   }
-
   & .cta {
     display: inline-flex;
     align-items: center;
@@ -217,7 +224,6 @@ body {
       transition: transform 0.2s ease;
     }
   }
-
   & .divider {
     width: 40px;
     height: 1px;
@@ -227,7 +233,6 @@ body {
     animation: fadeUp 0.6s ease forwards;
     animation-delay: 0.75s;
   }
-
   & .tags {
     display: flex;
     flex-wrap: wrap;
@@ -256,17 +261,64 @@ body {
       }
     }
   }
-
   & .sig {
     position: fixed;
     bottom: 20px;
     left: 0;
     right: 0;
+    width: fit-content;
+    margin: 0 auto;
     text-align: center;
     font-size: 11px;
-    color: var(--orange);
+    color: #000000;
     letter-spacing: 0.1em;
     z-index: 1;
+    padding: 5px;
+    border: 1px solid #000000;
+    backdrop-filter: blur(5px);
+    border-radius: 25px;
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.3s ease;
+    &.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+  & .about {
+    position: relative;
+    z-index: 1;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 24px 100px;
+    text-align: left;
+    & h2 {
+      font-family: "Playfair Display", serif;
+      font-weight: 700;
+      font-size: clamp(24px, 5vw, 32px);
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+    & p {
+      font-size: 14px;
+      line-height: 1.9;
+      color: var(--text-sec);
+      margin-bottom: 16px;
+    }
+    & h3 {
+      font-family: "DM Sans", sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      margin: 28px 0 10px;
+      color: var(--text);
+    }
+    & ul {
+      margin: 0 0 16px;
+      padding-left: 20px;
+      color: var(--text-sec);
+      font-size: 14px;
+      line-height: 1.9;
+    }
   }
 }
 
@@ -274,12 +326,10 @@ body {
   from { transform: translate(0,0) scale(1); }
   to   { transform: translate(20px,30px) scale(1.1); }
 }
-
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.3; }
 }
-
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -388,12 +438,35 @@ body {
         </span>
       </div>
     </main>
+    <section class="about">
+      <h2>Accurate prayer times, anywhere</h2>
+      <p>
+        Waqt is a progressive web app that calculates Islamic prayer times
+        (Salah times) for Fajr, Dhuhr, Asr, Maghrib and Isha based on your GPS
+        location or a manually selected city. Choose from calculation methods
+        including the Muslim World League, Islamic Society of North America,
+        Umm al-Qura, Karachi, Tehran, Egyptian General Authority, Moonsighting
+        Committee, and Singapore, along with Hanafi, Shafi'i, Maliki, or
+        Hanbali madhab settings for Asr.
+      </p>
+      <h3>What you get</h3>
+      <ul>
+        <li>Daily Salah times with a live countdown to the next prayer</li>
+        <li>Makruh (forbidden) prayer window alerts around sunrise, zawal and sunset</li>
+        <li>Sunnah times: Islamic midnight and the last third of the night</li>
+      </ul>
+      <p>
+        Install Waqt on your phone or desktop as a PWA and never miss a
+        Salah again — no account required to browse, and your location data
+        stays under your control.
+      </p>
+    </section>
     <p class="sig">@theabmmohi</p>
     <script>
 const isLIVE = true
 const badge = document.getElementById("badge-text")
 const dot = document.querySelector(".badge-dot")
-  if (isLIVE) {
+if (isLIVE) {
   badge.textContent = "Now Live"
   dot.style.background = "#22c55e"
   dot.style.animation = "blink 2s ease-in-out infinite"
@@ -407,6 +480,10 @@ function goToApp() {
   url.pathname = "/"
   window.location.replace(url.toString())
 }
+const sig = document.querySelector(".sig")
+const toggleSig = () => sig.classList.toggle("hidden", window.scrollY > 0)
+window.addEventListener("scroll", toggleSig, { passive: true })
+toggleSig()
     </script>
   </body>
 </html>
