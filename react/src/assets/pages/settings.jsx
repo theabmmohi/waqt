@@ -19,6 +19,7 @@ import Supabase from "@/supabase"
 import { Theme } from "@/main"
 import api from "@/api"
 
+import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew"
 import NotificationsIcon from "@mui/icons-material/Notifications"
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff"
 import FingerprintIcon from "@mui/icons-material/Fingerprint"
@@ -406,6 +407,7 @@ function Security({setSnack}) {
   const [pkAdding, setPkAdding]             = useState(false)
   const [seOPass, setSeOPass]               = useState(false)
   const [seNPass, setSeNPass]               = useState(false)
+  const [othersR, setOthersR]               = useState(false)
   const [oldPass, setOldPass]               = useState("")
   const [newPass, setNewPass]               = useState("")
   const [conPass, setConPass]               = useState("")
@@ -418,7 +420,6 @@ function Security({setSnack}) {
     if (newPass !== conPass) return setSnack("Passwords do not match")
     setPassUpdating(true)
     try {
-//    const { error } = await Supabase.auth.updateUser({ password: newPass, currentPassword: oldPass })
       const { error } = await Supabase.auth.updateUser({ password: newPass, current_password: oldPass })
       if (error) throw error
       setOldPass("")
@@ -457,6 +458,21 @@ function Security({setSnack}) {
       setEditingPasskey(null)
       setSnack("Passkey Deleted")
     } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally{setPkRemoving(false)}
+  }
+  const logout = async (scope) => {
+    setOthersR(true)
+    try {
+      if ("serviceWorker" in navigator && scope === "global") {
+        const reg = await navigator.serviceWorker.ready
+        const sub = await reg.pushManager.getSubscription()
+        if (sub) await sub.unsubscribe()
+        if (sub) await api.post("/settings/notifications/webPush/unsubscribe", { endpoint: sub.endpoint })
+      }
+      const { error } = await Supabase.auth.signOut({ scope })
+      if (error) throw error
+      if (scope === "global") await api.post("/settings/security/sessions/logout", { scope })
+      setSnack("Logged Out From Other Devices")
+    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally{setOthersR(false)}
   }
   useEffect(() => {
     (async () => {
@@ -521,6 +537,14 @@ function Security({setSnack}) {
             </Button>
           </DialogActions>
         </Dialog>
+      </Stack>
+      <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
+        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><PowerSettingsNewIcon sx={{ fontSize: 24 }}/>Manage Sessions</Typography>
+        <Typography>Logout From:</Typography>
+        <Stack sx={{ flexDirection: "row", gap: 2.5 }}>
+          <Button fullWidth disableElevation onClick={() => logout("others")} variant={othersR ? "outlined" : "contained"} disabled={othersR}>Other Devices</Button>
+          <Button fullWidth disableElevation onClick={() => logout("global")} variant="contained">All Devices</Button>
+        </Stack>
       </Stack>
     </Stack>
   )

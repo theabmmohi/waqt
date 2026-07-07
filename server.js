@@ -186,6 +186,23 @@ server.post("/settings/notifications/telegram/validateID", async (req, res) => {
   })}
 })
 
+server.post("/settings/security/sessions/logout", async (req, res) => {
+  try {
+    const user = await getUser(req)
+    const { scope } = req.body
+    if (scope === "global") await supabase.auth.admin.updateUserById(user.id, {
+      user_metadata: {...user.user_metadata, pushSubscriptions: null}
+    })
+    res.json({
+      success: true,
+      message: "Removed All Push Subscriptions"
+    })
+  } catch (err) {res.json({
+    success: false,
+    message: err?.message ?? "Server Error"
+  })}
+})
+
 
 
 
