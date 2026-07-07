@@ -26,6 +26,7 @@ import {
 } from "@mui/material"
 import Dashboard from "@page/dashboard"
 import Settings from "@page/settings"
+import Forgot from "@page/forgot"
 import Verify from "@page/verify"
 import Supabase from "@/supabase"
 import Qibla from "@page/qibla"
@@ -198,6 +199,7 @@ export default function App() {
         <Box sx={{ height: "100%", position: "relative" }}>
           <Routes>
             <Route path="/auth" element={user ? <Navigate to="/" replace/> : <Auth/>}/>
+            <Route path="/forgot" element={<Forgot/>}/>
             <Route path="/verify" element={<Verify/>}/>
             <Route path="/settings/*" element={!user ? <Navigate to="/" replace/> : <Settings/>}/>
             <Route path="/qibla" element={<Qibla/>}/>

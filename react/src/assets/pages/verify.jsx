@@ -21,8 +21,8 @@ import Supabase from "@/supabase"
 const OTP_LENGTH = 6
 
 export default function Verify() {
-  const navigate = useNavigate()
   const { state } = useLocation()
+  const navigate = useNavigate()
   const [digits, setDigits] = useState(Array(OTP_LENGTH).fill(""))
   const [verifying, setVerifying] = useState(false)
   const [snack, setSnack] = useState("")
@@ -47,6 +47,19 @@ export default function Verify() {
       setDigits(Array(OTP_LENGTH).fill(""))
       setSnack(err.message)
     } finally {setVerifying(false)}
+    if (state?.type === "recovery") try {
+      setVerifying(true)
+      const { error } = await Supabase.auth.verifyOtp({
+        email: state?.email,
+        type: state?.type,
+        token: otp
+      })
+      if (error) throw error
+      navigate("/forgot", { replace: true, state: { email: state?.email, type: "pass" } })
+    } catch (err) {
+      setDigits(Array(OTP_LENGTH).fill(""))
+      setSnack(err.message)
+    } finally {setVerifying(false)}
   }
   const resend = async () => {
     if (!captchaToken) return setSnack("Please complete the CAPTCHA first")
@@ -56,6 +69,11 @@ export default function Verify() {
         type: state?.type,
         options: { captchaToken }
       })
+      if (error) throw error
+      setSnack("Email Sent Successfully")
+    } catch (err) {setSnack(err.message)} finally {resetCaptcha()}
+    if (state?.type === "recovery") try {
+      const { error } = await Supabase.auth.resetPasswordForEmail(state?.email, { captchaToken })
       if (error) throw error
       setSnack("Email Sent Successfully")
     } catch (err) {setSnack(err.message)} finally {resetCaptcha()}

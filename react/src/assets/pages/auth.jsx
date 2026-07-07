@@ -85,18 +85,6 @@ export default function Auth() {
       }
     } catch (e) {show(titleCase(e.message))} finally {setSubmitting(false); resetCaptcha()}
   }
-  const handleForgot = async () => {
-    const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    if (!email) return show("Please enter your email address first")
-    if (!validEmail) return show("Please enter a valid email address")
-    if (!captchaToken) return show("Please complete the CAPTCHA")
-    setForgotLoading(true)
-    try {
-      const { error } = await Supabase.auth.resetPasswordForEmail(email, { captchaToken })
-      if (error) throw error
-      show("Password reset email sent!")
-    } catch (e) {show(titleCase(e.message))} finally {setForgotLoading(false); resetCaptcha()}
-  }
   const handlePasskey = async () => {
     if(!captchaToken) return show("Please complete the CAPTCHA")
     setPasskeyLoading(true)
@@ -124,7 +112,7 @@ export default function Auth() {
         <TextField fullWidth size="small" label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)}/>
         <TextField fullWidth size="small" label="Password" type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} slotProps={{ input: { endAdornment: (<IconButton size="small" onClick={() => setShowPass(!showPass)}>{showPass ? <VisibilityIcon/> : <VisibilityOffIcon/>}</IconButton>) } }}/>
         <Stack direction="row" sx={{ width: "100%", justifyContent: "space-between" }}>
-          {!isSignUp ? <Button onClick={handleForgot} disabled={forgotLoading} startIcon={forgotLoading ? <CircularProgress size={14}/> : null}>{forgotLoading ? "Sending..." : "Forgot Password"}</Button> : <Box/>}
+          {!isSignUp ? <Button onClick={() => navigate("/forgot", { state: { type: "email" } })} disabled={forgotLoading} startIcon={forgotLoading ? <CircularProgress size={14}/> : null}>{forgotLoading ? "Sending..." : "Forgot Password"}</Button> : <Box/>}
           <Button onClick={() => { setIsSignUp(!isSignUp); setPassword(""); setName("") }}>{isSignUp ? "Sign In Instead" : "Create Account"}</Button>
         </Stack>
         <Button disableElevation sx={{ width: "75%" }} type="submit" disabled={submitting} variant={submitting ? "outlined" : "contained"} startIcon={submitting ? <CircularProgress size={14}/> : null}>
