@@ -60,6 +60,10 @@ export default function Verify() {
       setSnack(err.message)
     } finally {setVerifying(false)}
   }
+  const commitDigits = (next) => {
+    setDigits(next)
+    if (next.every(d => d !== "") && !verifying) verify(next.join(""))
+  }
   const resend = async () => {
     if (!captchaToken) return setSnack("Please complete the CAPTCHA first")
     if (state?.type === "signup") try {
@@ -77,7 +81,6 @@ export default function Verify() {
       setSnack("Email Sent Successfully")
     } catch (err) {setSnack(err.message)} finally {resetCaptcha()}
   }
-  useEffect(() => {if (digits.every(d => d !== "") && !verifying) verify(digits.join(""))}, [digits])
   if (!state) return null
   return (<Stack sx={{ gap: 2.5, p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", alignSelf: "center", width: "100%", borderRadius: 1, maxWidth: 600, gap: 2.5, p: 2.5 }}>
@@ -95,12 +98,12 @@ export default function Verify() {
               if (text.length > 1) {
                 const next = [...digits]
                 text.split("").forEach((char, j) => { if (i + j < OTP_LENGTH) next[i + j] = char })
-                setDigits(next)
+                commitDigits(next)
                 inputsRef.current[Math.min(i + text.length, OTP_LENGTH - 1)]?.focus()
                 return
               }
               const char = text.slice(-1)
-              const next = [...digits]; next[i] = char; setDigits(next)
+              const next = [...digits]; next[i] = char; commitDigits(next)
               if (char && i < OTP_LENGTH - 1) inputsRef.current[i + 1]?.focus()
             }}
             onKeyDown={e => {
@@ -118,7 +121,7 @@ export default function Verify() {
               if (!text) return
               const next = [...digits]
               text.split("").forEach((char, j) => { if (i + j < OTP_LENGTH) next[i + j] = char })
-              setDigits(next)
+              commitDigits(next)
               inputsRef.current[Math.min(i + text.length, OTP_LENGTH - 1)]?.focus()
             }}
             sx={{
