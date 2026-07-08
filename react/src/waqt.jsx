@@ -24,6 +24,7 @@ import {
   Stack,
   Box
 } from "@mui/material"
+import Installations from "@page/installations"
 import Dashboard from "@page/dashboard"
 import Settings from "@page/settings"
 import Forgot from "@page/forgot"
@@ -40,6 +41,7 @@ import LightModeIcon from "@mui/icons-material/LightMode"
 import DarkModeIcon from "@mui/icons-material/DarkMode"
 import GpsFixedIcon from "@mui/icons-material/GpsFixed"
 import SettingsIcon from "@mui/icons-material/Settings"
+import AndroidIcon from "@mui/icons-material/Android"
 import AcUnitIcon from "@mui/icons-material/AcUnit"
 import LogoutIcon from "@mui/icons-material/Logout"
 import CloseIcon from "@mui/icons-material/Close"
@@ -158,6 +160,13 @@ export default function App() {
               })}
             </Stack>
             <Divider/>
+            <Button fullWidth disableElevation
+              sx={{ border: "none", borderRadius: 0, py: 1.25 }}
+              variant={location.pathname === "/installations" ? "contained" : "outlined"}
+              color={location.pathname === "/installations" ? "primary" : "inherit"}
+              onClick={() => { navigate("/installations"); closeDrawer() }}
+              startIcon={<AndroidIcon/>}>Installations</Button>
+            <Divider/>
             <Stack sx={{ flexDirection: "row" }}>
               <Stack sx={{ justifyContent: "center", alignItems: "center", flex: 1}}>
                 <ToggleButtonGroup fullWidth exclusive size="small" onChange={(_, val) => { if (val) toggle(val) }} value={dark} sx={{ borderRadius: 0, height: "100%", "& .MuiToggleButton-root": { borderRadius: 0, border: "none" }, "& .MuiToggleButtonGroup-grouped:not(:last-of-type)": { borderRight: "1px solid", borderColor: "divider" } }}>
@@ -202,6 +211,7 @@ export default function App() {
             <Route path="/forgot" element={<Forgot/>}/>
             <Route path="/verify" element={<Verify/>}/>
             <Route path="/settings/*" element={!user ? <Navigate to="/" replace/> : <Settings/>}/>
+            <Route path="/installations" element={<Installations/>}/>
             <Route path="/qibla" element={<Qibla/>}/>
             <Route path="/*" element={user ? <Dashboard/> : <Auth/>}/>
           </Routes>

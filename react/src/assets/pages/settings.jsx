@@ -551,11 +551,13 @@ function Security({setSnack}) {
 }
 
 export default function Settings() {
+  const { user } = useContext(Theme)
   const navigate = useNavigate()
   const location = useLocation()
   const [snack, setSnack] = useState("")
   const active = ["profile", "notifications", "preferences", "security"].find(x => location.pathname.includes(x)) ?? "profile"
   const mobile = useMediaQuery(useTheme().breakpoints.down("sm"))
+  useEffect(() => {if (!user) navigate("/", {replace: true})}, [user])
   return (
     <>
       <Stack direction={{ xs: "column", sm: "row" }} sx={{ height: "100%" }}>
