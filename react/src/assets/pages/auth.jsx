@@ -92,7 +92,7 @@ export default function Auth() {
       const { error } = await Supabase.auth.signInWithPasskey({ options: {captchaToken} })
       if (error) throw error
       navigate("/")
-    } catch (e) {show(titleCase(e.message))} finally {setPasskeyLoading(false)}
+    } catch (e) {show(titleCase(e.message))} finally {setPasskeyLoading(false); resetCaptcha()}
   }
   const handleGoogle = async () => {
     setGoogleLoading(true)
