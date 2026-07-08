@@ -81,10 +81,13 @@ function React() {
     </Theme.Provider>
   )
 }
-
 createRoot(document.getElementById("waqt")).render(
   <StrictMode>
     <React/>
   </StrictMode>
 )
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault()
+  window.location.reload()
+})
 registerSW({ immediate: true })

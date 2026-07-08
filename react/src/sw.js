@@ -2,9 +2,8 @@
 import { precacheAndRoute } from "workbox-precaching"
 import { clientsClaim } from "workbox-core"
 precacheAndRoute(self.__WB_MANIFEST)
-self.skipWaiting()
 clientsClaim()
-self.addEventListener("message", (e) => { if (e.data?.type === "SKIP_WAITING") self.skipWaiting() })
+self.skipWaiting()
 self.addEventListener("push", (e) => {
   const data = e.data?.json() ?? {}
   const title = data.title ?? "Waqt"
