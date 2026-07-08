@@ -186,7 +186,7 @@ function Notifications({setSnack}) {
     }
     setTeleLoading(false)
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user])  
   return (
     <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
@@ -314,7 +314,7 @@ function Preferences({setSnack}) {
       if (data.coords) setCoords(data.coords)
     }
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user])  
   return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
@@ -551,13 +551,11 @@ function Security({setSnack}) {
 }
 
 export default function Settings() {
-  const { user } = useContext(Theme)
   const navigate = useNavigate()
   const location = useLocation()
   const [snack, setSnack] = useState("")
   const active = ["profile", "notifications", "preferences", "security"].find(x => location.pathname.includes(x)) ?? "profile"
   const mobile = useMediaQuery(useTheme().breakpoints.down("sm"))
-  useEffect(() => {if (!user) navigate("/", {replace: true})}, [user])
   return (
     <>
       <Stack direction={{ xs: "column", sm: "row" }} sx={{ height: "100%" }}>

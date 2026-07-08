@@ -15,7 +15,6 @@ import {
   IconButton,
   TextField,
   Snackbar,
-  Divider,
   Button,
   Slide,
   Stack
@@ -41,7 +40,7 @@ export default function Forgot() {
   const [submitting, setSubmitting] = useState(false)
   const [passUpdating, setPassUpdating] = useState(false)
   const resetCaptcha = () => { turnstileRef.current?.reset(); setCaptchaToken(null) }
-  useEffect(() => {if (!state) navigate("/", { replace: true })}, [navigate])
+  useEffect(() => {if (!state) navigate("/", { replace: true })}, [navigate, state])
   const sendOtp = async (e) => {
     e.preventDefault()
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()

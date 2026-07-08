@@ -30,8 +30,7 @@ export default function Verify() {
   const inputsRef = useRef([])
   const turnstileRef = useRef()
   const resetCaptcha = () => { turnstileRef.current?.reset(); setCaptchaToken(null) }
-  useEffect(() => {if (!state) navigate("/", { replace: true })}, [navigate])
-  useEffect(() => {if (digits.every(d => d !== "") && !verifying) verify(digits.join(""))}, [digits])
+  useEffect(() => {if (!state) navigate("/", { replace: true })}, [navigate, state])
   const verify = async (otp) => {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
     if (state?.type === "signup") try {
@@ -78,6 +77,7 @@ export default function Verify() {
       setSnack("Email Sent Successfully")
     } catch (err) {setSnack(err.message)} finally {resetCaptcha()}
   }
+  useEffect(() => {if (digits.every(d => d !== "") && !verifying) verify(digits.join(""))}, [digits])
   if (!state) return null
   return (<Stack sx={{ gap: 2.5, p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", alignSelf: "center", width: "100%", borderRadius: 1, maxWidth: 600, gap: 2.5, p: 2.5 }}>

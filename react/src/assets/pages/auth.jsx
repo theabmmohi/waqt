@@ -38,7 +38,6 @@ export default function Auth() {
   const [open, setOpen] = useState(false)
   const [captchaToken, setCaptchaToken] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const [forgotLoading, setForgotLoading] = useState(false)
   const [passkeyLoading, setPasskeyLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const show = (msg) => { setSnack(msg); setOpen(true) }
@@ -112,7 +111,7 @@ export default function Auth() {
         <TextField fullWidth size="small" label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)}/>
         <TextField fullWidth size="small" label="Password" type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} slotProps={{ input: { endAdornment: (<IconButton size="small" onClick={() => setShowPass(!showPass)}>{showPass ? <VisibilityIcon/> : <VisibilityOffIcon/>}</IconButton>) } }}/>
         <Stack direction="row" sx={{ width: "100%", justifyContent: "space-between" }}>
-          {!isSignUp ? <Button onClick={() => navigate("/forgot", { state: { type: "email" } })} disabled={forgotLoading} startIcon={forgotLoading ? <CircularProgress size={14}/> : null}>{forgotLoading ? "Sending..." : "Forgot Password"}</Button> : <Box/>}
+          <Button onClick={() => navigate("/forgot", { state: { type: "email" } })}>Forgot Password</Button>
           <Button onClick={() => { setIsSignUp(!isSignUp); setPassword(""); setName("") }}>{isSignUp ? "Sign In Instead" : "Create Account"}</Button>
         </Stack>
         <Button disableElevation sx={{ width: "75%" }} type="submit" disabled={submitting} variant={submitting ? "outlined" : "contained"} startIcon={submitting ? <CircularProgress size={14}/> : null}>
