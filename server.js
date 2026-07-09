@@ -83,10 +83,17 @@ async function GHlatestRelease() {
     headers: {
       "User-Agent": "waqt-server",
       "Accept": "application/vnd.github+json",
-      ...(process.env.GITHUB_TOKN ? { "Authorization": `Bearer ${process.env.GITHUB_TOKEN}` } : {})
+      ...(process.env.GITHUB_TOKN ? { "Authorization": `Bearer ${process.env.GITHUB_TOKN}` } : {})
     }
   })
-  if (!res.ok) throw new Error(`GitHub API returned ${res.status}`)
+  if (!res.ok) {
+    let body
+    try { body = await res.json() } catch { body = { message: await res.text() } }
+    const err = new Error(body.message || `GitHub API returned ${res.status}`)
+    err.status = res.status
+    err.details = body
+    throw err
+  }
   const data = await res.json()
   GHreleaseCache = { data, expiresAt: Date.now() + 600_000 }
   return data
@@ -102,7 +109,7 @@ server.get("/download/android/latest", async (_, res) => {
     const asset = data.assets?.find(a => a.name.endsWith(".apk"))
     if (!asset) return res.status(404).send("No APK found in latest release")
     res.redirect(302, asset.browser_download_url)
-  } catch (err) { res.status(500).send(err.message) }
+  } catch (err) { res.status(500).json({ error: err.message, details: err.details }) }
 })
 
 server.post("/webhook/telegram", async (req, res) => {
