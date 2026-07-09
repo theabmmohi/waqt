@@ -1,7 +1,12 @@
 /* eslint-disable react-refresh/only-export-components */
+import {
+  BrowserRouter,
+  useNavigate,
+  useLocation
+} from "react-router-dom"
 import { registerSW } from "virtual:pwa-register"
-import { BrowserRouter } from "react-router-dom"
 import { createRoot } from "react-dom/client"
+import { App as Cap } from "@capacitor/app"
 import {
   createContext,
   StrictMode,
@@ -21,6 +26,22 @@ import Supabase from "@/supabase"
 import App from "@/waqt"
 import "@/style.css"
 export const Theme = createContext()
+
+function Back() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  useEffect(() => {
+    const listener = Cap.addListener("backButton", () => {
+      if (location.pathname === "/" || window.history.state?.idx === 0) {
+        Cap.exitApp()
+      } else {
+        navigate(-1)
+      }
+    })
+    return () => { listener.remove() }
+  }, [location, navigate])
+  return null
+}
 
 function React() {
   const [ready, setReady] = useState(false)
@@ -81,6 +102,7 @@ function React() {
     </Theme.Provider>
   )
 }
+
 createRoot(document.getElementById("waqt")).render(
   <StrictMode>
     <React/>
