@@ -17,6 +17,8 @@ import {
   Box
 } from "@mui/material"
 import { useNavigate } from "react-router-dom"
+import { Capacitor } from "@capacitor/core"
+import { Browser } from "@capacitor/browser"
 import Turnstile from "@asset/turnstile"
 import Supabase from "@/supabase"
 
@@ -96,11 +98,16 @@ export default function Auth() {
   const handleGoogle = async () => {
     setGoogleLoading(true)
     try {
-      const { error } = await Supabase.auth.signInWithOAuth({
+      const native = Capacitor.isNativePlatform()
+      const { data, error } = await Supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: window.location.origin }
+        options: {
+          redirectTo: native ? "com.theabmmohi.waqt://login-callback/" : window.location.origin,
+          skipBrowserRedirect: native
+        }
       })
       if (error) throw error
+      if (native && data?.url) await Browser.open({ url: data.url })
     } catch (e) {show(titleCase(e.message))} finally {setGoogleLoading(false)}
   }
   return (

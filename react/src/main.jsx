@@ -3,6 +3,7 @@ import { BrowserRouter } from "react-router-dom"
 import { registerSW } from "virtual:pwa-register"
 import { createRoot } from "react-dom/client"
 import { App as Cap } from "@capacitor/app"
+import { Browser } from "@capacitor/browser"
 import {
   createContext,
   StrictMode,
@@ -23,13 +24,20 @@ import App from "@/waqt"
 import "@/style.css"
 export const Theme = createContext()
 
-function Back() {
+function Helper() {
   useEffect(() => {
-    const listener = Cap.addListener("backButton", ({ canGoBack }) => {
+    const backListener = Cap.addListener("backButton", ({ canGoBack }) => {
       if (canGoBack) window.history.back()
       else Cap.exitApp()
     })
-    return () => { listener.remove() }
+    const urlListener = Cap.addListener("appUrlOpen", async ({ url }) => {
+      if (!url.includes("login-callback")) return
+      const code = new URL(url).searchParams.get("code")
+      if (code) await Supabase.auth.exchangeCodeForSession(code)
+      await Browser.close()
+      window.location.href = "/"
+    })
+    return () => { backListener.remove(); urlListener.remove() }
   }, [])
   return null
 }
@@ -86,7 +94,7 @@ function React() {
         {!ready && <Preloader leaving={leaving}/>}
         {(leaving || ready) && (
           <BrowserRouter>
-            <Back/>
+            <Helper/>
             <App/>
           </BrowserRouter>
         )}
