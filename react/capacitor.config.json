@@ -1,12 +1,5 @@
 {
   "appId": "com.theabmmohi.waqt",
   "appName": "Waqt",
-  "webDir": "dist",
-  "plugins": {
-    "CapacitorPasskey": {
-      "origin": "https://app.abm.ami.bd",
-      "domains": ["app.abm.ami.bd"],
-      "autoShim": true
-    }
-  }
+  "webDir": "dist"
 }

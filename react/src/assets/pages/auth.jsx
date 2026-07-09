@@ -17,7 +17,6 @@ import {
   Box
 } from "@mui/material"
 import { useNavigate } from "react-router-dom"
-import { Capacitor } from "@capacitor/core"
 import Turnstile from "@asset/turnstile"
 import Supabase from "@/supabase"
 
@@ -45,8 +44,7 @@ export default function Auth() {
   const titleCase = (str) => str.replace(/\b\w/g, c => c.toUpperCase())
   const resetCaptcha = () => { turnstileRef.current?.reset(); setCaptchaToken(null) }
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) setIsPasskeySupported(true)
-    else if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+    if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
       PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
         .then((result) => { if (result) setIsPasskeySupported(true) })
         .catch(() => setIsPasskeySupported(false))
