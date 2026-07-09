@@ -1,9 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import {
-  BrowserRouter,
-  useNavigate,
-  useLocation
-} from "react-router-dom"
+import { BrowserRouter } from "react-router-dom"
 import { registerSW } from "virtual:pwa-register"
 import { createRoot } from "react-dom/client"
 import { App as Cap } from "@capacitor/app"
@@ -28,18 +24,13 @@ import "@/style.css"
 export const Theme = createContext()
 
 function Back() {
-  const navigate = useNavigate()
-  const location = useLocation()
   useEffect(() => {
-    const listener = Cap.addListener("backButton", () => {
-      if (location.pathname === "/" || window.history.state?.idx === 0) {
-        Cap.exitApp()
-      } else {
-        navigate(-1)
-      }
+    const listener = Cap.addListener("backButton", ({ canGoBack }) => {
+      if (canGoBack) window.history.back()
+      else Cap.exitApp()
     })
     return () => { listener.remove() }
-  }, [location, navigate])
+  }, [])
   return null
 }
 
@@ -95,6 +86,7 @@ function React() {
         {!ready && <Preloader leaving={leaving}/>}
         {(leaving || ready) && (
           <BrowserRouter>
+            <Back/>
             <App/>
           </BrowserRouter>
         )}
@@ -108,8 +100,10 @@ createRoot(document.getElementById("waqt")).render(
     <React/>
   </StrictMode>
 )
+
 window.addEventListener("vite:preloadError", (event) => {
   event.preventDefault()
   window.location.reload()
 })
+
 registerSW({ immediate: true })
