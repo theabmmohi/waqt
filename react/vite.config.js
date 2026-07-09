@@ -35,16 +35,10 @@ export default defineConfig({
           }
         ]
       },
-      injectManifest: {
-        globPatterns: ["**/*.{js,css,html,svg,png,ico}"],
-        rollupOptions: {
-          external: ["@capgo/capacitor-passkey"]
-        }
-      },
+      injectManifest: { globPatterns: ["**/*.{js,css,html,svg,png,ico}"] },
       devOptions: { enabled: false }
     })
   ],
-  optimizeDeps: { noDiscovery: true },
   server: { port: 5000 },
   resolve: {
     alias: {
