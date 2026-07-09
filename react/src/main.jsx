@@ -30,12 +30,25 @@ function Helper() {
       if (canGoBack) window.history.back()
       else Cap.exitApp()
     })
+    // const urlListener = Cap.addListener("appUrlOpen", async ({ url }) => {
+    //   if (!url.includes("login-callback")) return
+    //   const code = new URL(url).searchParams.get("code")
+    //   if (code) await Supabase.auth.exchangeCodeForSession(code)
+    //   await Browser.close()
+    //   window.location.href = "/"
+    // })
     const urlListener = Cap.addListener("appUrlOpen", async ({ url }) => {
       if (!url.includes("login-callback")) return
-      const code = new URL(url).searchParams.get("code")
-      if (code) await Supabase.auth.exchangeCodeForSession(code)
-      await Browser.close()
-      window.location.href = "/"
+      try {
+        const code = new URL(url).searchParams.get("code")
+        if (!code) { alert("No code in callback URL: " + url); return }
+        const { error } = await Supabase.auth.exchangeCodeForSession(code)
+        if (error) { alert("Exchange failed: " + error.message); return }
+        await Browser.close()
+        window.location.href = "/"
+      } catch (e) {
+        alert("Callback error: " + e.message)
+      }
     })
     return () => { backListener.remove(); urlListener.remove() }
   }, [])
