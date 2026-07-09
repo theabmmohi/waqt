@@ -73,8 +73,10 @@ jobs:
       - name: Rename APK to version name
         id: apk
         run: |
+          version="${{ steps.tag.outputs.name }}"
+          version="${version#v}"
           src="android/app/build/outputs/apk/debug/app-debug.apk"
-          out="android/app/build/outputs/apk/debug/${{ steps.tag.outputs.name }}.apk"
+          out="android/app/build/outputs/apk/debug/Waqt(${version}).apk"
           mv "$src" "$out"
           echo "path=react/$out" >> "$GITHUB_OUTPUT"
 
