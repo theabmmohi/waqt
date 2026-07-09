@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { CapacitorPasskey } from "@capgo/capacitor-passkey"
 import { BrowserRouter } from "react-router-dom"
 import { registerSW } from "virtual:pwa-register"
 import { createRoot } from "react-dom/client"
@@ -25,8 +26,7 @@ export const Theme = createContext()
 
 function Back() {
   useEffect(() => {
-    //const pkg = "@capgo/capacitor-passkey"
-    //import(/* @vite-ignore */ pkg).then(({ CapacitorPasskey }) => { CapacitorPasskey.autoShimWebAuthn() })
+    CapacitorPasskey.autoShimWebAuthn()
     const listener = Cap.addListener("backButton", ({ canGoBack }) => {
       if (canGoBack) window.history.back()
       else Cap.exitApp()
