@@ -66,9 +66,7 @@ async function notify (message) {
         parse_mode: "Markdown"
       })
     })
-  } catch(error) {
-    console.error("Error at notifyAdmin: ", error)
-  }
+  } catch(error) { console.error("Error at notifyAdmin: ", error) }
 }
 
 async function getUser(req) {
@@ -81,10 +79,16 @@ async function getUser(req) {
 
 async function GHlatestRelease() {
   if (GHreleaseCache.data && Date.now() < GHreleaseCache.expiresAt) return GHreleaseCache.data
-  const res = await fetch(`https://api.github.com/repos/${process.env.GITHUB_USER}/${process.env.GITHUB_REPO}/releases/latest`, { headers: { "User-Agent": "waqt-server" } })
+  const res = await fetch(`https://api.github.com/repos/${process.env.GITHUB_USER}/${process.env.GITHUB_REPO}/releases/latest`, {
+    headers: {
+      "User-Agent": "waqt-server",
+      "Accept": "application/vnd.github+json",
+      ...(process.env.GITHUB_TOKN ? { "Authorization": `Bearer ${process.env.GITHUB_TOKEN}` } : {})
+    }
+  })
   if (!res.ok) throw new Error(`GitHub API returned ${res.status}`)
   const data = await res.json()
-  GHreleaseCache = { data, expiresAt: Date.now() + 150_000 }
+  GHreleaseCache = { data, expiresAt: Date.now() + 600_000 }
   return data
 }
 
