@@ -32,6 +32,8 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE
 )
 
+let GHreleaseCache = { data: null, expiresAt: 0 }
+
 
 
 
@@ -77,10 +79,27 @@ async function getUser(req) {
   return data.user
 }
 
+async function GHlatestRelease() {
+  if (GHreleaseCache.data && Date.now() < GHreleaseCache.expiresAt) return GHreleaseCache.data
+  const res = await fetch(`https://api.github.com/repos/${process.env.GITHUB_USER}/${process.env.GITHUB_REPO}/releases/latest`, { headers: { "User-Agent": "waqt-server" } })
+  if (!res.ok) throw new Error(`GitHub API returned ${res.status}`)
+  const data = await res.json()
+  GHreleaseCache = { data, expiresAt: Date.now() + 150_000 }
+  return data
+}
 
 
 
 
+
+server.get("/download/android/latest", async (_, res) => {
+  try {
+    const data = await GHlatestRelease()
+    const asset = data.assets?.find(a => a.name.endsWith(".apk"))
+    if (!asset) return res.status(404).send("No APK found in latest release")
+    res.redirect(302, asset.browser_download_url)
+  } catch (err) { res.status(500).send(err.message) }
+})
 
 server.post("/webhook/telegram", async (req, res) => {
   if (req.headers["x-telegram-bot-api-secret-token"] !== process.env.TG_HOOK_SCRT) return res.sendStatus(403)
