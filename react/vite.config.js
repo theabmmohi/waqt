@@ -44,6 +44,7 @@ export default defineConfig({
       devOptions: { enabled: false }
     })
   ],
+  optimizeDeps: { noDiscovery: true },
   server: { port: 5000 },
   resolve: {
     alias: {
