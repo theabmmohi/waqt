@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "696930371666",
+    "project_id": "waqt-fcm",
+    "storage_bucket": "waqt-fcm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:696930371666:android:46d8aa29617f8907ca378b",
+        "android_client_info": {
+          "package_name": "com.theabmmohi.waqt"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBkCHnGqRxCueWlzFpzzaQHrB14m-xfz1c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
