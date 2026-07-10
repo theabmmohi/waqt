@@ -25,6 +25,8 @@ import {
   Box
 } from "@mui/material"
 import { subscribeWeb, unsubscribeWeb } from "@/firebase"
+import { Theme, getNativeFcmToken } from "@/main"
+import { Capacitor } from "@capacitor/core"
 import Installations from "@page/installations"
 import Dashboard from "@page/dashboard"
 import Settings from "@page/settings"
@@ -32,7 +34,6 @@ import Forgot from "@page/forgot"
 import Verify from "@page/verify"
 import Supabase from "@/supabase"
 import Qibla from "@page/qibla"
-import { Theme } from "@/main"
 import Auth from "@page/auth"
 import api from "@/api"
 
@@ -60,6 +61,10 @@ export default function App() {
       if ("serviceWorker" in navigator) {
         const fcmToken = await subscribeWeb().catch(() => null)
         await unsubscribeWeb()
+        if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
+      }
+      if (Capacitor.isNativePlatform()) {
+        const fcmToken = getNativeFcmToken()
         if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
       }
     } finally {await Supabase.auth.signOut({ scope: "local" })}
