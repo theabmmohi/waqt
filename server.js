@@ -167,6 +167,46 @@ server.post("/webhook/telegram", async (req, res) => {
   } catch (err) { console.error("Error At /webhook/telegram: ", err) }
 })
 
+server.post("/settings/notifications/webPush/subscribe", async (req, res) => {
+  try {
+    const user = await getUser(req)
+    const { fcmToken } = req.body
+    if (!fcmToken) throw new Error("No FCM Token Provided")
+    const existing = user.user_metadata?.fcmTokens ?? []
+    const fcmTokens = [...new Set([...existing, fcmToken])]
+    await supabase.auth.admin.updateUserById(user.id, {
+      user_metadata: { ...user.user_metadata, fcmTokens }
+    })
+    res.json({
+      success: true,
+      message: "Push Notifications Subscribed"
+    })
+  } catch (err) {res.json({
+    success: false,
+    message: err?.message ?? "Server Error"
+  })}
+})
+
+server.post("/settings/notifications/webPush/unsubscribe", async (req, res) => {
+  try {
+    const user = await getUser(req)
+    const { fcmToken } = req.body
+    const existing = user.user_metadata?.fcmTokens ?? []
+    const filtered = existing.filter(t => t !== fcmToken)
+    const fcmTokens = filtered.length ? filtered : null
+    await supabase.auth.admin.updateUserById(user.id, {
+      user_metadata: { ...user.user_metadata, fcmTokens }
+    })
+    res.json({
+      success: true,
+      message: "Push Notifications Unsubscribed"
+    })
+  } catch (err) {res.json({
+    success: false,
+    message: err?.message ?? "Server Error"
+  })}
+})
+
 server.post("/settings/notifications/telegram/validateID", async (req, res) => {
   try {
     const user = await getUser(req)
