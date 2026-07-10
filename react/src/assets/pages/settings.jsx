@@ -13,6 +13,7 @@ import {
   TextField, MenuItem, Snackbar, Divider, Avatar,
   Dialog, Select, Button, Switch, Slide, Stack
 } from "@mui/material"
+import { subscribeWeb, unsubscribeWeb } from "@/firebase"
 import useMediaQuery from "@mui/material/useMediaQuery"
 import { useTheme } from "@mui/material/styles"
 import Supabase from "@/supabase"
@@ -118,20 +119,15 @@ function Notifications({setSnack}) {
     setBrowLoading(true)
     try {
       if (browEnabled) {
-        const reg = await navigator.serviceWorker.ready
-        const subscription = await reg.pushManager.getSubscription()
-        if (subscription) await subscription.unsubscribe()
-        await api.post("/settings/notifications/webPush/unsubscribe", { endpoint: subscription.endpoint })
+        const fcmToken = await subscribeWeb()
+        await unsubscribeWeb()
+        if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
         setBrowEnabled(false)
         setSnack("Browser notifications disabled")
       } else {
-        const { data: { key } } = await api.post("/settings/notifications/webPush/getPublic")
-        const reg = await navigator.serviceWorker.ready
-        const subscription = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: key
-        })
-        const { data } = await api.post("/settings/notifications/webPush/subscribe", { subscription })
+        const fcmToken = await subscribeWeb()
+        if (!fcmToken) throw new Error("Push notifications not supported on this device")
+        const { data } = await api.post("/settings/notifications/webPush/subscribe", { fcmToken })
         if (!data.success) throw new Error(data.message)
         setBrowEnabled(true)
         setSnack("Browser notifications enabled")
@@ -177,16 +173,13 @@ function Notifications({setSnack}) {
       setTeleLinked(true)
       setTeleId(teleChatId)
     }
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.ready.then(reg => {
-        reg.pushManager.getSubscription().then(sub => {
-          setBrowEnabled(!!sub)
-        })
-      })
+    if ("serviceWorker" in navigator && "Notification" in window) {
+      if (Notification.permission === "granted") subscribeWeb().then(fcmToken => setBrowEnabled(!!fcmToken)).catch(() => setBrowEnabled(false))
+      else setBrowEnabled(false)
     }
     setTeleLoading(false)
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [user])  
+  }, [user])
   return (
     <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
@@ -463,10 +456,9 @@ function Security({setSnack}) {
     setOthersR(true)
     try {
       if ("serviceWorker" in navigator && scope === "global") {
-        const reg = await navigator.serviceWorker.ready
-        const sub = await reg.pushManager.getSubscription()
-        if (sub) await sub.unsubscribe()
-        if (sub) await api.post("/settings/notifications/webPush/unsubscribe", { endpoint: sub.endpoint })
+        const fcmToken = await subscribeWeb().catch(() => null)
+        await unsubscribeWeb()
+        if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
       }
       const { error } = await Supabase.auth.signOut({ scope })
       if (error) throw error

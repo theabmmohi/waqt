@@ -24,6 +24,7 @@ import {
   Stack,
   Box
 } from "@mui/material"
+import { subscribeWeb, unsubscribeWeb } from "@/firebase"
 import Installations from "@page/installations"
 import Dashboard from "@page/dashboard"
 import Settings from "@page/settings"
@@ -57,10 +58,9 @@ export default function App() {
   const handleLogout = async () => {
     try {
       if ("serviceWorker" in navigator) {
-        const reg = await navigator.serviceWorker.ready
-        const sub = await reg.pushManager.getSubscription()
-        if (sub) await sub.unsubscribe()
-        if (sub) await api.post("/settings/notifications/webPush/unsubscribe", { endpoint: sub.endpoint })
+        const fcmToken = await subscribeWeb().catch(() => null)
+        await unsubscribeWeb()
+        if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
       }
     } finally {await Supabase.auth.signOut({ scope: "local" })}
     closeDrawer()

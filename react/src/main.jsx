@@ -1,9 +1,12 @@
 /* eslint-disable react-refresh/only-export-components */
+import { LocalNotifications } from "@capacitor/local-notifications"
+import { PushNotifications } from "@capacitor/push-notifications"
 import { BrowserRouter } from "react-router-dom"
 import { registerSW } from "virtual:pwa-register"
 import { createRoot } from "react-dom/client"
 import { App as Cap } from "@capacitor/app"
 import { Browser } from "@capacitor/browser"
+import { Capacitor } from "@capacitor/core"
 import {
   createContext,
   StrictMode,
@@ -20,23 +23,64 @@ import {
 } from "@/theme"
 import Preloader from "@asset/preloader"
 import Supabase from "@/supabase"
+import api from "@/api"
 import App from "@/waqt"
 import "@/style.css"
 export const Theme = createContext()
 
+function useNativePush() {
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    let regListener, receivedListener, actionListener
+    (async () => {
+      await LocalNotifications.requestPermissions()
+      const { display } = await PushNotifications.requestPermissions()
+      if (display !== "granted") return
+      await PushNotifications.register()
+      regListener = await PushNotifications.addListener("registration", async ({ value: fcmToken }) => {
+        try { await api.post("/settings/notifications/webPush/subscribe", { fcmToken }) }
+        catch (err) { console.error("FCM token registration failed:", err) }
+      })
+      receivedListener = await PushNotifications.addListener("pushNotificationReceived", async (notification) => {
+        const { title, body, url, actions } = notification.data ?? {}
+        const parsedActions = (actions ? JSON.parse(actions) : []).slice(0, 2)
+        const notifId = Date.now() % 2147483647
+        const actionTypeId = parsedActions.length ? `push_${notifId}` : undefined
+        if (actionTypeId) {
+          await LocalNotifications.registerActionTypes({
+            types: [{
+              actions: parsedActions.map(a => ({ id: a.id, title: a.title })),
+              id: actionTypeId
+            }]
+          })
+        }
+        await LocalNotifications.schedule({
+          notifications: [{
+            id: notifId,
+            title: title ?? "Waqt",
+            body: body ?? "",
+            extra: { url: url ?? "/", actionsMeta: parsedActions },
+            actionTypeId
+          }]
+        })
+      })
+      actionListener = await LocalNotifications.addListener("localNotificationActionPerformed", (event) => {
+        const meta = event.notification.extra?.actionsMeta?.find(a => a.id === event.actionId)
+        const url = meta?.url ?? event.notification.extra?.url ?? "/"
+        window.location.href = url
+      })
+    })()
+    return () => { regListener?.remove(); receivedListener?.remove(); actionListener?.remove() }
+  }, [])
+}
+
 function Helper() {
+  useNativePush()
   useEffect(() => {
     const backListener = Cap.addListener("backButton", ({ canGoBack }) => {
       if (canGoBack) window.history.back()
       else Cap.exitApp()
     })
-    // const urlListener = Cap.addListener("appUrlOpen", async ({ url }) => {
-    //   if (!url.includes("login-callback")) return
-    //   const code = new URL(url).searchParams.get("code")
-    //   if (code) await Supabase.auth.exchangeCodeForSession(code)
-    //   await Browser.close()
-    //   window.location.href = "/"
-    // })
     const urlListener = Cap.addListener("appUrlOpen", async ({ url }) => {
       if (!url.includes("login-callback")) return
       try {
