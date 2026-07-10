@@ -125,6 +125,10 @@ async function GHlatestRelease() {
   return data
 }
 
+
+
+
+
 server.get("/download/android/latest", async (_, res) => {
   try {
     const data = await GHlatestRelease()
@@ -147,7 +151,7 @@ server.post("/webhook/telegram", async (req, res) => {
       const chatId = message.chat.id
       let reply = `Welcome to Waqt Bot!\n\nYour Chat ID is:\n\`${chatId}\`\n\nCopy this and paste it in the Waqt app under Settings → Notifications → Telegram.`
       if (uid) {
-        const { data, error } = await supabase.auth.updateUserById(uid, { user_metadata: {teleChatId: chatId} })
+        const { data, error } = await supabase.auth.admin.updateUserById(uid, { user_metadata: {teleChatId: chatId} })
         reply = error ? error.message : `Your Telegram is now connected with your Waqt account (${data.user.email})`
       }
       await fetch(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
@@ -161,46 +165,6 @@ server.post("/webhook/telegram", async (req, res) => {
       })
     }
   } catch (err) { console.error("Error At /webhook/telegram: ", err) }
-})
-
-server.post("/settings/notifications/webPush/subscribe", async (req, res) => {
-  try {
-    const user = await getUser(req)
-    const { token } = req.body
-    if (!token) throw new Error("No FCM Token Provided")
-    const existing = user.user_metadata?.fcmTokens ?? []
-    const fcmTokens = [...new Set([...existing, token])]
-    await supabase.auth.updateUserById(user.id, {
-      user_metadata: { ...user.user_metadata, fcmTokens }
-    })
-    res.json({
-      success: true,
-      message: "Push Notifications Subscribed"
-    })
-  } catch (err) {res.json({
-    success: false,
-    message: err?.message ?? "Server Error"
-  })}
-})
-
-server.post("/settings/notifications/webPush/unsubscribe", async (req, res) => {
-  try {
-    const user = await getUser(req)
-    const { token } = req.body
-    const existing = user.user_metadata?.fcmTokens ?? []
-    const filtered = existing.filter(t => t !== token)
-    const fcmTokens = filtered.length ? filtered : null
-    await supabase.auth.updateUserById(user.id, {
-      user_metadata: { ...user.user_metadata, fcmTokens }
-    })
-    res.json({
-      success: true,
-      message: "Push Notifications Unsubscribed"
-    })
-  } catch (err) {res.json({
-    success: false,
-    message: err?.message ?? "Server Error"
-  })}
 })
 
 server.post("/settings/notifications/telegram/validateID", async (req, res) => {
@@ -238,8 +202,8 @@ server.post("/settings/security/sessions/logout", async (req, res) => {
   try {
     const user = await getUser(req)
     const { scope } = req.body
-    if (scope === "global") await supabase.auth.updateUserById(user.id, {
-      user_metadata: {...user.user_metadata, fcmTokens: null}
+    if (scope === "global") await supabase.auth.admin.updateUserById(user.id, {
+      user_metadata: {...user.user_metadata, pushSubscriptions: null}
     })
     res.json({
       success: true,
@@ -250,6 +214,10 @@ server.post("/settings/security/sessions/logout", async (req, res) => {
     message: err?.message ?? "Server Error"
   })}
 })
+
+
+
+
 
 server.get("/", (_, res) => res.type("text").send("Im Alive!"))
 server.listen(8000, () => console.log("Server Running On Port: 8000"))
