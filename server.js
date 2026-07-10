@@ -1,6 +1,7 @@
+import { initializeApp, cert } from "firebase-admin/app"
+import { getMessaging } from "firebase-admin/messaging"
 import { createClient } from "@supabase/supabase-js"
 import nodemailer from "nodemailer"
-import webpush from "web-push"
 import express from "express"
 import cron from "node-cron"
 import cors from "cors"
@@ -13,6 +14,11 @@ import {
 } from "adhan"
 
 const supabase = createClient(process.env.SB_URL, process.env.SB_SECRET)
+const firebase = initializeApp({ credential: cert({
+  privateKey: process.env.FB_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+  clientEmail: process.env.FB_CLIENT_EMAIL,
+  projectId: process.env.FB_PROJECT_ID
+}) })
 const server = express()
 const mailer = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -20,23 +26,43 @@ const mailer = nodemailer.createTransport({
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
-  },
-  secure: true
+  }, secure: true
 })
 
 server.use(cors({origin: "https://app.abm.ami.bd"}))
 server.use(express.json())
-webpush.setVapidDetails(
-  process.env.VAPID_MAILTO,
-  process.env.VAPID_PUBLIC,
-  process.env.VAPID_PRIVATE
-)
 
 let GHreleaseCache = { data: null, expiresAt: 0 }
 
 
 
 
+
+async function sendPush(tokens, { title, body, url = "/", actions = [] }) {
+  if (!tokens?.length) return { successCount: 0, failureCount: 0, invalidTokens: [] }
+  const cappedActions = actions.slice(0, 2)
+  const message = {
+    tokens,
+    data: {
+      actions: JSON.stringify(cappedActions),
+      title, body, url
+    },
+    webpush: {
+      fcmOptions: { link: url },
+      notification: {
+        title, body,
+        icon: "/android-chrome-192x192.png",
+        badge: "/android-chrome-192x192.png",
+        actions: cappedActions.map(a => ({ action: a.id, title: a.title }))
+      }
+    }
+  }
+  const res = await getMessaging(firebase).sendEachForMulticast(message)
+  const invalidTokens = res.responses
+    .map((r, i) => (!r.success && ["messaging/registration-token-not-registered", "messaging/invalid-registration-token"].includes(r.error?.code) ? tokens[i] : null))
+    .filter(Boolean)
+  return { successCount: res.successCount, failureCount: res.failureCount, invalidTokens }
+}
 
 async function mail ({ sender, to, subject, body, html, unsubscribe }) {
   try {
@@ -99,10 +125,6 @@ async function GHlatestRelease() {
   return data
 }
 
-
-
-
-
 server.get("/download/android/latest", async (_, res) => {
   try {
     const data = await GHlatestRelease()
@@ -125,7 +147,7 @@ server.post("/webhook/telegram", async (req, res) => {
       const chatId = message.chat.id
       let reply = `Welcome to Waqt Bot!\n\nYour Chat ID is:\n\`${chatId}\`\n\nCopy this and paste it in the Waqt app under Settings → Notifications → Telegram.`
       if (uid) {
-        const { data, error } = await supabase.auth.admin.updateUserById(uid, { user_metadata: {teleChatId: chatId} })
+        const { data, error } = await supabase.auth.updateUserById(uid, { user_metadata: {teleChatId: chatId} })
         reply = error ? error.message : `Your Telegram is now connected with your Waqt account (${data.user.email})`
       }
       await fetch(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
@@ -141,23 +163,19 @@ server.post("/webhook/telegram", async (req, res) => {
   } catch (err) { console.error("Error At /webhook/telegram: ", err) }
 })
 
-server.post("/settings/notifications/webPush/getPublic", (req, res) => {
-  res.json({ key: process.env.VAPID_PUBLIC })
-})
-
 server.post("/settings/notifications/webPush/subscribe", async (req, res) => {
   try {
     const user = await getUser(req)
-    const { subscription } = req.body
-    if (!subscription) throw new Error("No Subscription Provided")
-    const existing = user.user_metadata?.pushSubscriptions ?? []
-    const pushSubscriptions = [...existing.filter(s => s.endpoint !== subscription.endpoint), subscription]
-    await supabase.auth.admin.updateUserById(user.id, {
-      user_metadata: { ...user.user_metadata, pushSubscriptions }
+    const { token } = req.body
+    if (!token) throw new Error("No FCM Token Provided")
+    const existing = user.user_metadata?.fcmTokens ?? []
+    const fcmTokens = [...new Set([...existing, token])]
+    await supabase.auth.updateUserById(user.id, {
+      user_metadata: { ...user.user_metadata, fcmTokens }
     })
     res.json({
       success: true,
-      message: "WebPush Subscribed"
+      message: "Push Notifications Subscribed"
     })
   } catch (err) {res.json({
     success: false,
@@ -168,16 +186,16 @@ server.post("/settings/notifications/webPush/subscribe", async (req, res) => {
 server.post("/settings/notifications/webPush/unsubscribe", async (req, res) => {
   try {
     const user = await getUser(req)
-    const { endpoint } = req.body
-    const existing = user.user_metadata?.pushSubscriptions ?? []
-    const filtered = existing.filter(s => s.endpoint !== endpoint)
-    const pushSubscriptions = filtered.length ? filtered : null
-    await supabase.auth.admin.updateUserById(user.id, {
-      user_metadata: { ...user.user_metadata, pushSubscriptions }
+    const { token } = req.body
+    const existing = user.user_metadata?.fcmTokens ?? []
+    const filtered = existing.filter(t => t !== token)
+    const fcmTokens = filtered.length ? filtered : null
+    await supabase.auth.updateUserById(user.id, {
+      user_metadata: { ...user.user_metadata, fcmTokens }
     })
     res.json({
       success: true,
-      message: "WebPush Unsubscribed"
+      message: "Push Notifications Unsubscribed"
     })
   } catch (err) {res.json({
     success: false,
@@ -220,8 +238,8 @@ server.post("/settings/security/sessions/logout", async (req, res) => {
   try {
     const user = await getUser(req)
     const { scope } = req.body
-    if (scope === "global") await supabase.auth.admin.updateUserById(user.id, {
-      user_metadata: {...user.user_metadata, pushSubscriptions: null}
+    if (scope === "global") await supabase.auth.updateUserById(user.id, {
+      user_metadata: {...user.user_metadata, fcmTokens: null}
     })
     res.json({
       success: true,
@@ -232,10 +250,6 @@ server.post("/settings/security/sessions/logout", async (req, res) => {
     message: err?.message ?? "Server Error"
   })}
 })
-
-
-
-
 
 server.get("/", (_, res) => res.type("text").send("Im Alive!"))
 server.listen(8000, () => console.log("Server Running On Port: 8000"))
