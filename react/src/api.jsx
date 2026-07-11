@@ -1,9 +1,9 @@
-import axios from "axios"
-import { Capacitor } from "@capacitor/core"
 import Supabase from "@/supabase"
+import axios from "axios"
 
-const base = Capacitor.isNativePlatform() ? "api.abm.ami.bd" : window.location.hostname.replace(/^[^.]+/, "api")
-const api = axios.create({ baseURL: `https://${base}` })
+const api = axios.create({
+  baseURL: "https://api.abm.ami.bd"
+})
 
 api.interceptors.request.use(async (config) => {
   const { data } = await Supabase.auth.getSession()
