@@ -1,5 +1,9 @@
 {
   "appId": "com.theabmmohi.waqt",
   "appName": "Waqt",
-  "webDir": "dist"
+  "webDir": "dist",
+  "server": {
+    "hostname": "app.abm.ami.bd",
+    "androidScheme": "https"
+  }
 }

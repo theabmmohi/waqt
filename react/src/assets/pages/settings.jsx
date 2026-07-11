@@ -16,6 +16,7 @@ import {
 import { subscribeWeb, unsubscribeWeb } from "@/firebase"
 import { Capacitor } from "@capacitor/core"
 import { PushNotifications } from "@capacitor/push-notifications"
+import { LocalNotifications } from "@capacitor/local-notifications"
 import useMediaQuery from "@mui/material/useMediaQuery"
 import { useTheme } from "@mui/material/styles"
 import Supabase from "@/supabase"
@@ -145,16 +146,24 @@ function Notifications({setSnack}) {
       if (browEnabled) {
         const fcmToken = getNativeFcmToken()
         if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
+        await Supabase.auth.updateUser({ data: { platformNotif: false } })
         setBrowEnabled(false)
         setSnack("Notifications disabled for this device")
       } else {
         let { receive } = await PushNotifications.checkPermissions()
-        if (receive !== "granted") ({ receive } = await PushNotifications.requestPermissions())
+        if (receive === "prompt") ({ receive } = await PushNotifications.requestPermissions())
         if (receive !== "granted") {
           setSnack("Permission denied — enable notifications for Waqt in your device settings")
           return
         }
+        let { display } = await LocalNotifications.checkPermissions()
+        if (display === "prompt") ({ display } = await LocalNotifications.requestPermissions())
+        if (display !== "granted") {
+          setSnack("Permission denied — enable notifications for Waqt in your device settings")
+          return
+        }
         await PushNotifications.register()
+        await Supabase.auth.updateUser({ data: { platformNotif: true } })
         setBrowEnabled(true)
         setSnack("Notifications enabled")
       }
@@ -199,9 +208,16 @@ function Notifications({setSnack}) {
       setTeleLinked(true)
       setTeleId(teleChatId)
     }
+    let liveRegListener
     if (Capacitor.isNativePlatform()) {
       PushNotifications.checkPermissions()
-        .then(({ receive }) => setBrowEnabled(receive === "granted" && !!getNativeFcmToken()))
+        .then(({ receive }) => {
+          if (receive !== "granted") return setBrowEnabled(false)
+          if (getNativeFcmToken()) return setBrowEnabled(true)
+          setBrowEnabled(false)
+          PushNotifications.addListener("registration", () => setBrowEnabled(true))
+            .then(handle => { liveRegListener = handle })
+        })
         .catch(() => setBrowEnabled(false))
     } else if ("serviceWorker" in navigator && "Notification" in window) {
       if (Notification.permission === "granted") {
@@ -218,6 +234,7 @@ function Notifications({setSnack}) {
     }
     setTeleLoading(false)
     /* eslint-enable react-hooks/set-state-in-effect */
+    return () => { liveRegListener?.remove() }
   }, [user])
   return (
     <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>

@@ -35,15 +35,18 @@ export function getNativeFcmToken() { return nativeFcmToken }
 
 function useNativePush() {
   const { user } = useContext(Theme)
-  const tokenRef = useRef(null)
+  const userRef = useRef(user)
+  userRef.current = user
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
-    let regListener, receivedListener, actionListener
+    let regListener, regErrorListener, receivedListener, actionListener
     (async () => {
       regListener = await PushNotifications.addListener("registration", ({ value: fcmToken }) => {
-        tokenRef.current = fcmToken
         nativeFcmToken = fcmToken
-        if (user) api.post("/settings/notifications/webPush/subscribe", { fcmToken }).catch(err => console.error("FCM token registration failed:", err))
+        if (userRef.current) api.post("/settings/notifications/webPush/subscribe", { fcmToken }).catch(err => console.error("FCM token registration failed:", err))
+      })
+      regErrorListener = await PushNotifications.addListener("registrationError", (err) => {
+        console.error("FCM registration error:", err)
       })
       receivedListener = await PushNotifications.addListener("pushNotificationReceived", async (notification) => {
         const { title, body, url, actions } = notification.data ?? {}
@@ -73,17 +76,23 @@ function useNativePush() {
         const url = meta?.url ?? event.notification.extra?.url ?? "/"
         window.location.href = url
       })
-      await LocalNotifications.requestPermissions()
-      const { receive } = await PushNotifications.requestPermissions()
-      if (receive !== "granted") return
-      await PushNotifications.register()
     })()
-    return () => { regListener?.remove(); receivedListener?.remove(); actionListener?.remove() }
+    return () => { regListener?.remove(); regErrorListener?.remove(); receivedListener?.remove(); actionListener?.remove() }
   }, [])
   useEffect(() => {
-    if (!Capacitor.isNativePlatform() || !user || !tokenRef.current) return
-    api.post("/settings/notifications/webPush/subscribe", { fcmToken: tokenRef.current })
-      .catch(err => console.error("FCM token re-sync failed:", err))
+    if (!Capacitor.isNativePlatform() || !user) return
+    if (!user.user_metadata?.platformNotif) return
+    (async () => {
+      try {
+        const { receive } = await PushNotifications.checkPermissions()
+        if (receive !== "granted") return
+        const { display } = await LocalNotifications.checkPermissions()
+        if (display !== "granted") return
+        await PushNotifications.register()
+      } catch (err) {
+        console.error("Silent FCM re-registration failed:", err)
+      }
+    })()
   }, [user])
 }
 
