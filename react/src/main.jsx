@@ -40,10 +40,6 @@ function useNativePush() {
     if (!Capacitor.isNativePlatform()) return
     let regListener, receivedListener, actionListener
     (async () => {
-      await LocalNotifications.requestPermissions()
-      const { display } = await PushNotifications.requestPermissions()
-      if (display !== "granted") return
-      await PushNotifications.register()
       regListener = await PushNotifications.addListener("registration", ({ value: fcmToken }) => {
         tokenRef.current = fcmToken
         nativeFcmToken = fcmToken
@@ -77,6 +73,10 @@ function useNativePush() {
         const url = meta?.url ?? event.notification.extra?.url ?? "/"
         window.location.href = url
       })
+      await LocalNotifications.requestPermissions()
+      const { receive } = await PushNotifications.requestPermissions()
+      if (receive !== "granted") return
+      await PushNotifications.register()
     })()
     return () => { regListener?.remove(); receivedListener?.remove(); actionListener?.remove() }
   }, [])
