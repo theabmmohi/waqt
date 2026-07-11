@@ -201,7 +201,7 @@ function Notifications({setSnack}) {
     }
     if (Capacitor.isNativePlatform()) {
       PushNotifications.checkPermissions()
-        .then(({ receive }) => setBrowEnabled(receive === "granted"))
+        .then(({ receive }) => setBrowEnabled(receive === "granted" && !!getNativeFcmToken()))
         .catch(() => setBrowEnabled(false))
     } else if ("serviceWorker" in navigator && "Notification" in window) {
       if (Notification.permission === "granted") {
