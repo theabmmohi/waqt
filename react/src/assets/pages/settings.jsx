@@ -13,14 +13,14 @@ import {
   TextField, MenuItem, Snackbar, Divider, Avatar,
   Dialog, Select, Button, Switch, Slide, Stack
 } from "@mui/material"
-import { subscribeWeb, unsubscribeWeb } from "@/firebase"
-import { Capacitor } from "@capacitor/core"
+import { Theme, getNativeFcmToken, clearNativeFcmToken } from "@/main"
 import { PushNotifications } from "@capacitor/push-notifications"
 import { LocalNotifications } from "@capacitor/local-notifications"
+import { subscribeWeb, unsubscribeWeb } from "@/firebase"
 import useMediaQuery from "@mui/material/useMediaQuery"
 import { useTheme } from "@mui/material/styles"
+import { Capacitor } from "@capacitor/core"
 import Supabase from "@/supabase"
-import { Theme, getNativeFcmToken } from "@/main"
 import api from "@/api"
 
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew"
@@ -146,6 +146,7 @@ function Notifications({setSnack}) {
       if (browEnabled) {
         const fcmToken = getNativeFcmToken()
         if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
+        clearNativeFcmToken()
         await Supabase.auth.updateUser({ data: { platformNotif: false } })
         setBrowEnabled(false)
         setSnack("Notifications disabled for this device")

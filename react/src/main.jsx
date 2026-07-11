@@ -32,6 +32,7 @@ import "@/style.css"
 export const Theme = createContext()
 let nativeFcmToken = null
 export function getNativeFcmToken() { return nativeFcmToken }
+export function clearNativeFcmToken() { nativeFcmToken = null }
 
 function useNativePush() {
   const { user } = useContext(Theme)
@@ -84,6 +85,7 @@ function useNativePush() {
     if (!user.user_metadata?.platformNotif) return
     (async () => {
       try {
+        if (getNativeFcmToken()) return
         const { receive } = await PushNotifications.checkPermissions()
         if (receive !== "granted") return
         const { display } = await LocalNotifications.checkPermissions()
