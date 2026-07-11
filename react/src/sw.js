@@ -19,14 +19,14 @@ const app = initializeApp({
 const messaging = getMessaging(app)
 
 onBackgroundMessage(messaging, (payload) => {
-  const { title, body, icon, badge } = payload.notification ?? {}
+  const { title, body, url } = payload.data ?? {}
   const actions = payload.data?.actions ? JSON.parse(payload.data.actions) : []
   self.registration.showNotification(title ?? "Waqt", {
     body: body ?? "",
-    icon: icon ?? "/android-chrome-192x192.png",
-    badge: badge ?? "/android-chrome-192x192.png",
+    icon: "/android-chrome-192x192.png",
+    badge: "/android-chrome-192x192.png",
     actions: actions.slice(0, 2).map(a => ({ action: a.id, title: a.title })),
-    data: { url: payload.data?.url ?? payload.fcmOptions?.link ?? "/", actionsMeta: actions }
+    data: { url: url ?? payload.fcmOptions?.link ?? "/", actionsMeta: actions }
   })
 })
 

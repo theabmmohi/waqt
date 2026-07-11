@@ -44,6 +44,14 @@
         <meta-data
             android:name="asset_statements"
             android:resource="@string/capacitor_passkey_asset_statements" />
+
+        <!-- Default icon/color for FCM-displayed notifications (background/killed app) -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_waqt" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_color" />
     </application>
 
     <!-- Permissions -->

@@ -47,14 +47,15 @@ async function sendPush(tokens, { title, body, url = "/", actions = [] }) {
       actions: JSON.stringify(cappedActions),
       title, body, url
     },
-    webpush: {
-      fcmOptions: { link: url },
+    android: {
       notification: {
         title, body,
-        icon: "/android-chrome-192x192.png",
-        badge: "/android-chrome-192x192.png",
-        actions: cappedActions.map(a => ({ action: a.id, title: a.title }))
+        icon: "ic_stat_waqt",
+        color: "#F57C00"
       }
+    },
+    webpush: {
+      fcmOptions: { link: url }
     }
   }
   const res = await getMessaging(firebase).sendEachForMulticast(message)

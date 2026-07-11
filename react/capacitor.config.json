@@ -5,5 +5,11 @@
   "server": {
     "hostname": "app.abm.ami.bd",
     "androidScheme": "https"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_waqt",
+      "iconColor": "#F57C00"
+    }
   }
 }
