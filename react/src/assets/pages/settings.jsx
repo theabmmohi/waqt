@@ -15,6 +15,7 @@ import {
 } from "@mui/material"
 import { subscribeWeb, unsubscribeWeb } from "@/firebase"
 import { Capacitor } from "@capacitor/core"
+import { PushNotifications } from "@capacitor/push-notifications"
 import useMediaQuery from "@mui/material/useMediaQuery"
 import { useTheme } from "@mui/material/styles"
 import Supabase from "@/supabase"
@@ -115,7 +116,7 @@ function Notifications({setSnack}) {
     }, 3000)
     setTimeout(() => clearInterval(pollRef.current), 120000)
   }
-  const toggleBrow = async () => {
+  const toggleBrowWeb = async () => {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) return setSnack("Push notifications not supported on this device")
     setBrowLoading(true)
     try {
@@ -138,6 +139,30 @@ function Notifications({setSnack}) {
       else setSnack(err?.message ?? "Something went wrong")
     } finally { setBrowLoading(false) }
   }
+  const toggleBrowNative = async () => {
+    setBrowLoading(true)
+    try {
+      if (browEnabled) {
+        const fcmToken = getNativeFcmToken()
+        if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
+        setBrowEnabled(false)
+        setSnack("Notifications disabled for this device")
+      } else {
+        let { receive } = await PushNotifications.checkPermissions()
+        if (receive !== "granted") ({ receive } = await PushNotifications.requestPermissions())
+        if (receive !== "granted") {
+          setSnack("Permission denied — enable notifications for Waqt in your device settings")
+          return
+        }
+        await PushNotifications.register()
+        setBrowEnabled(true)
+        setSnack("Notifications enabled")
+      }
+    } catch (err) {
+      setSnack(err?.message ?? "Something went wrong")
+    } finally { setBrowLoading(false) }
+  }
+  const toggleBrow = Capacitor.isNativePlatform() ? toggleBrowNative : toggleBrowWeb
   const teleSubmit = async (e) => {
     e.preventDefault()
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
@@ -174,13 +199,12 @@ function Notifications({setSnack}) {
       setTeleLinked(true)
       setTeleId(teleChatId)
     }
-    if (!Capacitor.isNativePlatform() && "serviceWorker" in navigator && "Notification" in window) {
+    if (Capacitor.isNativePlatform()) {
+      PushNotifications.checkPermissions()
+        .then(({ receive }) => setBrowEnabled(receive === "granted"))
+        .catch(() => setBrowEnabled(false))
+    } else if ("serviceWorker" in navigator && "Notification" in window) {
       if (Notification.permission === "granted") {
-        // Having a browser token doesn't mean the server still has it (e.g.
-        // logout clears it server-side but the browser keeps its permission
-        // grant). Re-subscribe on every mount so they stay in sync — the
-        // subscribe endpoint is idempotent (Set dedup), so this is safe to
-        // call even if already saved.
         subscribeWeb()
           .then(fcmToken => {
             if (!fcmToken) return setBrowEnabled(false)
@@ -197,22 +221,20 @@ function Notifications({setSnack}) {
   }, [user])
   return (
     <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
-      {!Capacitor.isNativePlatform() && (
-        <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
-          <Stack sx={{ flex: 1 }}>
-            <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><WebhookIcon sx={{ fontSize: 24 }}/>Browser Notifications</Typography>
-            <Typography sx={{ color: "text.secondary" }}>
-              {browEnabled ? "Notifications are enabled." : "Allow Waqt sending reminders from browser."}
-            </Typography>
-          </Stack>
-          <Stack sx={{ justifyContent: "center" }}>
-            {browLoading ?
-              <CircularProgress size={25}/> :
-              <Switch checked={browEnabled} onChange={toggleBrow}/>
-            }
-          </Stack>
+      <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
+        <Stack sx={{ flex: 1 }}>
+          <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><WebhookIcon sx={{ fontSize: 24 }}/>{Capacitor.isNativePlatform() ? "App Notifications" : "Browser Notifications"}</Typography>
+          <Typography sx={{ color: "text.secondary" }}>
+            {browEnabled ? "Notifications are enabled." : Capacitor.isNativePlatform() ? "Allow Waqt to send you prayer reminders." : "Allow Waqt sending reminders from browser."}
+          </Typography>
         </Stack>
-      )}
+        <Stack sx={{ justifyContent: "center" }}>
+          {browLoading ?
+            <CircularProgress size={25}/> :
+            <Switch checked={browEnabled} onChange={toggleBrow}/>
+          }
+        </Stack>
+      </Stack>
       <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
         <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><TelegramIcon sx={{ fontSize: 24 }}/>Telegram Notifications</Typography>
         <Stack sx={{ "& .MuiTypography-root": { color: "text.secondary" } }}>

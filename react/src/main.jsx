@@ -24,26 +24,18 @@ import {
   darkTheme
 } from "@/theme"
 import Preloader from "@asset/preloader"
+import { subscribeWeb } from "@/firebase"
 import Supabase from "@/supabase"
 import api from "@/api"
 import App from "@/waqt"
 import "@/style.css"
 export const Theme = createContext()
-
-// Holds the current device's FCM token outside React state so it can be read
-// synchronously by waqt.jsx's handleLogout (needs it *before* the session is
-// cleared — see there). Native only; irrelevant on web.
 let nativeFcmToken = null
 export function getNativeFcmToken() { return nativeFcmToken }
 
-// Native-only: registers the device for FCM push once per app session, and
-// (re)saves the token to the server whenever a user is actually logged in —
-// registration can happen before login finishes, so a token obtained pre-login
-// gets (re)posted once `user` becomes truthy rather than being silently lost.
 function useNativePush() {
   const { user } = useContext(Theme)
   const tokenRef = useRef(null)
-
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
     let regListener, receivedListener, actionListener
@@ -88,9 +80,6 @@ function useNativePush() {
     })()
     return () => { regListener?.remove(); receivedListener?.remove(); actionListener?.remove() }
   }, [])
-
-  // Covers: registration finished before login completed. Once `user` becomes
-  // truthy, (re)post whatever token we already have — subscribe is idempotent.
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || !user || !tokenRef.current) return
     api.post("/settings/notifications/webPush/subscribe", { fcmToken: tokenRef.current })
@@ -98,8 +87,21 @@ function useNativePush() {
   }, [user])
 }
 
+function useWebPushResync() {
+  const { user } = useContext(Theme)
+  useEffect(() => {
+    if (Capacitor.isNativePlatform() || !user) return
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) return
+    if (Notification.permission !== "granted") return
+    subscribeWeb()
+      .then(fcmToken => fcmToken && api.post("/settings/notifications/webPush/subscribe", { fcmToken }))
+      .catch(err => console.error("Web push token re-sync failed:", err))
+  }, [user])
+}
+
 function Helper() {
   useNativePush()
+  useWebPushResync()
   useEffect(() => {
     const backListener = Cap.addListener("backButton", ({ canGoBack }) => {
       if (canGoBack) window.history.back()
