@@ -14,10 +14,11 @@ import {
   Dialog, Select, Button, Switch, Slide, Stack
 } from "@mui/material"
 import { subscribeWeb, unsubscribeWeb } from "@/firebase"
+import { Capacitor } from "@capacitor/core"
 import useMediaQuery from "@mui/material/useMediaQuery"
 import { useTheme } from "@mui/material/styles"
 import Supabase from "@/supabase"
-import { Theme } from "@/main"
+import { Theme, getNativeFcmToken } from "@/main"
 import api from "@/api"
 
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew"
@@ -173,29 +174,45 @@ function Notifications({setSnack}) {
       setTeleLinked(true)
       setTeleId(teleChatId)
     }
-    if ("serviceWorker" in navigator && "Notification" in window) {
-      if (Notification.permission === "granted") subscribeWeb().then(fcmToken => setBrowEnabled(!!fcmToken)).catch(() => setBrowEnabled(false))
-      else setBrowEnabled(false)
+    if (!Capacitor.isNativePlatform() && "serviceWorker" in navigator && "Notification" in window) {
+      if (Notification.permission === "granted") {
+        // Having a browser token doesn't mean the server still has it (e.g.
+        // logout clears it server-side but the browser keeps its permission
+        // grant). Re-subscribe on every mount so they stay in sync — the
+        // subscribe endpoint is idempotent (Set dedup), so this is safe to
+        // call even if already saved.
+        subscribeWeb()
+          .then(fcmToken => {
+            if (!fcmToken) return setBrowEnabled(false)
+            return api.post("/settings/notifications/webPush/subscribe", { fcmToken })
+              .then(({ data }) => setBrowEnabled(!!data.success))
+          })
+          .catch(() => setBrowEnabled(false))
+      } else {
+        setBrowEnabled(false)
+      }
     }
     setTeleLoading(false)
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [user])
   return (
     <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
-      <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
-        <Stack sx={{ flex: 1 }}>
-          <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><WebhookIcon sx={{ fontSize: 24 }}/>Browser Notifications</Typography>
-          <Typography sx={{ color: "text.secondary" }}>
-            {browEnabled ? "Notifications are enabled." : "Allow Waqt sending reminders from browser."}
-          </Typography>
+      {!Capacitor.isNativePlatform() && (
+        <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
+          <Stack sx={{ flex: 1 }}>
+            <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><WebhookIcon sx={{ fontSize: 24 }}/>Browser Notifications</Typography>
+            <Typography sx={{ color: "text.secondary" }}>
+              {browEnabled ? "Notifications are enabled." : "Allow Waqt sending reminders from browser."}
+            </Typography>
+          </Stack>
+          <Stack sx={{ justifyContent: "center" }}>
+            {browLoading ?
+              <CircularProgress size={25}/> :
+              <Switch checked={browEnabled} onChange={toggleBrow}/>
+            }
+          </Stack>
         </Stack>
-        <Stack sx={{ justifyContent: "center" }}>
-          {browLoading ?
-            <CircularProgress size={25}/> :
-            <Switch checked={browEnabled} onChange={toggleBrow}/>
-          }
-        </Stack>
-      </Stack>
+      )}
       <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
         <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><TelegramIcon sx={{ fontSize: 24 }}/>Telegram Notifications</Typography>
         <Stack sx={{ "& .MuiTypography-root": { color: "text.secondary" } }}>
@@ -455,15 +472,14 @@ function Security({setSnack}) {
   const logout = async (scope) => {
     setOthersR(true)
     try {
-      if ("serviceWorker" in navigator && scope === "global") {
-        const fcmToken = await subscribeWeb().catch(() => null)
-        await unsubscribeWeb()
-        if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
-      }
+      const fcmToken = "serviceWorker" in navigator
+        ? await subscribeWeb().catch(() => null)
+        : (Capacitor.isNativePlatform() ? getNativeFcmToken() : null)
+      await api.post("/settings/security/sessions/logout", { scope, fcmToken })
+      if (scope === "global" && "serviceWorker" in navigator) await unsubscribeWeb().catch(() => {})
       const { error } = await Supabase.auth.signOut({ scope })
       if (error) throw error
-      if (scope === "global") await api.post("/settings/security/sessions/logout", { scope })
-      setSnack("Logged Out From Other Devices")
+      setSnack(scope === "global" ? "Logged Out From All Devices" : "Logged Out From Other Devices")
     } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally{setOthersR(false)}
   }
   useEffect(() => {

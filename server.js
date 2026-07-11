@@ -241,13 +241,16 @@ server.post("/settings/notifications/telegram/validateID", async (req, res) => {
 server.post("/settings/security/sessions/logout", async (req, res) => {
   try {
     const user = await getUser(req)
-    const { scope } = req.body
-    if (scope === "global") await supabase.auth.admin.updateUserById(user.id, {
-      user_metadata: {...user.user_metadata, fcmTokens: null}
+    const { scope, fcmToken } = req.body
+    let fcmTokens
+    if (scope === "global") fcmTokens = null
+    else if (scope === "others") fcmTokens = fcmToken ? [fcmToken] : null
+    if (fcmTokens !== undefined) await supabase.auth.admin.updateUserById(user.id, {
+      user_metadata: {...user.user_metadata, fcmTokens}
     })
     res.json({
       success: true,
-      message: "Removed All FCM Tokens"
+      message: scope === "global" ? "Removed All FCM Tokens" : "Removed Other Devices' FCM Tokens"
     })
   } catch (err) {res.json({
     success: false,
