@@ -25,22 +25,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-// Saves a file already sitting in app storage into the device's public
-// Downloads folder, so it's visible/openable from the stock Files app or any
-// file manager — a more familiar, more trusted place than the app's private
-// cache dir for people who aren't comfortable with an in-app installer prompt.
-//
-// Android 10+ (API 29+): written via MediaStore.Downloads, no permission needed.
-// Android 9 and older: written directly to the public Downloads dir, which
-// requires the WRITE_EXTERNAL_STORAGE runtime permission on API 23-28.
 @CapacitorPlugin(
   name = "SaveToDownloads",
   permissions = {
     @Permission(alias = "storage", strings = { Manifest.permission.WRITE_EXTERNAL_STORAGE })
   }
 )
-public class SaveToDownloadsPlugin extends Plugin {
 
+public class SaveToDownloadsPlugin extends Plugin {
   @PluginMethod()
   public void save(PluginCall call) {
     if (!call.getData().has("path") || !call.getData().has("filename")) {
@@ -53,7 +45,6 @@ public class SaveToDownloadsPlugin extends Plugin {
     }
     performSave(call);
   }
-
   @PermissionCallback
   private void storagePermsCallback(PluginCall call) {
     if (getPermissionState("storage") != PermissionState.GRANTED) {
@@ -62,7 +53,6 @@ public class SaveToDownloadsPlugin extends Plugin {
     }
     performSave(call);
   }
-
   private void performSave(PluginCall call) {
     String path = call.getString("path");
     String filename = call.getString("filename");
@@ -84,7 +74,6 @@ public class SaveToDownloadsPlugin extends Plugin {
       call.reject(e.getMessage() != null ? e.getMessage() : "Failed to save file", e);
     }
   }
-
   private Uri saveViaMediaStore(File source, String filename, String mimeType) throws IOException {
     ContentResolver resolver = getContext().getContentResolver();
     ContentValues values = new ContentValues();
@@ -103,7 +92,6 @@ public class SaveToDownloadsPlugin extends Plugin {
     resolver.update(item, done, null, null);
     return item;
   }
-
   private Uri saveViaLegacyFile(File source, String filename) throws IOException {
     File downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
     if (!downloads.exists()) downloads.mkdirs();
@@ -111,12 +99,9 @@ public class SaveToDownloadsPlugin extends Plugin {
     try (InputStream in = new FileInputStream(source); OutputStream out = new FileOutputStream(dest)) {
       copy(in, out);
     }
-    // Without this, older Android's media scanner won't index the file until a reboot
-    // or manual rescan, so it may not show up in some file managers right away.
     MediaScannerConnection.scanFile(getContext(), new String[]{ dest.getAbsolutePath() }, null, null);
     return Uri.fromFile(dest);
   }
-
   private void copy(InputStream in, OutputStream out) throws IOException {
     byte[] buf = new byte[8192];
     int len;

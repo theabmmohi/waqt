@@ -9,10 +9,10 @@ import {
 } from "@mui/material"
 import { Filesystem, Directory } from "@capacitor/filesystem"
 import { FileOpener } from "@capacitor-community/file-opener"
+import { Capacitor, registerPlugin } from "@capacitor/core"
 import { FileTransfer } from "@capacitor/file-transfer"
 import { Browser } from "@capacitor/browser"
 import { App as Cap } from "@capacitor/app"
-import { Capacitor, registerPlugin } from "@capacitor/core"
 import api from "@/api"
 
 import InstallDesktopIcon from "@mui/icons-material/InstallDesktop"
@@ -21,9 +21,7 @@ import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt"
 import CheckCircleIcon from "@mui/icons-material/CheckCircle"
 import DownloadIcon from "@mui/icons-material/Download"
 
-// Local native plugin — android/app/src/main/java/.../SaveToDownloadsPlugin.java
 const SaveToDownloads = registerPlugin("SaveToDownloads")
-
 const APK_DOWNLOAD_URL = `${api.defaults.baseURL}/download/android/latest`
 
 export default function Installations() {
@@ -56,9 +54,6 @@ export default function Installations() {
     window.addEventListener("beforeinstallprompt", handler)
     return () => window.removeEventListener("beforeinstallprompt", handler)
   }, [])
-  // Three distinct audiences see three different things here:
-  // native app -> version/update panel, PWA -> just the APK card (already installed
-  // one way, might want the other), plain browser -> APK + PWA choices.
   const mode = isNativeApp ? "native" : pwaInstalled ? "pwa" : "web"
   const apkUpdateAvailable = useMemo(() => (
     currentVersion && latestVersion && currentVersion !== latestVersion
@@ -72,16 +67,11 @@ export default function Installations() {
       if (event.contentLength > 0) setDownloadProgress(Math.round((event.bytes / event.contentLength) * 100))
     })
     try {
-      // Cache is app-private and needs no runtime permission on any Android version,
-      // unlike Directory.ExternalStorage which Android 11+ blocks entirely.
       const { uri } = await Filesystem.getUri({ directory: Directory.Cache, path: filename })
       await FileTransfer.downloadFile({ url: APK_DOWNLOAD_URL, path: uri, progress: true })
       try {
         await FileOpener.open({ filePath: uri, contentType: "application/vnd.android.package-archive" })
       } catch {
-        // User backed out of the installer chooser, or no handler was found for it.
-        // Fall back to a copy in the public Downloads folder — a more familiar,
-        // trusted place for anyone unsure about installing straight from the app.
         try {
           await SaveToDownloads.save({ path: uri, filename, mimeType: "application/vnd.android.package-archive" })
           setSnack(`Saved to Downloads as "${filename}" — open it from your Files app to install`)
