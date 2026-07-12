@@ -5,7 +5,7 @@ import {
 } from "react"
 import {
   LinearProgress, Typography, Snackbar,
-  Chip, Button, Slide, Stack
+  Button, Slide, Stack, Divider
 } from "@mui/material"
 import { Filesystem, Directory } from "@capacitor/filesystem"
 import { FileOpener } from "@capacitor-community/file-opener"
@@ -15,19 +15,16 @@ import { App as Cap } from "@capacitor/app"
 import { Capacitor, registerPlugin } from "@capacitor/core"
 import api from "@/api"
 
-import SmartphoneIcon from "@mui/icons-material/Smartphone"
 import InstallDesktopIcon from "@mui/icons-material/InstallDesktop"
 import AndroidIcon from "@mui/icons-material/Android"
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt"
 import CheckCircleIcon from "@mui/icons-material/CheckCircle"
-import OpenInNewIcon from "@mui/icons-material/OpenInNew"
 import DownloadIcon from "@mui/icons-material/Download"
 
 // Local native plugin — android/app/src/main/java/.../SaveToDownloadsPlugin.java
 const SaveToDownloads = registerPlugin("SaveToDownloads")
 
 const APK_DOWNLOAD_URL = `${api.defaults.baseURL}/download/android/latest`
-const WEBSITE_URL = "https://app.abm.ami.bd"
 
 export default function Installations() {
   const isNativeApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"
@@ -59,9 +56,13 @@ export default function Installations() {
     window.addEventListener("beforeinstallprompt", handler)
     return () => window.removeEventListener("beforeinstallprompt", handler)
   }, [])
+  // Three distinct audiences see three different things here:
+  // native app -> version/update panel, PWA -> just the APK card (already installed
+  // one way, might want the other), plain browser -> APK + PWA choices.
+  const mode = isNativeApp ? "native" : pwaInstalled ? "pwa" : "web"
   const apkUpdateAvailable = useMemo(() => (
-    isNativeApp && currentVersion && latestVersion && currentVersion !== latestVersion
-  ), [isNativeApp, currentVersion, latestVersion])
+    currentVersion && latestVersion && currentVersion !== latestVersion
+  ), [currentVersion, latestVersion])
   const downloadApk = async () => {
     if (downloading) return
     setDownloading(true)
@@ -95,68 +96,71 @@ export default function Installations() {
       setDownloading(false)
     }
   }
-  const openExternal = async (url) => {
-    if (Capacitor.isNativePlatform()) await Browser.open({ url })
-    else window.open(url, "_blank", "noopener,noreferrer")
+  const downloadApkInBrowser = async () => {
+    if (Capacitor.isNativePlatform()) await Browser.open({ url: APK_DOWNLOAD_URL })
+    else window.open(APK_DOWNLOAD_URL, "_blank", "noopener,noreferrer")
   }
-  const open = async (type) => {
-    if (type === "apk") return isNativeApp ? downloadApk() : openExternal(APK_DOWNLOAD_URL)
-    if (type === "pwa") {
-      if (!pwaPrompt) return
-      await pwaPrompt.prompt()
-      const { outcome } = await pwaPrompt.userChoice
-      if (outcome === "accepted") setPwaInstalled(true)
-      setPwaPrompt(null)
-      return
-    }
-    if (type === "web") return openExternal(WEBSITE_URL)
+  const installPwa = async () => {
+    if (!pwaPrompt) return setSnack("Open your browser's menu (⋮) and tap \"Install app\" or \"Add to Home screen\"")
+    await pwaPrompt.prompt()
+    const { outcome } = await pwaPrompt.userChoice
+    if (outcome === "accepted") setPwaInstalled(true)
+    setPwaPrompt(null)
   }
-  const renderAction = (type) => {
-    switch (type) {
-      case "apk": {
-        if (!isNativeApp) return (<Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={() => open("apk")}>Download</Button>)
-        if (downloading) return (<Stack sx={{ width: 96, gap: 0.5 }}>
-          <Typography variant="caption" sx={{ color: "text.secondary" }}>{downloadProgress}%</Typography>
+  const cardSx = { flexDirection: "row", alignItems: "center", minHeight: 104, border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }
+  if (mode === "native") return (<Stack sx={{ p: 2.5 }}>
+    <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5, p: 2.5 }}>
+      <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><AndroidIcon sx={{ fontSize: 24 }}/>App Version</Typography>
+      <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <Typography sx={{ color: "text.secondary" }}>Current version</Typography>
+        <Typography sx={{ fontWeight: 600 }}>{currentVersion ? `v${currentVersion}` : "—"}</Typography>
+      </Stack>
+      <Divider/>
+      <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <Typography sx={{ color: "text.secondary" }}>Latest version</Typography>
+        <Typography sx={{ fontWeight: 600 }}>{latestVersion ? `v${latestVersion}` : "—"}</Typography>
+      </Stack>
+      <Divider/>
+      {downloading ? (
+        <Stack sx={{ gap: 0.5 }}>
+          <Typography variant="caption" sx={{ color: "text.secondary" }}>Downloading update… {downloadProgress}%</Typography>
           <LinearProgress variant="determinate" value={downloadProgress} sx={{ borderRadius: 1 }} />
-        </Stack>)
-        if (apkUpdateAvailable) return (<Stack sx={{ alignItems: "flex-end", gap: 0.5 }}>
-          <Chip size="small" color="warning" label={`v${latestVersion} available`} />
-          <Button size="small" variant="contained" startIcon={<SystemUpdateAltIcon />} onClick={() => open("apk")}>Update</Button>
-        </Stack>)
-        return (<Stack sx={{ alignItems: "flex-end", gap: 0.5 }}>
-          <Stack sx={{ flexDirection: "row", alignItems: "center", gap: 0.5 }}>
-            <CheckCircleIcon sx={{ fontSize: 16, color: "success.main" }} />
-            <Typography variant="caption" sx={{ color: "text.secondary" }}>Up to date</Typography>
-          </Stack>
-          {currentVersion && <Typography variant="caption" sx={{ color: "text.secondary" }}>v{currentVersion}</Typography>}
-        </Stack>)
-      }
-      case "pwa": {
-        if (pwaInstalled) return <Chip size="small" color="success" icon={<CheckCircleIcon />} label="Installed" />
-        if (!pwaPrompt) return <Typography variant="caption" sx={{ color: "text.secondary" }}>Not available on this browser</Typography>
-        return (<Button size="small" variant="contained" startIcon={<InstallDesktopIcon />} onClick={() => open("pwa")}>Install</Button>)
-      }
-      case "web": return (<Button size="small" variant="outlined" startIcon={<OpenInNewIcon />} onClick={() => open("web")}>Open</Button>)
-      default: return null
-    }
-  }
-  const CARDS = [
-    { type: "apk", icon: AndroidIcon, title: "Android APK", desc: "Direct download for Android devices" },
-    { type: "pwa", icon: InstallDesktopIcon, title: "Progressive Web App", desc: "Install as an app from your browser" },
-    { type: "web", icon: SmartphoneIcon, title: "Browser Website", desc: "Use directly, no installation needed" }
-  ]
+        </Stack>
+      ) : apkUpdateAvailable ? (
+        <Button variant="contained" startIcon={<SystemUpdateAltIcon />} onClick={downloadApk}>Update to v{latestVersion}</Button>
+      ) : (
+        <Stack sx={{ flexDirection: "row", alignItems: "center", gap: 1 }}>
+          <CheckCircleIcon sx={{ fontSize: 18, color: "success.main" }} />
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>You&apos;re on the latest version</Typography>
+        </Stack>
+      )}
+    </Stack>
+    <Snackbar open={!!snack} onClose={() => setSnack("")} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}/>
+  </Stack>)
   return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5 }}>
-      {CARDS.map(({ type, icon: Icon, title, desc }) => (
-        <Stack key={type} sx={{ flexDirection: "row", alignItems: "center", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
-          <Icon sx={{ fontSize: 32 }}/>
-          <Stack sx={{ flex: 1 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>{title}</Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>{desc}</Typography>
-          </Stack>
-          {renderAction(type)}
+      <Stack sx={cardSx}>
+        <AndroidIcon sx={{ fontSize: 32, flexShrink: 0 }}/>
+        <Stack sx={{ flex: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>Android APK</Typography>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>Direct download for Android devices</Typography>
         </Stack>
-      ))}
+        <Stack sx={{ alignItems: "flex-end", width: 110, flexShrink: 0 }}>
+          <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={downloadApkInBrowser}>Download</Button>
+        </Stack>
+      </Stack>
+      {mode === "web" && (
+        <Stack sx={cardSx}>
+          <InstallDesktopIcon sx={{ fontSize: 32, flexShrink: 0 }}/>
+          <Stack sx={{ flex: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>Web App</Typography>
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>Install as an app from your browser</Typography>
+          </Stack>
+          <Stack sx={{ alignItems: "flex-end", width: 110, flexShrink: 0 }}>
+            <Button size="small" variant={pwaPrompt ? "contained" : "outlined"} startIcon={<InstallDesktopIcon />} onClick={installPwa}>{pwaPrompt ? "Install" : "How to install"}</Button>
+          </Stack>
+        </Stack>
+      )}
     </Stack>
     <Snackbar open={!!snack} onClose={() => setSnack("")} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}/>
   </Stack>)
