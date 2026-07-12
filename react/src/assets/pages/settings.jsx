@@ -7,15 +7,14 @@ import {
   useRef, useState
 } from "react"
 import {
-  ToggleButtonGroup, CircularProgress, InputAdornment, DialogActions,
-  DialogContent, Autocomplete, ToggleButton, DialogTitle, Link,
-  FormControl, IconButton, InputLabel, Typography,
-  TextField, MenuItem, Snackbar, Divider, Avatar,
-  Dialog, Select, Button, Switch, Slide, Stack
+  ToggleButtonGroup, CircularProgress, InputAdornment, DialogActions, Tab,
+  DialogContent, Autocomplete, ToggleButton, DialogTitle, FormControl,
+  IconButton, InputLabel, Typography, TextField, MenuItem, Snackbar, Tabs,
+  Divider, Avatar, Dialog, Select, Button, Switch, Slide, Stack, Link,
 } from "@mui/material"
 import { Theme, getNativeFcmToken, clearNativeFcmToken } from "@/main"
-import { PushNotifications } from "@capacitor/push-notifications"
 import { LocalNotifications } from "@capacitor/local-notifications"
+import { PushNotifications } from "@capacitor/push-notifications"
 import { subscribeWeb, unsubscribeWeb } from "@/firebase"
 import useMediaQuery from "@mui/material/useMediaQuery"
 import { useTheme } from "@mui/material/styles"
@@ -69,7 +68,7 @@ function Profile({setSnack}) {
     } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setSaving(false)}
   }
   return (<Stack sx={{ p: 2.5 }}>
-    <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
+    <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", alignItems: "center" }}>
         <Avatar src={avatar} onClick={() => fileRef.current.click()} sx={{ border: "2px solid", borderColor: "text.primary", cursor: "pointer", height: 72, width: 72 }}>{user?.user_metadata?.full_name?.[0]?.toUpperCase() ?? "?"}</Avatar>
         <Stack sx={{ px: 2.5 }}>
@@ -237,8 +236,8 @@ function Notifications({setSnack}) {
     /* eslint-enable react-hooks/set-state-in-effect */
     return () => { liveRegListener?.remove() }
   }, [user])
-  return (
-    <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
+  return (<Stack sx={{ p: 2.5 }}>
+    <Stack sx={{ alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5 }}>
       <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
         <Stack sx={{ flex: 1 }}>
           <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><WebhookIcon sx={{ fontSize: 24 }}/>{Capacitor.isNativePlatform() ? "App Notifications" : "Browser Notifications"}</Typography>
@@ -281,7 +280,7 @@ function Notifications({setSnack}) {
         </Stack>
       </Stack>
     </Stack>
-  )
+  </Stack>)
 }
 
 function Preferences({setSnack}) {
@@ -364,9 +363,9 @@ function Preferences({setSnack}) {
       if (data.coords) setCoords(data.coords)
     }
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [user])  
+  }, [user])
   return (<Stack sx={{ p: 2.5 }}>
-    <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
+    <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
         <Typography sx={{ minWidth: "50%" }}>Language :</Typography>
         <ToggleButtonGroup exclusive fullWidth size="small" sx={{ flex: 1 }} value={language} onChange={(_, v) => { if (v) setLanguage(v) }}>
@@ -531,8 +530,8 @@ function Security({setSnack}) {
       } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")}
     })()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  return (
-    <Stack sx={{ alignSelf: "center", maxWidth: 600, width: "100%", gap: 2.5, p: 2.5 }}>
+  return (<Stack sx={{ p: 2.5 }}>
+    <Stack sx={{ alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5 }}>
       <Stack component="form" onSubmit={updatePassword} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
         <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><LockResetIcon sx={{ fontSize: 24 }}/>Update Password</Typography>
         <TextField fullWidth size="small" label="Old password" type={seOPass ? "text" : "password"} value={oldPass} onChange={e => setOldPass(e.target.value)} slotProps={{ input: { endAdornment: (
@@ -595,7 +594,7 @@ function Security({setSnack}) {
         </Stack>
       </Stack>
     </Stack>
-  )
+  </Stack>)
 }
 
 export default function Settings() {
@@ -604,27 +603,25 @@ export default function Settings() {
   const [snack, setSnack] = useState("")
   const active = ["profile", "notifications", "preferences", "security"].find(x => location.pathname.includes(x)) ?? "profile"
   const mobile = useMediaQuery(useTheme().breakpoints.down("sm"))
-  return (
-    <>
-      <Stack direction={{ xs: "column", sm: "row" }} sx={{ height: "100%" }}>
-        <ToggleButtonGroup fullWidth={mobile} exclusive orientation={mobile ? "horizontal" : "vertical"} value={active} onChange={(_, x) => { if (x) navigate(`/settings/${x}`, { replace: !true }) }} sx={{ "& .MuiToggleButton-root": { borderRadius: 0 } }}>
-          <ToggleButton value="profile"><PersonIcon/></ToggleButton>
-          <ToggleButton value="notifications"><NotificationsIcon/></ToggleButton>
-          <ToggleButton value="preferences"><TuneIcon/></ToggleButton>
-          <ToggleButton value="security"><SecurityIcon/></ToggleButton>
-        </ToggleButtonGroup>
-        <Divider flexItem orientation={mobile ? "horizontal" : "vertical"}/>
-        <Stack sx={{ overflowY: "auto", flex: 1 }}>
-          <Routes>
-            <Route path="profile" element={<Profile setSnack={setSnack}/>}/>
-            <Route path="notifications" element={<Notifications setSnack={setSnack}/>}/>
-            <Route path="preferences" element={<Preferences setSnack={setSnack}/>}/>
-            <Route path="security" element={<Security setSnack={setSnack}/>}/>
-            <Route path="*" element={<Profile setSnack={setSnack}/>}/>
-          </Routes>
-        </Stack>
-      </Stack>
-      <Snackbar open={!!snack} onClose={() => setSnack("")} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}/>
-    </>
-  )
+  return (<Stack direction={{ xs: "column", sm: "row" }} sx={{ height: "100%", overflow: "hidden" }}>
+    <Stack sx={{ overflowY: "auto", minHeight: 0 }}>
+      <Tabs orientation={mobile ? "horizontal" : "vertical"} variant={mobile ? "fullWidth" : "standard"} value={active} onChange={(_, x) => { if (x) navigate(`/settings/${x}`, { replace: !true }) }} sx={{ minHeight: 0, flexShrink: 0, "& .MuiTabs-scroller": { overflowY: mobile ? "visible" : "auto", minHeight: 0, }, "& .MuiTab-root": { py: mobile ? undefined : 2.5 } }}>
+        <Tab value="profile" icon={<PersonIcon/>}/>
+        <Tab value="notifications" icon={<NotificationsIcon/>}/>
+        <Tab value="preferences" icon={<TuneIcon/>}/>
+        <Tab value="security" icon={<SecurityIcon/>}/>
+      </Tabs>
+    </Stack>
+    <Divider flexItem orientation={mobile ? "horizontal" : "vertical"}/>
+    <Stack sx={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
+      <Routes>
+        <Route path="profile" element={<Profile setSnack={setSnack}/>}/>
+        <Route path="notifications" element={<Notifications setSnack={setSnack}/>}/>
+        <Route path="preferences" element={<Preferences setSnack={setSnack}/>}/>
+        <Route path="security" element={<Security setSnack={setSnack}/>}/>
+        <Route path="*" element={<Profile setSnack={setSnack}/>}/>
+      </Routes>
+    </Stack>
+    <Snackbar open={!!snack} onClose={() => setSnack("")} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}/>
+  </Stack>)
 }
