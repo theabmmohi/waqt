@@ -43,7 +43,7 @@ export default function Installations() {
     if (!isNativeApp) return
     fetch(APK_DOWNLOAD_URL, { method: "HEAD", redirect: "follow" })
       .then((res) => {
-        const match = decodeURIComponent(res.url).match(/(\d+\.\d+\.\d+)/)
+        const match = decodeURIComponent(res.url).match(/Waqt-(\d+\.\d+\.\d+)\.apk/i)
         setLatestVersion(match ? match[1] : null)
       })
       .catch(() => setLatestVersion(null))
