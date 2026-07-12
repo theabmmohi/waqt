@@ -19,14 +19,24 @@ const app = initializeApp({
 const messaging = getMessaging(app)
 
 onBackgroundMessage(messaging, (payload) => {
-  const { title, body, url } = payload.data ?? {}
+  const { title, body, url, notifId } = payload.data ?? {}
   const actions = payload.data?.actions ? JSON.parse(payload.data.actions) : []
-  self.registration.showNotification(title ?? "Waqt", {
-    body: body ?? "",
-    icon: "/android-chrome-192x192.png",
-    badge: "/android-chrome-192x192.png",
-    actions: actions.slice(0, 2).map(a => ({ action: a.id, title: a.title })),
-    data: { url: url ?? payload.fcmOptions?.link ?? "/", actionsMeta: actions }
+  // Stable tag: if the FCM SDK's own background handling fires a second
+  // notification for this same push (a known unresolved firebase-js-sdk
+  // issue), this ensures the second call replaces the first instead of
+  // stacking a duplicate in the tray.
+  const tag = notifId ?? `${title ?? ""}-${body ?? ""}`
+  self.registration.getNotifications({ tag }).then(existing => {
+    existing.forEach(n => n.close())
+    self.registration.showNotification(title ?? "Waqt", {
+      body: body ?? "",
+      tag,
+      renotify: false,
+      icon: "/android-chrome-192x192.png",
+      badge: "/android-chrome-192x192.png",
+      actions: actions.slice(0, 2).map(a => ({ action: a.id, title: a.title })),
+      data: { url: url ?? payload.fcmOptions?.link ?? "/", actionsMeta: actions }
+    })
   })
 })
 

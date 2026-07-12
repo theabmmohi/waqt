@@ -40,7 +40,7 @@ function useNativePush() {
   userRef.current = user
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
-    let regListener, regErrorListener, receivedListener, actionListener
+    let regListener, regErrorListener
     (async () => {
       regListener = await PushNotifications.addListener("registration", ({ value: fcmToken }) => {
         nativeFcmToken = fcmToken
@@ -49,36 +49,14 @@ function useNativePush() {
       regErrorListener = await PushNotifications.addListener("registrationError", (err) => {
         console.error("FCM registration error:", err)
       })
-      receivedListener = await PushNotifications.addListener("pushNotificationReceived", async (notification) => {
-        const { title, body, url, actions } = notification.data ?? {}
-        const parsedActions = (actions ? JSON.parse(actions) : []).slice(0, 2)
-        const notifId = Date.now() % 2147483647
-        const actionTypeId = parsedActions.length ? `push_${notifId}` : undefined
-        if (actionTypeId) {
-          await LocalNotifications.registerActionTypes({
-            types: [{
-              actions: parsedActions.map(a => ({ id: a.id, title: a.title })),
-              id: actionTypeId
-            }]
-          })
-        }
-        await LocalNotifications.schedule({
-          notifications: [{
-            id: notifId,
-            title: title ?? "Waqt",
-            body: body ?? "",
-            extra: { url: url ?? "/", actionsMeta: parsedActions },
-            actionTypeId
-          }]
-        })
-      })
-      actionListener = await LocalNotifications.addListener("localNotificationActionPerformed", (event) => {
-        const meta = event.notification.extra?.actionsMeta?.find(a => a.id === event.actionId)
-        const url = meta?.url ?? event.notification.extra?.url ?? "/"
-        window.location.href = url
-      })
+      // Notification display (foreground, backgrounded, and killed) is now
+      // handled entirely natively by CustomFirebaseMessagingService.java,
+      // so there's no pushNotificationReceived listener here anymore.
+      // Taps on the notification (including its action buttons) relaunch
+      // the app via the existing com.theabmmohi.waqt://push deep link,
+      // handled below in the appUrlOpen listener.
     })()
-    return () => { regListener?.remove(); regErrorListener?.remove(); receivedListener?.remove(); actionListener?.remove() }
+    return () => { regListener?.remove(); regErrorListener?.remove() }
   }, [])
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || !user) return
@@ -119,6 +97,15 @@ function Helper() {
       else Cap.exitApp()
     })
     const urlListener = Cap.addListener("appUrlOpen", async ({ url }) => {
+      if (url.includes("push")) {
+        try {
+          const target = new URL(url).searchParams.get("url") ?? "/"
+          window.location.href = target
+        } catch (e) {
+          console.error("Push deep link error:", e)
+        }
+        return
+      }
       if (!url.includes("login-callback")) return
       try {
         const code = new URL(url).searchParams.get("code")
