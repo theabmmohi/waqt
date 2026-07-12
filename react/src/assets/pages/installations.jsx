@@ -12,7 +12,7 @@ import { FileOpener } from "@capacitor-community/file-opener"
 import { FileTransfer } from "@capacitor/file-transfer"
 import { Browser } from "@capacitor/browser"
 import { App as Cap } from "@capacitor/app"
-import { Capacitor } from "@capacitor/core"
+import { Capacitor, registerPlugin } from "@capacitor/core"
 import api from "@/api"
 
 import SmartphoneIcon from "@mui/icons-material/Smartphone"
@@ -22,6 +22,9 @@ import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt"
 import CheckCircleIcon from "@mui/icons-material/CheckCircle"
 import OpenInNewIcon from "@mui/icons-material/OpenInNew"
 import DownloadIcon from "@mui/icons-material/Download"
+
+// Local native plugin — android/app/src/main/java/.../SaveToDownloadsPlugin.java
+const SaveToDownloads = registerPlugin("SaveToDownloads")
 
 const APK_DOWNLOAD_URL = `${api.defaults.baseURL}/download/android/latest`
 const WEBSITE_URL = "https://app.abm.ami.bd"
@@ -74,7 +77,17 @@ export default function Installations() {
       await FileTransfer.downloadFile({ url: APK_DOWNLOAD_URL, path: uri, progress: true })
       try {
         await FileOpener.open({ filePath: uri, contentType: "application/vnd.android.package-archive" })
-      } catch { /* user dismissed the installer chooser, nothing to report */ }
+      } catch {
+        // User backed out of the installer chooser, or no handler was found for it.
+        // Fall back to a copy in the public Downloads folder — a more familiar,
+        // trusted place for anyone unsure about installing straight from the app.
+        try {
+          await SaveToDownloads.save({ path: uri, filename, mimeType: "application/vnd.android.package-archive" })
+          setSnack(`Saved to Downloads as "${filename}" — open it from your Files app to install`)
+        } catch (saveErr) {
+          setSnack(saveErr?.message ?? "Sorry, couldn't save to Downloads")
+        }
+      }
     } catch (err) {
       setSnack(err?.message ?? "Sorry, download failed")
     } finally {
