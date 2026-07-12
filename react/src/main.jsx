@@ -49,12 +49,6 @@ function useNativePush() {
       regErrorListener = await PushNotifications.addListener("registrationError", (err) => {
         console.error("FCM registration error:", err)
       })
-      // Notification display (foreground, backgrounded, and killed) is now
-      // handled entirely natively by CustomFirebaseMessagingService.java,
-      // so there's no pushNotificationReceived listener here anymore.
-      // Taps on the notification (including its action buttons) relaunch
-      // the app via the existing com.theabmmohi.waqt://push deep link,
-      // handled below in the appUrlOpen listener.
     })()
     return () => { regListener?.remove(); regErrorListener?.remove() }
   }, [])

@@ -41,26 +41,14 @@ let GHreleaseCache = { data: null, expiresAt: 0 }
 async function sendPush(tokens, { title, body, url = "/", actions = [] }) {
   if (!tokens?.length) return { successCount: 0, failureCount: 0, invalidTokens: [] }
   const cappedActions = actions.slice(0, 2)
-  // Shared across every delivery path (web sw.js tag, Android notification ID)
-  // so that if the same push somehow gets displayed twice, the second call
-  // replaces the first instead of stacking a duplicate.
   const notifId = Date.now() % 2147483647
   const message = {
-    tokens,
-    data: {
+    webpush: { fcmOptions: { link: url } },
+    android: { priority: "high" },
+    tokens, data: {
       actions: JSON.stringify(cappedActions),
       notifId: String(notifId),
       title, body, url
-    },
-    android: {
-      // Data-only on purpose: the Android app now builds its own
-      // notification natively (CustomFirebaseMessagingService), in every
-      // app state including killed. priority: high avoids Doze-mode
-      // batching/delay.
-      priority: "high"
-    },
-    webpush: {
-      fcmOptions: { link: url }
     }
   }
   const res = await getMessaging(firebase).sendEachForMulticast(message)
