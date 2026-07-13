@@ -34,6 +34,15 @@ let nativeFcmToken = null
 export function getNativeFcmToken() { return nativeFcmToken }
 export function clearNativeFcmToken() { nativeFcmToken = null }
 
+let deferredPwaPrompt = null
+export function getPwaPrompt() { return deferredPwaPrompt }
+export function clearPwaPrompt() { deferredPwaPrompt = null }
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault()
+  deferredPwaPrompt = e
+  window.dispatchEvent(new Event("pwa-prompt-ready"))
+})
+
 function useNativePush() {
   const { user } = useContext(Theme)
   const userRef = useRef(user)

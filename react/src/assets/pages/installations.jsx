@@ -11,6 +11,7 @@ import { Filesystem, Directory } from "@capacitor/filesystem"
 import { FileOpener } from "@capacitor-community/file-opener"
 import { Capacitor, registerPlugin } from "@capacitor/core"
 import { FileTransfer } from "@capacitor/file-transfer"
+import { getPwaPrompt, clearPwaPrompt } from "@/main"
 import { Browser } from "@capacitor/browser"
 import { App as Cap } from "@capacitor/app"
 import api from "@/api"
@@ -48,9 +49,10 @@ export default function Installations() {
   }, [isNativeApp])
   useEffect(() => {
     setPwaInstalled(window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true)
-    const handler = (e) => { e.preventDefault(); setPwaPrompt(e) }
-    window.addEventListener("beforeinstallprompt", handler)
-    return () => window.removeEventListener("beforeinstallprompt", handler)
+    setPwaPrompt(getPwaPrompt())
+    const handler = () => setPwaPrompt(getPwaPrompt())
+    window.addEventListener("pwa-prompt-ready", handler)
+    return () => window.removeEventListener("pwa-prompt-ready", handler)
   }, [])
   const mode = isNativeApp ? "native" : pwaInstalled ? "pwa" : "web"
   const apkUpdateAvailable = useMemo(() => (
@@ -93,6 +95,7 @@ export default function Installations() {
     await pwaPrompt.prompt()
     const { outcome } = await pwaPrompt.userChoice
     if (outcome === "accepted") setPwaInstalled(true)
+    clearPwaPrompt()
     setPwaPrompt(null)
   }
   const cardSx = { flexDirection: "row", alignItems: "center", minHeight: 76, border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }
