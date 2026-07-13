@@ -133,7 +133,7 @@ export default function Installations() {
           <Typography variant="h6" sx={{ fontWeight: 600 }}>Android APK</Typography>
         </Stack>
         <Stack sx={{ alignItems: "flex-end", width: 110, flexShrink: 0 }}>
-          <Button size="small" variant="outlined" onClick={downloadApkInBrowser} sx={{ width: 104 }}>Download</Button>
+          <Button size="small" variant="outlined" onClick={downloadApkInBrowser} sx={{ width: 100 }}>Download</Button>
         </Stack>
       </Stack>
       {mode === "web" && (
@@ -143,7 +143,7 @@ export default function Installations() {
             <Typography variant="h6" sx={{ fontWeight: 600 }}>Web App</Typography>
           </Stack>
           <Stack sx={{ alignItems: "flex-end", width: 110, flexShrink: 0 }}>
-            <Button size="small" variant="outlined" onClick={installPwa} sx={{ width: 104 }}>Install</Button>
+            <Button size="small" variant="outlined" onClick={installPwa} sx={{ width: 100 }}>Install</Button>
           </Stack>
         </Stack>
       )}
