@@ -15,7 +15,6 @@ import { getPwaPrompt, clearPwaPrompt } from "@/main"
 import { Browser } from "@capacitor/browser"
 import { App as Cap } from "@capacitor/app"
 import api from "@/api"
-
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt"
 import InstallDesktopIcon from "@mui/icons-material/InstallDesktop"
 import CheckCircleIcon from "@mui/icons-material/CheckCircle"
@@ -62,26 +61,42 @@ export default function Installations() {
     setDownloading(true)
     setDownloadProgress(0)
     const filename = `waqt-${latestVersion || "latest"}.apk`
+    const versionBeforeInstall = currentVersion
     const progressListener = await FileTransfer.addListener("progress", (event) => {
       if (event.contentLength > 0) setDownloadProgress(Math.round((event.bytes / event.contentLength) * 100))
     })
+    const saveToDownloadsFallback = async (reason) => {
+      try {
+        const { uri } = await Filesystem.getUri({ directory: Directory.Cache, path: filename })
+        await SaveToDownloads.save({ path: uri, filename, mimeType: "application/vnd.android.package-archive" })
+        setSnack(`Saved to Downloads as "${filename}" — open it from your Files app to install`)
+      } catch (saveErr) {
+        console.error(`Save to Downloads failed (${reason}):`, saveErr)
+        setSnack(saveErr?.message ?? "Sorry, couldn't save to Downloads")
+      }
+    }
     try {
       const { uri } = await Filesystem.getUri({ directory: Directory.Cache, path: filename })
       await FileTransfer.downloadFile({ url: APK_DOWNLOAD_URL, path: uri, progress: true })
-      let savedToDownloads = false
       try {
-        await SaveToDownloads.save({ path: uri, filename, mimeType: "application/vnd.android.package-archive" })
-        savedToDownloads = true
-      } catch (saveErr) {
-        console.error("Save to Downloads failed:", saveErr)
-      }
-      try {
+        let settled = false
+        const resumeListener = await Cap.addListener("appStateChange", ({ isActive }) => {
+          if (!isActive || settled) return
+          settled = true
+          resumeListener.remove()
+          setTimeout(async () => {
+            try {
+              const info = await Cap.getInfo()
+              if (info.version === versionBeforeInstall) await saveToDownloadsFallback("cancelled")
+              else setCurrentVersion(info.version)
+            } catch (err) {
+              console.error("Post-install version check failed:", err)
+            }
+          }, 1500)
+        })
         await FileOpener.open({ filePath: uri, contentType: "application/vnd.android.package-archive" })
-        if (savedToDownloads) setSnack(`Downloaded — also saved to Downloads as "${filename}" in case you need it later`)
       } catch {
-        setSnack(savedToDownloads
-          ? `Saved to Downloads as "${filename}" — open it from your Files app to install`
-          : "Sorry, couldn't open the installer or save to Downloads")
+        await saveToDownloadsFallback("opener-failed")
       }
     } catch (err) {
       setSnack(err?.message ?? "Sorry, download failed")
