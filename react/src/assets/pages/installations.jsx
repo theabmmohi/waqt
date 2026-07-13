@@ -16,15 +16,14 @@ import { Browser } from "@capacitor/browser"
 import { App as Cap } from "@capacitor/app"
 import api from "@/api"
 
-import InstallDesktopIcon from "@mui/icons-material/InstallDesktop"
-import AndroidIcon from "@mui/icons-material/Android"
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt"
+import InstallDesktopIcon from "@mui/icons-material/InstallDesktop"
 import CheckCircleIcon from "@mui/icons-material/CheckCircle"
+import AndroidIcon from "@mui/icons-material/Android"
 
 const SaveToDownloads = registerPlugin("SaveToDownloads")
 const APK_DOWNLOAD_URL = `${api.defaults.baseURL}/download/android/latest`
 const APK_VERSION_URL = `${api.defaults.baseURL}/download/android/version`
-
 export default function Installations() {
   const isNativeApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"
   const [snack, setSnack] = useState("")
@@ -69,15 +68,20 @@ export default function Installations() {
     try {
       const { uri } = await Filesystem.getUri({ directory: Directory.Cache, path: filename })
       await FileTransfer.downloadFile({ url: APK_DOWNLOAD_URL, path: uri, progress: true })
+      let savedToDownloads = false
+      try {
+        await SaveToDownloads.save({ path: uri, filename, mimeType: "application/vnd.android.package-archive" })
+        savedToDownloads = true
+      } catch (saveErr) {
+        console.error("Save to Downloads failed:", saveErr)
+      }
       try {
         await FileOpener.open({ filePath: uri, contentType: "application/vnd.android.package-archive" })
+        if (savedToDownloads) setSnack(`Downloaded — also saved to Downloads as "${filename}" in case you need it later`)
       } catch {
-        try {
-          await SaveToDownloads.save({ path: uri, filename, mimeType: "application/vnd.android.package-archive" })
-          setSnack(`Saved to Downloads as "${filename}" — open it from your Files app to install`)
-        } catch (saveErr) {
-          setSnack(saveErr?.message ?? "Sorry, couldn't save to Downloads")
-        }
+        setSnack(savedToDownloads
+          ? `Saved to Downloads as "${filename}" — open it from your Files app to install`
+          : "Sorry, couldn't open the installer or save to Downloads")
       }
     } catch (err) {
       setSnack(err?.message ?? "Sorry, download failed")
