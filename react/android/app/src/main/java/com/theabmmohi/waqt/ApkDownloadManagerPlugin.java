@@ -39,7 +39,7 @@ public class ApkDownloadManagerPlugin extends Plugin {
       call.reject(e.getMessage() != null ? e.getMessage() : "Failed to start download", e);
     }
   }
-  @PluginMethod()¬
+  @PluginMethod()
   public void getStatus(PluginCall call) {
     Long id = parseId(call);
     if (id == null) return;
