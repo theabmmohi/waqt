@@ -1,8 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import { LocalNotifications } from "@capacitor/local-notifications"
 import { PushNotifications } from "@capacitor/push-notifications"
-import { BrowserRouter } from "react-router-dom"
+import { ScreenOrientation } from "@capacitor/screen-orientation"
 import { registerSW } from "virtual:pwa-register"
+import { BrowserRouter } from "react-router-dom"
 import { createRoot } from "react-dom/client"
 import { App as Cap } from "@capacitor/app"
 import { Browser } from "@capacitor/browser"
@@ -42,6 +43,9 @@ window.addEventListener("beforeinstallprompt", (e) => {
   deferredPwaPrompt = e
   window.dispatchEvent(new Event("pwa-prompt-ready"))
 })
+
+if (Capacitor.isNativePlatform()) ScreenOrientation.lock({ orientation: "portrait" }).catch((err) => console.error("Native orientation lock failed:", err))
+else if (screen.orientation?.lock) screen.orientation.lock("portrait").catch((err) => console.error("Web orientation lock failed:", err))
 
 function useNativePush() {
   const { user } = useContext(Theme)
