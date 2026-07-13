@@ -10,6 +10,7 @@ import {
 import { Filesystem, Directory } from "@capacitor/filesystem"
 import { FileOpener } from "@capacitor-community/file-opener"
 import { Capacitor, registerPlugin } from "@capacitor/core"
+import { FileTransfer } from "@capacitor/file-transfer"
 import { getPwaPrompt, clearPwaPrompt } from "@/main"
 import { Browser } from "@capacitor/browser"
 import { App as Cap } from "@capacitor/app"
@@ -19,7 +20,6 @@ import InstallDesktopIcon from "@mui/icons-material/InstallDesktop"
 import CheckCircleIcon from "@mui/icons-material/CheckCircle"
 import AndroidIcon from "@mui/icons-material/Android"
 
-const SaveToDownloads = registerPlugin("SaveToDownloads")
 const ApkDownloadManager = registerPlugin("ApkDownloadManager")
 const APK_DOWNLOAD_URL = `${api.defaults.baseURL}/download/android/latest`
 const APK_VERSION_URL = `${api.defaults.baseURL}/download/android/version`
@@ -70,6 +70,13 @@ export default function Installations() {
   }, [])
   useEffect(() => {
     if (!isNativeApp) return
+    Filesystem.readdir({ directory: Directory.Cache, path: "" })
+      .then(({ files }) => Promise.all(
+        files
+          .filter((f) => /^waqt-.*\.apk$/i.test(f.name))
+          .map((f) => Filesystem.deleteFile({ directory: Directory.Cache, path: f.name }).catch((err) => console.error(`Failed to clear cached APK ${f.name}:`, err)))
+      ))
+      .catch((err) => console.error("Cache cleanup failed:", err))
     ApkDownloadManager.cleanupStale().catch((err) => console.error("Stale download cleanup failed:", err))
   }, [isNativeApp])
   const mode = isNativeApp ? "native" : pwaInstalled ? "pwa" : "web"
@@ -77,32 +84,25 @@ export default function Installations() {
     currentVersion && latestVersion && currentVersion !== latestVersion
   ), [currentVersion, latestVersion])
   const [downloadedApk, setDownloadedApk] = useState(null)
+  const [savedToDownloads, setSavedToDownloads] = useState(false)
   const downloadApk = async () => {
     if (downloading) return
     setDownloading(true)
     setDownloadProgress(0)
     setDownloadedApk(null)
+    setSavedToDownloads(false)
     const filename = `waqt-${latestVersion || "latest"}.apk`
+    const progressListener = await FileTransfer.addListener("progress", (event) => {
+      if (event.contentLength > 0) setDownloadProgress(Math.round((event.bytes / event.contentLength) * 100))
+    })
     try {
-      const { id } = await ApkDownloadManager.enqueue({ url: APK_DOWNLOAD_URL, filename })
-      await new Promise((resolve, reject) => {
-        const poll = setInterval(async () => {
-          try {
-            const { status, bytesDownloaded, totalBytes } = await ApkDownloadManager.getStatus({ id })
-            if (totalBytes > 0) setDownloadProgress(Math.round((bytesDownloaded / totalBytes) * 100))
-            if (status === "successful") { clearInterval(poll); resolve() }
-            else if (status === "failed") { clearInterval(poll); reject(new Error("Download failed")) }
-          } catch (err) {
-            clearInterval(poll)
-            reject(err)
-          }
-        }, 400)
-      })
-      const { uri } = await Filesystem.getUri({ directory: Directory.External, path: `Download/${filename}` })
-      setDownloadedApk({ uri, filename, id })
+      const { uri } = await Filesystem.getUri({ directory: Directory.Cache, path: filename })
+      await FileTransfer.downloadFile({ url: APK_DOWNLOAD_URL, path: uri, progress: true })
+      setDownloadedApk({ uri, filename })
     } catch (err) {
       setSnack(err?.message ?? "Sorry, download failed")
     } finally {
+      progressListener.remove()
       setDownloading(false)
     }
   }
@@ -118,10 +118,9 @@ export default function Installations() {
   const saveApk = async () => {
     if (!downloadedApk) return
     try {
-      await SaveToDownloads.save({ path: downloadedApk.uri, filename: downloadedApk.filename, mimeType: "application/vnd.android.package-archive" })
-      setSnack(`Saved to Downloads as "${downloadedApk.filename}"`)
-      await ApkDownloadManager.remove({ id: downloadedApk.id }).catch((err) => console.error("Cleanup after save failed:", err))
-      setDownloadedApk(null)
+      await ApkDownloadManager.enqueue({ url: APK_DOWNLOAD_URL, filename: downloadedApk.filename })
+      setSavedToDownloads(true)
+      setSnack("Saving to Downloads — check your notifications")
     } catch (err) {
       console.error("Save to Downloads failed:", err)
       setSnack(err?.message ?? "Sorry, couldn't save to Downloads")
@@ -162,7 +161,7 @@ export default function Installations() {
         <Stack sx={{ gap: 1 }}>
           <Typography variant="caption" sx={{ color: "text.secondary" }}>Update downloaded — install now or save it for later</Typography>
           <Stack sx={{ flexDirection: "row", gap: 1.5 }}>
-            <Button fullWidth disableElevation variant="outlined" onClick={saveApk}>Save</Button>
+            {!savedToDownloads && <Button fullWidth disableElevation variant="outlined" onClick={saveApk}>Save</Button>}
             <Button fullWidth disableElevation variant="contained" startIcon={<SystemUpdateAltIcon />} onClick={installApk}>Install</Button>
           </Stack>
         </Stack>

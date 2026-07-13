@@ -5,7 +5,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Environment;
-
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -28,12 +27,8 @@ public class ApkDownloadManagerPlugin extends Plugin {
       request.setTitle(filename);
       request.setDescription("Downloading update");
       request.setMimeType("application/vnd.android.package-archive");
-      // This is what makes Android show the native "Download Manager" notification
-      // in the tray: a progress notification while running, then a completion one.
       request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-      // App-private external storage — no storage permission needed, still a real
-      // file:// path that Capacitor's own Filesystem/FileOpener plugins can use.
-      request.setDestinationInExternalFilesDir(getContext(), Environment.DIRECTORY_DOWNLOADS, filename);
+      request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename);
       request.setAllowedOverMetered(true);
       request.setAllowedOverRoaming(true);
       long id = dm.enqueue(request);
@@ -44,8 +39,7 @@ public class ApkDownloadManagerPlugin extends Plugin {
       call.reject(e.getMessage() != null ? e.getMessage() : "Failed to start download", e);
     }
   }
-
-  @PluginMethod()
+  @PluginMethod()¬
   public void getStatus(PluginCall call) {
     Long id = parseId(call);
     if (id == null) return;
@@ -75,7 +69,6 @@ public class ApkDownloadManagerPlugin extends Plugin {
       call.resolve(ret);
     }
   }
-
   @PluginMethod()
   public void remove(PluginCall call) {
     Long id = parseId(call);
@@ -84,9 +77,6 @@ public class ApkDownloadManagerPlugin extends Plugin {
     dm.remove(id);
     call.resolve();
   }
-
-  // Clears any leftover waqt-*.apk download records (e.g. from a previous
-  // session where the user downloaded but never tapped Save/Install).
   @PluginMethod()
   public void cleanupStale(PluginCall call) {
     DownloadManager dm = (DownloadManager) getContext().getSystemService(Context.DOWNLOAD_SERVICE);
@@ -104,7 +94,6 @@ public class ApkDownloadManagerPlugin extends Plugin {
     }
     call.resolve();
   }
-
   private Long parseId(PluginCall call) {
     String idStr = call.getString("id");
     if (idStr == null) {
