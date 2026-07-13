@@ -31,7 +31,7 @@ export default function Installations() {
   const [downloading, setDownloading] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [pwaPrompt, setPwaPrompt] = useState(null)
-  const [pwaInstalled, setPwaInstalled] = useState(false)
+  const [pwaInstalled, setPwaInstalled] = useState(true)
   useEffect(() => {
     if (!isNativeApp) return
     Cap.getInfo()
@@ -82,8 +82,6 @@ export default function Installations() {
     const filename = `waqt-${latestVersion || "latest"}.apk`
     try {
       const { id } = await ApkDownloadManager.enqueue({ url: APK_DOWNLOAD_URL, filename })
-      // Poll Android's real DownloadManager for progress — the OS itself
-      // renders the notification/progress bar, this just drives our own UI.
       await new Promise((resolve, reject) => {
         const poll = setInterval(async () => {
           try {
