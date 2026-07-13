@@ -15,6 +15,7 @@ import {
 import { Theme, getNativeFcmToken, clearNativeFcmToken } from "@/main"
 import { LocalNotifications } from "@capacitor/local-notifications"
 import { PushNotifications } from "@capacitor/push-notifications"
+import { Geolocation } from "@capacitor/geolocation"
 import { subscribeWeb, unsubscribeWeb } from "@/firebase"
 import useMediaQuery from "@mui/material/useMediaQuery"
 import { useTheme } from "@mui/material/styles"
@@ -299,26 +300,37 @@ function Preferences({setSnack}) {
   const [city, setCity] =                   useState(null)
   const [tz, setTz] =                       useState("")
   const timerRef = useRef()
-  const getCoords = () => {
-    if (!navigator.geolocation) return setSnack("This Device Doesn't Support GPS")
+  const getCoords = async () => {
     setCoordsLoading(true)
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude
-        const lon = pos.coords.longitude
-        setCoords({ lat, lon })
-        try {
-          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&timezone=auto`)
-          const { timezone } = await res.json()
-          setTz(timezone)
-        } catch {setTz("")}
-        setCoordsLoading(false)
-      },
-      (err) => {
-        setSnack(err.message ?? "Failed To Get Location")
-        setCoordsLoading(false)
+    try {
+      let lat, lon
+      if (Capacitor.isNativePlatform()) {
+        let { location } = await Geolocation.checkPermissions()
+        if (location === "prompt" || location === "prompt-with-rationale") ({ location } = await Geolocation.requestPermissions())
+        if (location !== "granted") {
+          setSnack("Permission denied — enable location for Waqt in your device settings")
+          return
+        }
+        const pos = await Geolocation.getCurrentPosition()
+        lat = pos.coords.latitude
+        lon = pos.coords.longitude
+      } else {
+        if (!navigator.geolocation) return setSnack("This Device Doesn't Support GPS")
+        const pos = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject))
+        lat = pos.coords.latitude
+        lon = pos.coords.longitude
       }
-    )
+      setCoords({ lat, lon })
+      try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&timezone=auto`)
+        const { timezone } = await res.json()
+        setTz(timezone)
+      } catch { setTz("") }
+    } catch (err) {
+      setSnack(err?.message ?? "Failed To Get Location")
+    } finally {
+      setCoordsLoading(false)
+    }
   }
   const citySearch = (query) => {
     clearTimeout(timerRef.current)
