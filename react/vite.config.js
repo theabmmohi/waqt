@@ -1,6 +1,7 @@
 import { VitePWA } from "vite-plugin-pwa"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
+
 export default defineConfig({
   plugins: [
     react(),
@@ -10,9 +11,9 @@ export default defineConfig({
       filename: "sw.js",
       srcDir: "src",
       includeAssets: [
-        "apple-touch-icon.png",
         "favicon-16x16.png",
         "favicon-32x32.png",
+        "icon.png"
       ],
       manifest: {
         description: "Prayer times, simplified.",
@@ -25,16 +26,10 @@ export default defineConfig({
         name: "Waqt",
         icons: [
           {
-            src: "/android-chrome-192x192.png",
+            src: "/icon.png",
             type: "image/png",
-            sizes: "192x192",
-            "purpose": "any"
-          },
-          {
-            src: "/android-chrome-512x512.png",
-            type: "image/png",
-            sizes: "512x512",
-            "purpose": "any maskable"
+            sizes: "1024x1024",
+            "purpose": "any maskable",
           }
         ]
       },

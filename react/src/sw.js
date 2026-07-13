@@ -32,8 +32,8 @@ onBackgroundMessage(messaging, (payload) => {
     body: body ?? "",
     tag,
     renotify: false,
-    icon: "/android-chrome-192x192.png",
-    badge: "/android-chrome-192x192.png",
+    icon: "/icon.png",
+    badge: "/favicon-32x32.png",
     actions: actions.slice(0, 2).map(a => ({ action: a.id, title: a.title })),
     data: { url: url ?? payload.fcmOptions?.link ?? "/", actionsMeta: actions }
   })
