@@ -130,6 +130,10 @@ function Helper() {
   return null
 }
 
+const isNativeApp = Capacitor.isNativePlatform()
+const isPwa = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true
+const showPreloader = !isNativeApp && !isPwa
+
 function React() {
   const [ready, setReady] = useState(false)
   const [leaving, setLeaving] = useState(false)
@@ -139,6 +143,7 @@ function React() {
   useEffect(() => {
     const start = Date.now()
     const done = () => {
+      if (!showPreloader) { setReady(true); return }
       const remaining = Math.max(0, 1000 - (Date.now() - start))
       setTimeout(() => {
         setLeaving(true)
@@ -179,8 +184,8 @@ function React() {
     <Theme.Provider value={{ dark: mode, toggle, user }}>
       <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
         <CssBaseline/>
-        {!ready && <Preloader leaving={leaving}/>}
-        {(leaving || ready) && (
+        {showPreloader && !ready && <Preloader leaving={leaving}/>}
+        {(ready || (showPreloader && leaving)) && (
           <BrowserRouter>
             <Helper/>
             <App/>
