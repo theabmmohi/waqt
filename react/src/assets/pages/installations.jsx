@@ -31,7 +31,7 @@ export default function Installations() {
   const [downloading, setDownloading] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [pwaPrompt, setPwaPrompt] = useState(null)
-  const [pwaInstalled, setPwaInstalled] = useState(true)
+  const [pwaInstalled, setPwaInstalled] = useState(null)
   useEffect(() => {
     if (!isNativeApp) return
     Cap.getInfo()
@@ -48,11 +48,14 @@ export default function Installations() {
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     const standalone = window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true
-    if (standalone) setPwaInstalled(true)
-    else if (navigator.getInstalledRelatedApps) {
+    if (standalone) {
+      setPwaInstalled(true)
+    } else if (navigator.getInstalledRelatedApps) {
       navigator.getInstalledRelatedApps()
-        .then((apps) => { if (apps.length > 0) setPwaInstalled(true) })
-        .catch((err) => console.error("getInstalledRelatedApps failed:", err))
+        .then((apps) => setPwaInstalled(apps.length > 0))
+        .catch((err) => { console.error("getInstalledRelatedApps failed:", err); setPwaInstalled(false) })
+    } else {
+      setPwaInstalled(false)
     }
     setPwaPrompt(getPwaPrompt())
     const promptHandler = () => setPwaPrompt(getPwaPrompt())
@@ -185,7 +188,7 @@ export default function Installations() {
           <Button size="small" variant="outlined" onClick={downloadApkInBrowser} sx={{ width: 100 }}>Download</Button>
         </Stack>
       </Stack>
-      {mode === "web" && (
+      {!isNativeApp && pwaInstalled === false && (
         <Stack sx={cardSx}>
           <InstallDesktopIcon sx={{ fontSize: 32, flexShrink: 0 }}/>
           <Stack sx={{ flex: 1 }}>
