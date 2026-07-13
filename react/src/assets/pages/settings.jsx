@@ -311,12 +311,12 @@ function Preferences({setSnack}) {
           setSnack("Permission denied — enable location for Waqt in your device settings")
           return
         }
-        const pos = await Geolocation.getCurrentPosition()
+        const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 })
         lat = pos.coords.latitude
         lon = pos.coords.longitude
       } else {
         if (!navigator.geolocation) return setSnack("This Device Doesn't Support GPS")
-        const pos = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject))
+        const pos = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 }))
         lat = pos.coords.latitude
         lon = pos.coords.longitude
       }
