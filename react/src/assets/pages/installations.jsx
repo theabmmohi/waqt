@@ -46,11 +46,13 @@ export default function Installations() {
       .catch(() => setLatestVersion(null))
   }, [isNativeApp])
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     setPwaInstalled(window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true)
     setPwaPrompt(getPwaPrompt())
     const handler = () => setPwaPrompt(getPwaPrompt())
     window.addEventListener("pwa-prompt-ready", handler)
     return () => window.removeEventListener("pwa-prompt-ready", handler)
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [])
   useEffect(() => {
     if (!isNativeApp) return
