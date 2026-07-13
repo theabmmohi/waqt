@@ -47,11 +47,22 @@ export default function Installations() {
   }, [isNativeApp])
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
-    setPwaInstalled(window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true)
+    const standalone = window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true
+    if (standalone) setPwaInstalled(true)
+    else if (navigator.getInstalledRelatedApps) {
+      navigator.getInstalledRelatedApps()
+        .then((apps) => { if (apps.length > 0) setPwaInstalled(true) })
+        .catch((err) => console.error("getInstalledRelatedApps failed:", err))
+    }
     setPwaPrompt(getPwaPrompt())
-    const handler = () => setPwaPrompt(getPwaPrompt())
-    window.addEventListener("pwa-prompt-ready", handler)
-    return () => window.removeEventListener("pwa-prompt-ready", handler)
+    const promptHandler = () => setPwaPrompt(getPwaPrompt())
+    const installedHandler = () => setPwaInstalled(true)
+    window.addEventListener("pwa-prompt-ready", promptHandler)
+    window.addEventListener("appinstalled", installedHandler)
+    return () => {
+      window.removeEventListener("pwa-prompt-ready", promptHandler)
+      window.removeEventListener("appinstalled", installedHandler)
+    }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [])
   useEffect(() => {

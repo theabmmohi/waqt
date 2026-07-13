@@ -24,6 +24,10 @@ export default defineConfig({
         short_name: "Waqt",
         start_url: "/",
         name: "Waqt",
+        related_applications: [{
+            url: "/manifest.webmanifest",
+            platform: "webapp"
+        }],
         icons: [
           {
             src: "/icon.png",
