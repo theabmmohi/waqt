@@ -10,7 +10,6 @@ import {
 import { Filesystem, Directory } from "@capacitor/filesystem"
 import { FileOpener } from "@capacitor-community/file-opener"
 import { Capacitor, registerPlugin } from "@capacitor/core"
-import { FileTransfer } from "@capacitor/file-transfer"
 import { getPwaPrompt, clearPwaPrompt } from "@/main"
 import { Browser } from "@capacitor/browser"
 import { App as Cap } from "@capacitor/app"
@@ -21,6 +20,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle"
 import AndroidIcon from "@mui/icons-material/Android"
 
 const SaveToDownloads = registerPlugin("SaveToDownloads")
+const ApkDownloadManager = registerPlugin("ApkDownloadManager")
 const APK_DOWNLOAD_URL = `${api.defaults.baseURL}/download/android/latest`
 const APK_VERSION_URL = `${api.defaults.baseURL}/download/android/version`
 export default function Installations() {
@@ -52,57 +52,65 @@ export default function Installations() {
     window.addEventListener("pwa-prompt-ready", handler)
     return () => window.removeEventListener("pwa-prompt-ready", handler)
   }, [])
+  useEffect(() => {
+    if (!isNativeApp) return
+    ApkDownloadManager.cleanupStale().catch((err) => console.error("Stale download cleanup failed:", err))
+  }, [isNativeApp])
   const mode = isNativeApp ? "native" : pwaInstalled ? "pwa" : "web"
   const apkUpdateAvailable = useMemo(() => (
     currentVersion && latestVersion && currentVersion !== latestVersion
   ), [currentVersion, latestVersion])
+  const [downloadedApk, setDownloadedApk] = useState(null)
   const downloadApk = async () => {
     if (downloading) return
     setDownloading(true)
     setDownloadProgress(0)
+    setDownloadedApk(null)
     const filename = `waqt-${latestVersion || "latest"}.apk`
-    const versionBeforeInstall = currentVersion
-    const progressListener = await FileTransfer.addListener("progress", (event) => {
-      if (event.contentLength > 0) setDownloadProgress(Math.round((event.bytes / event.contentLength) * 100))
-    })
-    const saveToDownloadsFallback = async (reason) => {
-      try {
-        const { uri } = await Filesystem.getUri({ directory: Directory.Cache, path: filename })
-        await SaveToDownloads.save({ path: uri, filename, mimeType: "application/vnd.android.package-archive" })
-        setSnack(`Saved to Downloads as "${filename}" — open it from your Files app to install`)
-      } catch (saveErr) {
-        console.error(`Save to Downloads failed (${reason}):`, saveErr)
-        setSnack(saveErr?.message ?? "Sorry, couldn't save to Downloads")
-      }
-    }
     try {
-      const { uri } = await Filesystem.getUri({ directory: Directory.Cache, path: filename })
-      await FileTransfer.downloadFile({ url: APK_DOWNLOAD_URL, path: uri, progress: true })
-      try {
-        let settled = false
-        const resumeListener = await Cap.addListener("appStateChange", ({ isActive }) => {
-          if (!isActive || settled) return
-          settled = true
-          resumeListener.remove()
-          setTimeout(async () => {
-            try {
-              const info = await Cap.getInfo()
-              if (info.version === versionBeforeInstall) await saveToDownloadsFallback("cancelled")
-              else setCurrentVersion(info.version)
-            } catch (err) {
-              console.error("Post-install version check failed:", err)
-            }
-          }, 1500)
-        })
-        await FileOpener.open({ filePath: uri, contentType: "application/vnd.android.package-archive" })
-      } catch {
-        await saveToDownloadsFallback("opener-failed")
-      }
+      const { id } = await ApkDownloadManager.enqueue({ url: APK_DOWNLOAD_URL, filename })
+      // Poll Android's real DownloadManager for progress — the OS itself
+      // renders the notification/progress bar, this just drives our own UI.
+      await new Promise((resolve, reject) => {
+        const poll = setInterval(async () => {
+          try {
+            const { status, bytesDownloaded, totalBytes } = await ApkDownloadManager.getStatus({ id })
+            if (totalBytes > 0) setDownloadProgress(Math.round((bytesDownloaded / totalBytes) * 100))
+            if (status === "successful") { clearInterval(poll); resolve() }
+            else if (status === "failed") { clearInterval(poll); reject(new Error("Download failed")) }
+          } catch (err) {
+            clearInterval(poll)
+            reject(err)
+          }
+        }, 400)
+      })
+      const { uri } = await Filesystem.getUri({ directory: Directory.External, path: `Download/${filename}` })
+      setDownloadedApk({ uri, filename, id })
     } catch (err) {
       setSnack(err?.message ?? "Sorry, download failed")
     } finally {
-      progressListener.remove()
       setDownloading(false)
+    }
+  }
+  const installApk = async () => {
+    if (!downloadedApk) return
+    try {
+      await FileOpener.open({ filePath: downloadedApk.uri, contentType: "application/vnd.android.package-archive" })
+    } catch (err) {
+      console.error("Opening installer failed:", err)
+      setSnack(err?.message ?? "Sorry, couldn't open the installer")
+    }
+  }
+  const saveApk = async () => {
+    if (!downloadedApk) return
+    try {
+      await SaveToDownloads.save({ path: downloadedApk.uri, filename: downloadedApk.filename, mimeType: "application/vnd.android.package-archive" })
+      setSnack(`Saved to Downloads as "${downloadedApk.filename}"`)
+      await ApkDownloadManager.remove({ id: downloadedApk.id }).catch((err) => console.error("Cleanup after save failed:", err))
+      setDownloadedApk(null)
+    } catch (err) {
+      console.error("Save to Downloads failed:", err)
+      setSnack(err?.message ?? "Sorry, couldn't save to Downloads")
     }
   }
   const downloadApkInBrowser = async () => {
@@ -135,6 +143,14 @@ export default function Installations() {
         <Stack sx={{ gap: 0.5 }}>
           <Typography variant="caption" sx={{ color: "text.secondary" }}>Downloading update… {downloadProgress}%</Typography>
           <LinearProgress variant="determinate" value={downloadProgress} sx={{ borderRadius: 1 }} />
+        </Stack>
+      ) : downloadedApk ? (
+        <Stack sx={{ gap: 1 }}>
+          <Typography variant="caption" sx={{ color: "text.secondary" }}>Update downloaded — install now or save it for later</Typography>
+          <Stack sx={{ flexDirection: "row", gap: 1.5 }}>
+            <Button fullWidth disableElevation variant="outlined" onClick={saveApk}>Save</Button>
+            <Button fullWidth disableElevation variant="contained" startIcon={<SystemUpdateAltIcon />} onClick={installApk}>Install</Button>
+          </Stack>
         </Stack>
       ) : apkUpdateAvailable ? (
         <Button disableElevation variant="contained" startIcon={<SystemUpdateAltIcon />} onClick={downloadApk}>Update to {latestVersion}</Button>
