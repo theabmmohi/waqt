@@ -1,27 +1,28 @@
+import { VitePWA } from "vite-plugin-pwa"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
-import { VitePWA } from "vite-plugin-pwa"
 export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: "autoUpdate",
       strategies: "injectManifest",
-      srcDir: "src",
+      registerType: "autoUpdate",
       filename: "sw.js",
+      srcDir: "src",
       includeAssets: [
+        "apple-touch-icon.png",
         "favicon-16x16.png",
         "favicon-32x32.png",
-        "apple-touch-icon.png"
       ],
       manifest: {
-        name: "Waqt",
-        short_name: "Waqt",
         description: "Prayer times, simplified.",
-        start_url: "/",
-        display: "standalone",
-        theme_color: "#ffffff",
         background_color: "#ffffff",
+        orientation: "portrait",
+        theme_color: "#ffffff",
+        display: "standalone",
+        short_name: "Waqt",
+        start_url: "/",
+        name: "Waqt",
         icons: [
           {
             src: "/android-chrome-192x192.png",
