@@ -19,10 +19,10 @@ import InstallDesktopIcon from "@mui/icons-material/InstallDesktop"
 import AndroidIcon from "@mui/icons-material/Android"
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt"
 import CheckCircleIcon from "@mui/icons-material/CheckCircle"
-import DownloadIcon from "@mui/icons-material/Download"
 
 const SaveToDownloads = registerPlugin("SaveToDownloads")
 const APK_DOWNLOAD_URL = `${api.defaults.baseURL}/download/android/latest`
+const APK_VERSION_URL = `${api.defaults.baseURL}/download/android/version`
 
 export default function Installations() {
   const isNativeApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"
@@ -41,11 +41,9 @@ export default function Installations() {
   }, [isNativeApp])
   useEffect(() => {
     if (!isNativeApp) return
-    fetch(APK_DOWNLOAD_URL, { method: "HEAD", redirect: "follow" })
-      .then((res) => {
-        const match = decodeURIComponent(res.url).match(/Waqt-(\d+\.\d+\.\d+)\.apk/i)
-        setLatestVersion(match ? match[1] : null)
-      })
+    fetch(APK_VERSION_URL)
+      .then((res) => res.json())
+      .then((data) => setLatestVersion(data.version ?? null))
       .catch(() => setLatestVersion(null))
   }, [isNativeApp])
   useEffect(() => {
@@ -97,18 +95,18 @@ export default function Installations() {
     if (outcome === "accepted") setPwaInstalled(true)
     setPwaPrompt(null)
   }
-  const cardSx = { flexDirection: "row", alignItems: "center", minHeight: 104, border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }
+  const cardSx = { flexDirection: "row", alignItems: "center", minHeight: 76, border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }
   if (mode === "native") return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5, p: 2.5 }}>
       <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><AndroidIcon sx={{ fontSize: 24 }}/>App Version</Typography>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Typography sx={{ color: "text.secondary" }}>Current version</Typography>
-        <Typography sx={{ fontWeight: 600 }}>{currentVersion ? `v${currentVersion}` : "—"}</Typography>
+        <Typography sx={{ fontWeight: 600 }}>{currentVersion ?? "—"}</Typography>
       </Stack>
       <Divider/>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Typography sx={{ color: "text.secondary" }}>Latest version</Typography>
-        <Typography sx={{ fontWeight: 600 }}>{latestVersion ? `v${latestVersion}` : "—"}</Typography>
+        <Typography sx={{ fontWeight: 600 }}>{latestVersion ?? "—"}</Typography>
       </Stack>
       <Divider/>
       {downloading ? (
@@ -117,7 +115,7 @@ export default function Installations() {
           <LinearProgress variant="determinate" value={downloadProgress} sx={{ borderRadius: 1 }} />
         </Stack>
       ) : apkUpdateAvailable ? (
-        <Button variant="contained" startIcon={<SystemUpdateAltIcon />} onClick={downloadApk}>Update to v{latestVersion}</Button>
+        <Button disableElevation variant="contained" startIcon={<SystemUpdateAltIcon />} onClick={downloadApk}>Update to {latestVersion}</Button>
       ) : (
         <Stack sx={{ flexDirection: "row", alignItems: "center", gap: 1 }}>
           <CheckCircleIcon sx={{ fontSize: 18, color: "success.main" }} />
@@ -133,10 +131,9 @@ export default function Installations() {
         <AndroidIcon sx={{ fontSize: 32, flexShrink: 0 }}/>
         <Stack sx={{ flex: 1 }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>Android APK</Typography>
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>Direct download for Android devices</Typography>
         </Stack>
         <Stack sx={{ alignItems: "flex-end", width: 110, flexShrink: 0 }}>
-          <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={downloadApkInBrowser}>Download</Button>
+          <Button size="small" variant="outlined" onClick={downloadApkInBrowser} sx={{ width: 104 }}>Download</Button>
         </Stack>
       </Stack>
       {mode === "web" && (
@@ -144,10 +141,9 @@ export default function Installations() {
           <InstallDesktopIcon sx={{ fontSize: 32, flexShrink: 0 }}/>
           <Stack sx={{ flex: 1 }}>
             <Typography variant="h6" sx={{ fontWeight: 600 }}>Web App</Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>Install as an app from your browser</Typography>
           </Stack>
           <Stack sx={{ alignItems: "flex-end", width: 110, flexShrink: 0 }}>
-            <Button size="small" variant={pwaPrompt ? "contained" : "outlined"} startIcon={<InstallDesktopIcon />} onClick={installPwa}>{pwaPrompt ? "Install" : "How to install"}</Button>
+            <Button size="small" variant="outlined" onClick={installPwa} sx={{ width: 104 }}>Install</Button>
           </Stack>
         </Stack>
       )}

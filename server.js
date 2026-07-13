@@ -123,6 +123,13 @@ async function GHlatestRelease() {
 
 
 
+server.get("/download/android/version", async (_, res) => {
+  try {
+    const data = await GHlatestRelease()
+    res.json({ version: data.tag_name?.replace(/^v/, "") ?? null })
+  } catch (err) { res.status(500).json({ error: err.message, details: err.details }) }
+})
+
 server.get("/download/android/latest", async (_, res) => {
   try {
     const data = await GHlatestRelease()
