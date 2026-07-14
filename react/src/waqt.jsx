@@ -21,18 +21,21 @@ import {
   Avatar,
   Button,
   Drawer,
+  Badge,
   Stack,
   Box
 } from "@mui/material"
 import { subscribeWeb, unsubscribeWeb } from "@/firebase"
 import { Theme, getNativeFcmToken } from "@/main"
-import { Capacitor } from "@capacitor/core"
 import Installations from "@page/installations"
+import { App as Cap } from "@capacitor/app"
+import { Capacitor } from "@capacitor/core"
 import Dashboard from "@page/dashboard"
 import Settings from "@page/settings"
 import Forgot from "@page/forgot"
 import Verify from "@page/verify"
 import Supabase from "@/supabase"
+import About from "@page/about"
 import Qibla from "@page/qibla"
 import Auth from "@page/auth"
 import api from "@/api"
@@ -47,6 +50,7 @@ import AndroidIcon from "@mui/icons-material/Android"
 import AcUnitIcon from "@mui/icons-material/AcUnit"
 import LogoutIcon from "@mui/icons-material/Logout"
 import CloseIcon from "@mui/icons-material/Close"
+import InfoIcon from "@mui/icons-material/Info"
 import MenuIcon from "@mui/icons-material/Menu"
 
 export default function App() {
@@ -54,6 +58,7 @@ export default function App() {
   const location = useLocation()
   const { dark, toggle, user } = useContext(Theme)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [updateAvail, setUpdateAvail] = useState(false)
   const closeDrawer = () => setDrawerOpen(false)
   const openDrawer = () => setDrawerOpen(true)
   const handleLogout = async () => {
@@ -107,6 +112,18 @@ export default function App() {
       })
     }
   }, [drawerOpen])
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return
+    Promise.all([
+      Cap.getInfo().then((info) => info.version).catch(() => null),
+      fetch(`${api.defaults.baseURL}/download/android/version`)
+        .then((res) => res.json())
+        .then((data) => data.version ?? null)
+        .catch(() => null)
+    ]).then(([current, latest]) => {
+      setUpdateAvail(Boolean(current && latest && current !== latest))
+    })
+  }, [])
   return (
     <Box sx={{ flexDirection: "column", height: "100dvh", display: "flex", width: "100vw" }}>
       {!isAuth && (
@@ -165,12 +182,23 @@ export default function App() {
               })}
             </Stack>
             <Divider/>
-            <Button fullWidth disableElevation
-              sx={{ border: "none", borderRadius: 0, py: 1.25 }}
-              variant={location.pathname === "/installations" ? "contained" : "outlined"}
-              color={location.pathname === "/installations" ? "primary" : "inherit"}
-              onClick={() => { navigate("/installations"); closeDrawer() }}
-              startIcon={<AndroidIcon/>}>Installations</Button>
+            <Stack sx={{ flexDirection: "row" }}>
+              <Badge color="primary" variant="dot" invisible={!updateAvail || location.pathname === "/installations"} overlap="rectangular" sx={{ flex: 1, "& .MuiBadge-badge": { top: 10, right: 10 } }}>
+                <Button fullWidth disableElevation
+                  sx={{ border: "none", borderRadius: 0, py: 1.25 }}
+                  variant={location.pathname === "/installations" ? "contained" : "outlined"}
+                  color={location.pathname === "/installations" ? "primary" : "inherit"}
+                  onClick={() => { navigate("/installations"); closeDrawer() }}
+                  startIcon={<AndroidIcon/>}
+                >Installations</Button>
+              </Badge>
+              <Divider orientation="vertical"/>
+              <Stack sx={{ p: 0.5, justifyContent: "center", backgroundColor: location.pathname.startsWith("/about") ? "primary.main" : "" }}>
+                <IconButton onClick={() => {navigate("/about"); closeDrawer()}}>
+                  <InfoIcon sx={{ color: location.pathname.startsWith("/about") ? "background.default" : "" }} />
+                </IconButton>
+              </Stack>
+            </Stack>
             <Divider/>
             <Stack sx={{ flexDirection: "row" }}>
               <Stack sx={{ justifyContent: "center", alignItems: "center", flex: 1}}>
@@ -202,9 +230,9 @@ export default function App() {
                 </Typography>
               </Stack>
               <Divider orientation="vertical"/>
-              <Stack sx={{ p: 0.5, justifyContent: "center" }}>
-                <IconButton onClick={() => {navigate("/settings"); closeDrawer() }} sx={{ backgroundColor: location.pathname.startsWith("/settings") ? "background.default" : "" }}>
-                  <SettingsIcon/>
+              <Stack sx={{ p: 0.5, justifyContent: "center", backgroundColor: location.pathname.startsWith("/settings") ? "primary.main" : "" }}>
+                <IconButton onClick={() => {navigate("/settings"); closeDrawer()}}>
+                  <SettingsIcon sx={{ color: location.pathname.startsWith("/settings") ? "background.default" : "" }} />
                 </IconButton>
               </Stack>
             </Stack>
@@ -216,6 +244,7 @@ export default function App() {
             <Route path="/forgot" element={<Forgot/>}/>
             <Route path="/verify" element={<Verify/>}/>
             <Route path="/settings/*" element={!user ? <Navigate to="/" replace/> : <Settings/>}/>
+            <Route path="/about" element={<About/>}/>
             <Route path="/installations" element={<Installations/>}/>
             <Route path="/qibla" element={<Qibla/>}/>
             <Route path="/*" element={user ? <Dashboard/> : <Auth/>}/>

@@ -56,7 +56,9 @@ if (Capacitor.isNativePlatform()) {
 function useNativePush() {
   const { user } = useContext(Theme)
   const userRef = useRef(user)
-  userRef.current = user
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
     let regListener, regErrorListener
