@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.get_login_creds"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.theabmmohi.waqt",
+      "sha256_cert_fingerprints": [
+        "08:42:EB:92:AD:4F:02:BC:A1:B5:3C:6B:00:A3:59:43:BD:BA:56:D0:8D:8D:C4:E2:17:DC:31:FA:43:1A:FA:11"
+      ]
+    }
+  }
+]
