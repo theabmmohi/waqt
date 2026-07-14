@@ -75,12 +75,6 @@ jobs:
           name: ${{ steps.tag.outputs.name }}
           body: ${{ steps.commit.outputs.message }}
           files: ${{ steps.apk.outputs.path }}
-      - name: Notify server of new release
-        run: |
-          curl -sf -X POST "${{ secrets.SERVER_URL }}/webhook/release" \
-            -H "Content-Type: application/json" \
-            -H "x-release-secret: ${{ secrets.RELEASE_HOOK }}" \
-            -d "{\"version\": \"${{ steps.tag.outputs.name }}\"}"
       - name: Prune old releases (keep latest 5)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
