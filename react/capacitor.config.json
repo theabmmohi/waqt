@@ -10,6 +10,11 @@
     "LocalNotifications": {
       "smallIcon": "ic_stat_waqt",
       "iconColor": "#F57C00"
+    },
+    "CapacitorPasskey": {
+      "origin": "https://app.abm.ami.bd",
+      "domains": ["app.abm.ami.bd"],
+      "autoShim": true
     }
   }
 }

@@ -28,3 +28,6 @@ project(':capacitor-push-notifications').projectDir = new File('../node_modules/
 
 include ':capacitor-screen-orientation'
 project(':capacitor-screen-orientation').projectDir = new File('../node_modules/@capacitor/screen-orientation/android')
+
+include ':capgo-capacitor-passkey'
+project(':capgo-capacitor-passkey').projectDir = new File('../node_modules/@capgo/capacitor-passkey/android')
