@@ -38,6 +38,12 @@ let GHreleaseCache = { data: null, expiresAt: 0 }
 
 
 
+function chunk(arr, size) {
+  const out = []
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+  return out
+}
+
 async function sendPush(tokens, { title, body, url = "/", actions = [] }) {
   if (!tokens?.length) return { successCount: 0, failureCount: 0, invalidTokens: [] }
   const cappedActions = actions.slice(0, 2)
@@ -119,25 +125,32 @@ async function GHlatestRelease() {
   return data
 }
 
+async function getAllFcmTokens() {
+  const rows = []
+  let lastId = null
+  const pageSize = 1000
+  while (true) {
+    let query = supabase.from("fcm_tokens").select("id, token").order("id", { ascending: true }).limit(pageSize)
+    if (lastId) query = query.gt("id", lastId)
+    const { data, error } = await query
+    if (error) throw new Error(error.message)
+    if (!data.length) break
+    rows.push(...data)
+    lastId = data[data.length - 1].id
+    if (data.length < pageSize) break
+  }
+  return rows
+}
+
+async function pruneInvalidTokens(invalidTokens) {
+  if (!invalidTokens.length) return
+  const { error } = await supabase.from("fcm_tokens").delete().in("token", invalidTokens)
+  if (error) console.error("Error pruning invalid tokens: ", error.message)
+}
 
 
 
 
-server.get("/download/android/version", async (_, res) => {
-  try {
-    const data = await GHlatestRelease()
-    res.json({ version: data.tag_name?.replace(/^v/, "") ?? null })
-  } catch (err) { res.status(500).json({ error: err.message, details: err.details }) }
-})
-
-server.get("/download/android/latest", async (_, res) => {
-  try {
-    const data = await GHlatestRelease()
-    const asset = data.assets?.find(a => a.name.endsWith(".apk"))
-    if (!asset) return res.status(404).send("No APK found in latest release")
-    res.redirect(302, asset.browser_download_url)
-  } catch (err) { res.status(500).json({ error: err.message, details: err.details }) }
-})
 
 server.post("/webhook/telegram", async (req, res) => {
   if (req.headers["x-telegram-bot-api-secret-token"] !== process.env.TG_HOOK_SCRT) return res.sendStatus(403)
@@ -168,16 +181,65 @@ server.post("/webhook/telegram", async (req, res) => {
   } catch (err) { console.error("Error At /webhook/telegram: ", err) }
 })
 
+server.post("/webhook/release", async (req, res) => {
+  if (req.headers["x-release-secret"] !== process.env.RELEASE_HOOK) return res.sendStatus(403)
+  res.sendStatus(200)
+  try {
+    GHreleaseCache = { data: null, expiresAt: 0 }
+    const { version } = req.body || {}
+    const data = await GHlatestRelease()
+    const tag = version || data.tag_name?.replace(/^v/, "")
+    const rows = await getAllFcmTokens()
+    if (!rows.length) {
+      await notify(`📦 Release *${tag}* published — no subscribed devices to notify.`)
+      return
+    }
+    let successCount = 0, failureCount = 0
+    const invalidTokens = []
+    for (const batch of chunk(rows, 500)) {
+      const result = await sendPush(batch.map(r => r.token), {
+        title: "New Update Available",
+        body: `Waqt ${tag} is ready to install.`,
+        url: "/installations"
+      })
+      successCount += result.successCount
+      failureCount += result.failureCount
+      invalidTokens.push(...result.invalidTokens)
+    }
+    await pruneInvalidTokens(invalidTokens)
+    await notify(`📦 Release *${tag}* pushed — ${successCount} sent, ${failureCount} failed, ${invalidTokens.length} stale tokens pruned.`)
+  } catch (err) {
+    console.error("Error at /webhook/release: ", err)
+    await notify(`⚠️ Release webhook failed: ${err.message}`)
+  }
+})
+
+server.get("/download/android/version", async (_, res) => {
+  try {
+    const data = await GHlatestRelease()
+    res.json({ version: data.tag_name?.replace(/^v/, "") ?? null })
+  } catch (err) { res.status(500).json({ error: err.message, details: err.details }) }
+})
+
+server.get("/download/android/latest", async (_, res) => {
+  try {
+    const data = await GHlatestRelease()
+    const asset = data.assets?.find(a => a.name.endsWith(".apk"))
+    if (!asset) return res.status(404).send("No APK found in latest release")
+    res.redirect(302, asset.browser_download_url)
+  } catch (err) { res.status(500).json({ error: err.message, details: err.details }) }
+})
+
 server.post("/settings/notifications/webPush/subscribe", async (req, res) => {
   try {
     const user = await getUser(req)
     const { fcmToken } = req.body
     if (!fcmToken) throw new Error("No FCM Token Provided")
-    const existing = user.user_metadata?.fcmTokens ?? []
-    const fcmTokens = [...new Set([...existing, fcmToken])]
-    await supabase.auth.admin.updateUserById(user.id, {
-      user_metadata: { ...user.user_metadata, fcmTokens }
-    })
+    const { error } = await supabase.from("fcm_tokens").upsert(
+      { user_id: user.id, token: fcmToken },
+      { onConflict: "token" }
+    )
+    if (error) throw new Error(error.message)
     res.json({
       success: true,
       message: "Push Notifications Subscribed"
@@ -192,12 +254,12 @@ server.post("/settings/notifications/webPush/unsubscribe", async (req, res) => {
   try {
     const user = await getUser(req)
     const { fcmToken } = req.body
-    const existing = user.user_metadata?.fcmTokens ?? []
-    const filtered = existing.filter(t => t !== fcmToken)
-    const fcmTokens = filtered.length ? filtered : null
-    await supabase.auth.admin.updateUserById(user.id, {
-      user_metadata: { ...user.user_metadata, fcmTokens }
-    })
+    if (!fcmToken) throw new Error("No FCM Token Provided")
+    const { error } = await supabase.from("fcm_tokens")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("token", fcmToken)
+    if (error) throw new Error(error.message)
     res.json({
       success: true,
       message: "Push Notifications Unsubscribed"
@@ -243,12 +305,15 @@ server.post("/settings/security/sessions/logout", async (req, res) => {
   try {
     const user = await getUser(req)
     const { scope, fcmToken } = req.body
-    let fcmTokens
-    if (scope === "global") fcmTokens = null
-    else if (scope === "others") fcmTokens = fcmToken ? [fcmToken] : null
-    if (fcmTokens !== undefined) await supabase.auth.admin.updateUserById(user.id, {
-      user_metadata: {...user.user_metadata, fcmTokens}
-    })
+    if (scope === "global") {
+      const { error } = await supabase.from("fcm_tokens").delete().eq("user_id", user.id)
+      if (error) throw new Error(error.message)
+    } else if (scope === "others") {
+      let query = supabase.from("fcm_tokens").delete().eq("user_id", user.id)
+      query = fcmToken ? query.neq("token", fcmToken) : query
+      const { error } = await query
+      if (error) throw new Error(error.message)
+    }
     res.json({
       success: true,
       message: scope === "global" ? "Removed All FCM Tokens" : "Removed Other Devices' FCM Tokens"

@@ -155,7 +155,7 @@ export default function Qibla() {
   }, [comStatus])
   useEffect(() => () => cleanupRef.current?.(), [])
   return (<Stack sx={{ gap: 2.5, p: 2.5 }}>
-    <Stack sx={{ border: "1px solid", borderColor: "divider", alignSelf: "center", width: "100%", borderRadius: 1, maxWidth: 600, gap: 2.5, p: 2.5 }}>
+    <Stack sx={{ alignSelf: "center", width: "100%", maxWidth: 600, gap: 2.5, p: 2.5 }}>
       <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: "50%", alignSelf: "center", position: "relative", width: S, height: S }}>
         <svg viewBox={`0 0 ${S} ${S}`} width={S} height={S}>
           <g transform={`translate(${CX},${CY}) rotate(${-heading})`}>
