@@ -523,9 +523,9 @@ function Security({setSnack}) {
   const logout = async (scope) => {
     setOthersR(true)
     try {
-      const fcmToken = "serviceWorker" in navigator
-        ? await subscribeWeb().catch(() => null)
-        : (Capacitor.isNativePlatform() ? getNativeFcmToken() : null)
+      const fcmToken = Capacitor.isNativePlatform()
+        ? getNativeFcmToken()
+        : ("serviceWorker" in navigator ? await subscribeWeb().catch(() => null) : null)
       await api.post("/settings/security/sessions/logout", { scope, fcmToken })
       if (scope === "global" && "serviceWorker" in navigator) await unsubscribeWeb().catch(() => {})
       const { error } = await Supabase.auth.signOut({ scope })
