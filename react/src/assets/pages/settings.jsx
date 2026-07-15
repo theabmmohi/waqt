@@ -107,13 +107,14 @@ function Notifications({setSnack}) {
   const pollRef = useRef()
   const startPolling = () => {
     pollRef.current = setInterval(async () => {
-      const { data } = await Supabase.auth.getUser()
-      const chatId = data?.user?.user_metadata?.teleChatId
-      if (chatId) {
-        setTeleLinked(true)
-        setTeleId(chatId)
-        clearInterval(pollRef.current)
-      }
+      try {
+        const { data } = await api.post("/settings/notifications/telegram/status")
+        if (data.success && data.chatId) {
+          setTeleLinked(true)
+          setTeleId(data.chatId)
+          clearInterval(pollRef.current)
+        }
+      } catch {}
     }, 3000)
     setTimeout(() => clearInterval(pollRef.current), 120000)
   }
@@ -124,7 +125,6 @@ function Notifications({setSnack}) {
       if (browEnabled) {
         const fcmToken = await subscribeWeb()
         if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
-        await Supabase.auth.updateUser({ data: { webPushNotif: false } })
         setBrowEnabled(false)
         setSnack("Browser notifications disabled")
       } else {
@@ -132,7 +132,6 @@ function Notifications({setSnack}) {
         if (!fcmToken) throw new Error("Push notifications not supported on this device")
         const { data } = await api.post("/settings/notifications/webPush/subscribe", { fcmToken })
         if (!data.success) throw new Error(data.message)
-        await Supabase.auth.updateUser({ data: { webPushNotif: true } })
         setBrowEnabled(true)
         setSnack("Browser notifications enabled")
       }
@@ -148,7 +147,6 @@ function Notifications({setSnack}) {
         const fcmToken = getNativeFcmToken()
         if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
         clearNativeFcmToken()
-        await Supabase.auth.updateUser({ data: { platformNotif: false } })
         setBrowEnabled(false)
         setSnack("Notifications disabled for this device")
       } else {
@@ -165,7 +163,6 @@ function Notifications({setSnack}) {
           return
         }
         await PushNotifications.register()
-        await Supabase.auth.updateUser({ data: { platformNotif: true } })
         setBrowEnabled(true)
         setSnack("Notifications enabled")
       }
@@ -180,36 +177,36 @@ function Notifications({setSnack}) {
     if (!teleLinked) {
       setTeleLinking(true)
       try {
-        const { error } = await Supabase.auth.updateUser({ data: { teleChatId: teleId.trim() } })
-        if (error) throw error
-        const { data } = await api.post("/settings/notifications/telegram/validateID")
-        if (!data.success) {
-          await Supabase.auth.updateUser({ data: { teleChatId: null } })
-          setTeleLinked(false)
-          setTeleId("")
-          throw new Error(data.message)
-        }
+        const { data } = await api.post("/settings/notifications/telegram/validateID", { chatId: teleId.trim() })
+        if (!data.success) throw new Error(data.message)
         setTeleLinked(true)
+        setTeleId(data.chatId)
         setSnack(data.message)
       } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setTeleLinking(false)}
     } else {
       setTeleUnLinking(true)
       try {
-        const { error } = await Supabase.auth.updateUser({ data: { teleChatId: null } })
-        if (error) throw error
+        const { data } = await api.post("/settings/notifications/telegram/unlink")
+        if (!data.success) throw new Error(data.message)
         setTeleLinked(false)
         setTeleId("")
-        setSnack("Telegram Account Disconnected")
+        setSnack(data.message)
       } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setTeleUnLinking(false)}
     }
   }
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
-    const teleChatId = user?.user_metadata?.teleChatId
-    if (teleChatId) {
-      setTeleLinked(true)
-      setTeleId(teleChatId)
-    }
+    let cancelled = false
+    api.post("/settings/notifications/telegram/status")
+      .then(({ data }) => {
+        if (cancelled) return
+        if (data.success && data.chatId) {
+          setTeleLinked(true)
+          setTeleId(data.chatId)
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setTeleLoading(false) })
     let liveRegListener
     if (Capacitor.isNativePlatform()) {
       PushNotifications.checkPermissions()
@@ -231,20 +228,16 @@ function Notifications({setSnack}) {
           .then(fcmToken => {
             if (!fcmToken) return setBrowEnabled(false)
             return api.post("/settings/notifications/webPush/status", { fcmToken })
-              .then(({ data }) => {
-                setBrowEnabled(!!data.subscribed)
-                if (data.subscribed && !user?.user_metadata?.webPushNotif) Supabase.auth.updateUser({ data: { webPushNotif: true } }).catch(() => {})
-              })
+              .then(({ data }) => setBrowEnabled(!!data.subscribed))
           })
           .catch(() => setBrowEnabled(false))
       } else {
         setBrowEnabled(false)
       }
     }
-    setTeleLoading(false)
     /* eslint-enable react-hooks/set-state-in-effect */
-    return () => { liveRegListener?.remove() }
-  }, [user?.id, user?.user_metadata?.teleChatId])
+    return () => { cancelled = true; liveRegListener?.remove() }
+  }, [user?.id])
   return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5 }}>
       <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>

@@ -269,14 +269,18 @@ server.post("/settings/notifications/telegram/status", async (req, res) => {
 server.post("/settings/notifications/telegram/validateID", async (req, res) => {
   try {
     const user = await getUser(req)
-    const { data: channel, error: fetchErr } = await supabase
-      .from("notification_channels")
-      .select("identifier")
-      .eq("user_id", user.id)
-      .eq("type", "telegram")
-      .maybeSingle()
-    if (fetchErr) throw new Error(fetchErr.message)
-    const chatID = channel?.identifier
+    const { chatId } = req.body
+    let chatID = chatId
+    if (!chatID) {
+      const { data: channel, error: fetchErr } = await supabase
+        .from("notification_channels")
+        .select("identifier")
+        .eq("user_id", user.id)
+        .eq("type", "telegram")
+        .maybeSingle()
+      if (fetchErr) throw new Error(fetchErr.message)
+      chatID = channel?.identifier
+    }
     if (!chatID) throw new Error("No Telegram Chat ID Found In This Account")
     const resp = await fetch(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
       method: "POST",
@@ -293,15 +297,16 @@ server.post("/settings/notifications/telegram/validateID", async (req, res) => {
       if (tele.error_code === 403) throw new Error("Bot Is Blocked By User")
       throw new Error(tele.description ?? "Telegram Error")
     }
+    const { error: upsertErr } = await supabase
+      .from("notification_channels")
+      .upsert(
+        { user_id: user.id, type: "telegram", identifier: String(chatID), last_used_at: new Date().toISOString() },
+        { onConflict: "type,identifier" }
+      )
+    if (upsertErr) throw new Error(upsertErr.message)
     const username = tele.result.chat.username
-    res.json({
-      success: true,
-      message: `${username ? `@${username}` : "Your Telegram"} Is Linked With Your Waqt Account`
-    })
-  } catch (err) {res.json({
-    success: false,
-    message: err?.message ?? "Server Error"
-  })}
+    res.json({ success: true, chatId: String(chatID), message: `${username ? `@${username}` : "Your Telegram"} Is Linked With Your Waqt Account` })
+  } catch (err) { res.json({ success: false, message: err?.message ?? "Server Error" }) }
 })
 
 server.post("/settings/notifications/telegram/unlink", async (req, res) => {
