@@ -152,8 +152,18 @@ server.post("/webhook/telegram", async (req, res) => {
       const chatId = message.chat.id
       let reply = `Welcome to Waqt Bot!\n\nYour Chat ID is:\n\`${chatId}\`\n\nCopy this and paste it in the Waqt app under Settings → Notifications → Telegram.`
       if (uid) {
-        const { data, error } = await supabase.auth.admin.updateUserById(uid, { user_metadata: {teleChatId: chatId} })
-        reply = error ? error.message : `Your Telegram is now connected with your Waqt account (${data.user.email})`
+        const { error } = await supabase
+          .from("notification_channels")
+          .upsert(
+            { user_id: uid, type: "telegram", identifier: String(chatId), last_used_at: new Date().toISOString() },
+            { onConflict: "type,identifier" }
+          )
+        if (!error) {
+          const { data, error: userErr } = await supabase.auth.admin.getUserById(uid)
+          reply = userErr ? userErr.message : `Your Telegram is now connected with your Waqt account (${data.user.email})`
+        } else {
+          reply = error.message
+        }
       }
       await fetch(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
         method: "POST",
@@ -172,10 +182,18 @@ server.post("/settings/notifications/webPush/status", async (req, res) => {
   try {
     const user = await getUser(req)
     const { fcmToken } = req.body
-    const existing = user.user_metadata?.fcmTokens ?? []
+    if (!fcmToken) return res.json({ success: true, subscribed: false })
+    const { data, error } = await supabase
+      .from("notification_channels")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("type", "fcm")
+      .eq("identifier", fcmToken)
+      .maybeSingle()
+    if (error) throw new Error(error.message)
     res.json({
       success: true,
-      subscribed: !!fcmToken && existing.includes(fcmToken)
+      subscribed: !!data
     })
   } catch (err) {res.json({
     success: false,
@@ -188,11 +206,13 @@ server.post("/settings/notifications/webPush/subscribe", async (req, res) => {
     const user = await getUser(req)
     const { fcmToken } = req.body
     if (!fcmToken) throw new Error("No FCM Token Provided")
-    const existing = user.user_metadata?.fcmTokens ?? []
-    const fcmTokens = [...new Set([...existing, fcmToken])]
-    await supabase.auth.admin.updateUserById(user.id, {
-      user_metadata: { ...user.user_metadata, fcmTokens }
-    })
+    const { error } = await supabase
+      .from("notification_channels")
+      .upsert(
+        { user_id: user.id, type: "fcm", identifier: fcmToken, last_used_at: new Date().toISOString() },
+        { onConflict: "type,identifier" }
+      )
+    if (error) throw new Error(error.message)
     res.json({
       success: true,
       message: "Push Notifications Subscribed"
@@ -207,12 +227,15 @@ server.post("/settings/notifications/webPush/unsubscribe", async (req, res) => {
   try {
     const user = await getUser(req)
     const { fcmToken } = req.body
-    const existing = user.user_metadata?.fcmTokens ?? []
-    const filtered = existing.filter(t => t !== fcmToken)
-    const fcmTokens = filtered.length ? filtered : null
-    await supabase.auth.admin.updateUserById(user.id, {
-      user_metadata: { ...user.user_metadata, fcmTokens }
-    })
+    if (fcmToken) {
+      const { error } = await supabase
+        .from("notification_channels")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("type", "fcm")
+        .eq("identifier", fcmToken)
+      if (error) throw new Error(error.message)
+    }
     res.json({
       success: true,
       message: "Push Notifications Unsubscribed"
@@ -223,10 +246,37 @@ server.post("/settings/notifications/webPush/unsubscribe", async (req, res) => {
   })}
 })
 
+server.post("/settings/notifications/telegram/status", async (req, res) => {
+  try {
+    const user = await getUser(req)
+    const { data, error } = await supabase
+      .from("notification_channels")
+      .select("identifier")
+      .eq("user_id", user.id)
+      .eq("type", "telegram")
+      .maybeSingle()
+    if (error) throw new Error(error.message)
+    res.json({
+      success: true,
+      chatId: data?.identifier ?? null
+    })
+  } catch (err) {res.json({
+    success: false,
+    message: err?.message ?? "Server Error"
+  })}
+})
+
 server.post("/settings/notifications/telegram/validateID", async (req, res) => {
   try {
     const user = await getUser(req)
-    const chatID = user.user_metadata?.teleChatId
+    const { data: channel, error: fetchErr } = await supabase
+      .from("notification_channels")
+      .select("identifier")
+      .eq("user_id", user.id)
+      .eq("type", "telegram")
+      .maybeSingle()
+    if (fetchErr) throw new Error(fetchErr.message)
+    const chatID = channel?.identifier
     if (!chatID) throw new Error("No Telegram Chat ID Found In This Account")
     const resp = await fetch(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
       method: "POST",
@@ -254,16 +304,35 @@ server.post("/settings/notifications/telegram/validateID", async (req, res) => {
   })}
 })
 
+server.post("/settings/notifications/telegram/unlink", async (req, res) => {
+  try {
+    const user = await getUser(req)
+    const { error } = await supabase
+      .from("notification_channels")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("type", "telegram")
+    if (error) throw new Error(error.message)
+    res.json({
+      success: true,
+      message: "Telegram Account Disconnected"
+    })
+  } catch (err) {res.json({
+    success: false,
+    message: err?.message ?? "Server Error"
+  })}
+})
+
 server.post("/settings/security/sessions/logout", async (req, res) => {
   try {
     const user = await getUser(req)
     const { scope, fcmToken } = req.body
-    let fcmTokens
-    if (scope === "global") fcmTokens = null
-    else if (scope === "others" && fcmToken) fcmTokens = [fcmToken]
-    if (fcmTokens !== undefined) await supabase.auth.admin.updateUserById(user.id, {
-      user_metadata: {...user.user_metadata, fcmTokens}
-    })
+    if (scope === "global" || (scope === "others" && fcmToken)) {
+      let query = supabase.from("notification_channels").delete().eq("user_id", user.id).eq("type", "fcm")
+      if (scope === "others") query = query.neq("identifier", fcmToken)
+      const { error } = await query
+      if (error) throw new Error(error.message)
+    }
     res.json({
       success: true,
       message: scope === "global" ? "Removed All FCM Tokens" : "Removed Other Devices' FCM Tokens"
