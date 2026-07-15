@@ -168,6 +168,21 @@ server.post("/webhook/telegram", async (req, res) => {
   } catch (err) { console.error("Error At /webhook/telegram: ", err) }
 })
 
+server.post("/settings/notifications/webPush/status", async (req, res) => {
+  try {
+    const user = await getUser(req)
+    const { fcmToken } = req.body
+    const existing = user.user_metadata?.fcmTokens ?? []
+    res.json({
+      success: true,
+      subscribed: !!fcmToken && existing.includes(fcmToken)
+    })
+  } catch (err) {res.json({
+    success: false,
+    message: err?.message ?? "Server Error"
+  })}
+})
+
 server.post("/settings/notifications/webPush/subscribe", async (req, res) => {
   try {
     const user = await getUser(req)

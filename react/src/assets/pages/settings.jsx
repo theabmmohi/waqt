@@ -213,7 +213,11 @@ function Notifications({setSnack}) {
       PushNotifications.checkPermissions()
         .then(({ receive }) => {
           if (receive !== "granted") return setBrowEnabled(false)
-          if (getNativeFcmToken()) return setBrowEnabled(true)
+          const existingToken = getNativeFcmToken()
+          if (existingToken) {
+            return api.post("/settings/notifications/webPush/status", { fcmToken: existingToken })
+              .then(({ data }) => setBrowEnabled(!!data.subscribed))
+          }
           setBrowEnabled(false)
           PushNotifications.addListener("registration", () => setBrowEnabled(true))
             .then(handle => { liveRegListener = handle })
@@ -224,8 +228,8 @@ function Notifications({setSnack}) {
         subscribeWeb()
           .then(fcmToken => {
             if (!fcmToken) return setBrowEnabled(false)
-            return api.post("/settings/notifications/webPush/subscribe", { fcmToken })
-              .then(({ data }) => setBrowEnabled(!!data.success))
+            return api.post("/settings/notifications/webPush/status", { fcmToken })
+              .then(({ data }) => setBrowEnabled(!!data.subscribed))
           })
           .catch(() => setBrowEnabled(false))
       } else {
