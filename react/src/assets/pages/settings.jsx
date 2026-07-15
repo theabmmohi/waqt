@@ -124,6 +124,7 @@ function Notifications({setSnack}) {
       if (browEnabled) {
         const fcmToken = await subscribeWeb()
         if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
+        await Supabase.auth.updateUser({ data: { webPushNotif: false } })
         setBrowEnabled(false)
         setSnack("Browser notifications disabled")
       } else {
@@ -131,6 +132,7 @@ function Notifications({setSnack}) {
         if (!fcmToken) throw new Error("Push notifications not supported on this device")
         const { data } = await api.post("/settings/notifications/webPush/subscribe", { fcmToken })
         if (!data.success) throw new Error(data.message)
+        await Supabase.auth.updateUser({ data: { webPushNotif: true } })
         setBrowEnabled(true)
         setSnack("Browser notifications enabled")
       }
@@ -229,7 +231,10 @@ function Notifications({setSnack}) {
           .then(fcmToken => {
             if (!fcmToken) return setBrowEnabled(false)
             return api.post("/settings/notifications/webPush/status", { fcmToken })
-              .then(({ data }) => setBrowEnabled(!!data.subscribed))
+              .then(({ data }) => {
+                setBrowEnabled(!!data.subscribed)
+                if (data.subscribed && !user?.user_metadata?.webPushNotif) Supabase.auth.updateUser({ data: { webPushNotif: true } }).catch(() => {})
+              })
           })
           .catch(() => setBrowEnabled(false))
       } else {

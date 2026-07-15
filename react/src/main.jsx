@@ -99,12 +99,13 @@ function useWebPushResync() {
   const { user } = useContext(Theme)
   useEffect(() => {
     if (Capacitor.isNativePlatform() || !user) return
+    if (!user.user_metadata?.webPushNotif) return
     if (!("Notification" in window) || !("serviceWorker" in navigator)) return
     if (Notification.permission !== "granted") return
     subscribeWeb()
       .then(fcmToken => fcmToken && api.post("/settings/notifications/webPush/subscribe", { fcmToken }))
       .catch(err => console.error("Web push token re-sync failed:", err))
-  }, [user?.id])
+  }, [user?.id, user?.user_metadata?.webPushNotif])
 }
 
 function Helper() {
