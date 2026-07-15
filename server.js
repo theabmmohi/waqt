@@ -246,11 +246,6 @@ server.post("/settings/security/sessions/logout", async (req, res) => {
     let fcmTokens
     if (scope === "global") fcmTokens = null
     else if (scope === "others" && fcmToken) fcmTokens = [fcmToken]
-    // scope === "others" with no fcmToken: leave user_metadata untouched.
-    // We can't safely tell "keep this device" apart from "remove all" without
-    // a confirmed current token, so we skip the FCM wipe rather than risk
-    // deleting this device's own token too. The actual session revoke below
-    // still runs regardless, so other devices are logged out either way.
     if (fcmTokens !== undefined) await supabase.auth.admin.updateUserById(user.id, {
       user_metadata: {...user.user_metadata, fcmTokens}
     })

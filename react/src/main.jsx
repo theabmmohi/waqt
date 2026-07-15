@@ -78,7 +78,11 @@ function useNativePush() {
     if (!user.user_metadata?.platformNotif) return
     (async () => {
       try {
-        if (getNativeFcmToken()) return
+        const existingToken = getNativeFcmToken()
+        if (existingToken) {
+          await api.post("/settings/notifications/webPush/subscribe", { fcmToken: existingToken }).catch(err => console.error("FCM token resync failed:", err))
+          return
+        }
         const { receive } = await PushNotifications.checkPermissions()
         if (receive !== "granted") return
         const { display } = await LocalNotifications.checkPermissions()

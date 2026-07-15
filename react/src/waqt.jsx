@@ -25,7 +25,7 @@ import {
   Stack,
   Box
 } from "@mui/material"
-import { subscribeWeb, unsubscribeWeb } from "@/firebase"
+import { subscribeWeb } from "@/firebase"
 import { Theme, getNativeFcmToken } from "@/main"
 import Installations from "@page/installations"
 import { App as Cap } from "@capacitor/app"
@@ -65,7 +65,6 @@ export default function App() {
     try {
       if ("serviceWorker" in navigator) {
         const fcmToken = await subscribeWeb().catch(() => null)
-        await unsubscribeWeb()
         if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
       }
       if (Capacitor.isNativePlatform()) {

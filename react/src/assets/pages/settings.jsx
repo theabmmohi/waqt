@@ -123,7 +123,6 @@ function Notifications({setSnack}) {
     try {
       if (browEnabled) {
         const fcmToken = await subscribeWeb()
-        await unsubscribeWeb()
         if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
         setBrowEnabled(false)
         setSnack("Browser notifications disabled")
