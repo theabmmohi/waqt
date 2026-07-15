@@ -94,7 +94,7 @@ export default function App() {
       script.remove()
       document.querySelectorAll(".sk-widget-btn, .sk-widget-iframe-container").forEach(el => el.remove())
     }
-  }, [user])
+  }, [user?.id])
   useEffect(() => {
     document.querySelectorAll(".sk-widget-btn").forEach(el => {
       el.style.transition = "opacity 0.2s ease"

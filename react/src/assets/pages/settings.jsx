@@ -235,7 +235,7 @@ function Notifications({setSnack}) {
     setTeleLoading(false)
     /* eslint-enable react-hooks/set-state-in-effect */
     return () => { liveRegListener?.remove() }
-  }, [user])
+  }, [user?.id, user?.user_metadata?.teleChatId])
   return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5 }}>
       <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
@@ -374,7 +374,7 @@ function Preferences({setSnack}) {
       if (data.coords) setCoords(data.coords)
     }
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [user])
+  }, [user?.id])
   return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>

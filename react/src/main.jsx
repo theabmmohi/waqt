@@ -92,7 +92,7 @@ function useNativePush() {
         console.error("Silent FCM re-registration failed:", err)
       }
     })()
-  }, [user])
+  }, [user?.id, user?.user_metadata?.platformNotif])
 }
 
 function useWebPushResync() {
@@ -104,7 +104,7 @@ function useWebPushResync() {
     subscribeWeb()
       .then(fcmToken => fcmToken && api.post("/settings/notifications/webPush/subscribe", { fcmToken }))
       .catch(err => console.error("Web push token re-sync failed:", err))
-  }, [user])
+  }, [user?.id])
 }
 
 function Helper() {
