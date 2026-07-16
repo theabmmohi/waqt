@@ -214,10 +214,10 @@ server.post("/webhook/release", async (req, res) => {
       const { error: pruneErr } = await supabase.from("notification_channels").delete().eq("type", "fcm").in("identifier", invalidTokens)
       if (pruneErr) console.error("Error pruning invalid tokens: ", pruneErr.message)
     }
-    await notify(`📦 *Release ${version ?? "?"}* notified\n✅ ${successCount} sent · ❌ ${failureCount} failed · 🧹 ${invalidTokens.length} pruned`)
+    await notify(`📦 *Release ${version ?? "?"}* notified\n${successCount} sent | ${failureCount} failed | ${invalidTokens.length} pruned`)
   } catch (err) {
     console.error("Error at /webhook/release: ", err)
-    await notify(`⚠️ Release webhook failed for ${version ?? "?"}: ${err.message}`)
+    await notify(`⚠️ Release webhook failed for ${version ?? "?"}:\n${err.message}`)
   }
 })
 
