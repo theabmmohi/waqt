@@ -115,7 +115,7 @@ function Notifications({setSnack}) {
           clearInterval(pollRef.current)
         }
       } catch {}
-    }, 3000)
+    }, 2500)
     setTimeout(() => clearInterval(pollRef.current), 120000)
   }
   const toggleBrowWeb = async () => {
