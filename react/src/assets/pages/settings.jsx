@@ -131,7 +131,7 @@ function Notifications({setSnack}) {
       } else {
         const fcmToken = await subscribeWeb()
         if (!fcmToken) throw new Error("Push notifications not supported on this device")
-        const { data } = await api.post("/settings/notifications/webPush/subscribe", { fcmToken })
+        const { data } = await api.post("/settings/notifications/webPush/subscribe", { fcmToken, platform: "web" })
         if (!data.success) throw new Error(data.message)
         await Supabase.auth.updateUser({ data: { webPushNotif: true } })
         setBrowEnabled(true)

@@ -204,12 +204,13 @@ server.post("/settings/notifications/webPush/status", async (req, res) => {
 server.post("/settings/notifications/webPush/subscribe", async (req, res) => {
   try {
     const user = await getUser(req)
-    const { fcmToken } = req.body
+    const { fcmToken, platform } = req.body
     if (!fcmToken) throw new Error("No FCM Token Provided")
+    const metadata = platform === "app" || platform === "web" ? { platform } : {}
     const { error } = await supabase
       .from("notification_channels")
       .upsert(
-        { user_id: user.id, type: "fcm", identifier: fcmToken, last_used_at: new Date().toISOString() },
+        { user_id: user.id, type: "fcm", identifier: fcmToken, metadata, last_used_at: new Date().toISOString() },
         { onConflict: "type,identifier" }
       )
     if (error) throw new Error(error.message)

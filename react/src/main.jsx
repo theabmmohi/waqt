@@ -65,7 +65,7 @@ function useNativePush() {
     (async () => {
       regListener = await PushNotifications.addListener("registration", ({ value: fcmToken }) => {
         nativeFcmToken = fcmToken
-        if (userRef.current) api.post("/settings/notifications/webPush/subscribe", { fcmToken }).catch(err => console.error("FCM token registration failed:", err))
+        if (userRef.current) api.post("/settings/notifications/webPush/subscribe", { fcmToken, platform: "app" }).catch(err => console.error("FCM token registration failed:", err))
       })
       regErrorListener = await PushNotifications.addListener("registrationError", (err) => {
         console.error("FCM registration error:", err)
@@ -80,7 +80,7 @@ function useNativePush() {
       try {
         const existingToken = getNativeFcmToken()
         if (existingToken) {
-          await api.post("/settings/notifications/webPush/subscribe", { fcmToken: existingToken }).catch(err => console.error("FCM token resync failed:", err))
+          await api.post("/settings/notifications/webPush/subscribe", { fcmToken: existingToken, platform: "app" }).catch(err => console.error("FCM token resync failed:", err))
           return
         }
         const { receive } = await PushNotifications.checkPermissions()
@@ -103,7 +103,7 @@ function useWebPushResync() {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) return
     if (Notification.permission !== "granted") return
     subscribeWeb()
-      .then(fcmToken => fcmToken && api.post("/settings/notifications/webPush/subscribe", { fcmToken }))
+      .then(fcmToken => fcmToken && api.post("/settings/notifications/webPush/subscribe", { fcmToken, platform: "web" }))
       .catch(err => console.error("Web push token re-sync failed:", err))
   }, [user?.id, user?.user_metadata?.webPushNotif])
 }
