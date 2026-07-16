@@ -58,6 +58,12 @@ export default function App() {
   const location = useLocation()
   const { dark, toggle, user } = useContext(Theme)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drawerPos, setDrawerPos] = useState(() => localStorage.getItem("drawerPos") || "l")
+  useEffect(() => {
+    const handler = (e) => setDrawerPos(e.detail)
+    window.addEventListener("drawerpos-change", handler)
+    return () => window.removeEventListener("drawerpos-change", handler)
+  }, [])
   const [updateAvail, setUpdateAvail] = useState(false)
   const closeDrawer = () => setDrawerOpen(false)
   const openDrawer = () => setDrawerOpen(true)
@@ -80,6 +86,7 @@ export default function App() {
     { icon: <GpsFixedIcon/>, label: "Qibla", route: "/qibla" }
   ]
   const isAuth = location.pathname === "/auth"
+  const rowDir = drawerPos === "r" ? "row-reverse" : "row"
   useEffect(() => {
     if (!user) return
     document.querySelectorAll(".sk-widget-btn, .sk-widget-iframe-container, script[src*=\"supportkori\"]").forEach(el => el.remove())
@@ -88,13 +95,13 @@ export default function App() {
     script.dataset.id = "theabmmohi"
     script.dataset.message = "CupHi?"
     script.dataset.color = "#FFDD00"
-    script.dataset.position = "right"
+    script.dataset.position = drawerPos === "r" ? "left" : "right"
     document.body.appendChild(script)
     return () => {
       script.remove()
       document.querySelectorAll(".sk-widget-btn, .sk-widget-iframe-container").forEach(el => el.remove())
     }
-  }, [user?.id])
+  }, [user?.id, drawerPos])
   useEffect(() => {
     document.querySelectorAll(".sk-widget-btn").forEach(el => {
       el.style.transition = "opacity 0.2s ease"
@@ -161,7 +168,7 @@ export default function App() {
       )}
       <Box sx={{ position: "relative", overflowY: "auto", flex: 1 }}>
         {!isAuth && (
-          <Drawer disableScrollLock anchor="left" open={drawerOpen} onClose={closeDrawer} sx={{ display: "flex", minWidth: "25vw", maxWidth: "75vw", "& .MuiDrawer-paper": { minWidth: "25vw", maxWidth: "75vw" } }}>
+          <Drawer disableScrollLock anchor={drawerPos === "r" ? "right" : "left"} open={drawerOpen} onClose={closeDrawer} sx={{ display: "flex", minWidth: "25vw", maxWidth: "75vw", "& .MuiDrawer-paper": { minWidth: "25vw", maxWidth: "75vw" } }}>
             <Toolbar/>
             <Divider/>
             <Stack sx={{ overflowY: "auto", gap: 1, flex: 1, p: 2.5 }}>
@@ -181,7 +188,7 @@ export default function App() {
               })}
             </Stack>
             <Divider/>
-            <Stack sx={{ flexDirection: "row" }}>
+            <Stack sx={{ flexDirection: rowDir }}>
               <Badge color="primary" variant="dot" invisible={!updateAvail || location.pathname === "/installations"} overlap="rectangular" sx={{ flex: 1, "& .MuiBadge-badge": { top: 10, right: 10 } }}>
                 <Button fullWidth disableElevation
                   sx={{ border: "none", borderRadius: 0, py: 1.25 }}
@@ -199,7 +206,7 @@ export default function App() {
               </Stack>
             </Stack>
             <Divider/>
-            <Stack sx={{ flexDirection: "row" }}>
+            <Stack sx={{ flexDirection: rowDir }}>
               <Stack sx={{ justifyContent: "center", alignItems: "center", flex: 1}}>
                 <ToggleButtonGroup fullWidth exclusive size="small" onChange={(_, val) => { if (val) toggle(val) }} value={dark} sx={{ borderRadius: 0, height: "100%", "& .MuiToggleButton-root": { borderRadius: 0, border: "none" }, "& .MuiToggleButtonGroup-grouped:not(:last-of-type)": { borderRight: "1px solid", borderColor: "divider" } }}>
                   <ToggleButton value="light"><LightModeIcon/></ToggleButton>
@@ -215,7 +222,7 @@ export default function App() {
               </Stack>
             </Stack>
             <Divider/>
-            <Stack sx={{ flexDirection: "row" }}>
+            <Stack sx={{ flexDirection: rowDir }}>
               <Stack sx={{ px: 0.5, justifyContent: "center" }}>
                 <Avatar src={user?.user_metadata?.avatar_url}>{user?.user_metadata?.full_name?.[0]?.toUpperCase() ?? "?"}</Avatar>
               </Stack>

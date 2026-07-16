@@ -291,6 +291,7 @@ function Notifications({setSnack}) {
 
 function Preferences({setSnack}) {
   const { user } = useContext(Theme)
+  const [drawerPos, setDrawerPos] =         useState(() => localStorage.getItem("drawerPos") || "l")
   const [locationType, setLocationType] =   useState("gps")
   const [timeFormat, setTimeFormat] =       useState("12h")
   const [calcMethod, setCalcMethod] =       useState("Karachi")
@@ -381,7 +382,7 @@ function Preferences({setSnack}) {
     }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [user?.id])
-  return (<Stack sx={{ p: 2.5 }}>
+  return (<Stack sx={{ gap: 2.5, p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
         <Typography sx={{ minWidth: "50%" }}>Language :</Typography>
@@ -462,6 +463,20 @@ function Preferences({setSnack}) {
       <Button disableElevation onClick={save} disabled={saving} variant={saving ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={saving ? <CircularProgress size={14}/> : <SaveIcon/>}>
         {saving ? "Saving..." : "Save"}
       </Button>
+    </Stack>
+    <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5, p: 2.5 }}>
+      <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
+        <Typography sx={{ minWidth: "50%" }}>App Drawer Position :</Typography>
+        <ToggleButtonGroup exclusive fullWidth size="small" sx={{ flex: 1 }} value={drawerPos} onChange={(_, v) => {
+          if (!v) return
+          setDrawerPos(v)
+          localStorage.setItem("drawerPos", v)
+          window.dispatchEvent(new CustomEvent("drawerpos-change", { detail: v }))
+        }}>
+          <ToggleButton value="l">Left</ToggleButton>
+          <ToggleButton value="r">Right</ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
     </Stack>
   </Stack>)
 }

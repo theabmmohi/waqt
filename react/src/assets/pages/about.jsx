@@ -32,7 +32,7 @@ export default function About() {return (<Stack sx={{ gap: 2.5, p: 2.5 }}>
       <Typography variant="body2" sx={{ color: "text.secondary" }}>
         Waqt is free to use. Some features rely on services that cost me to keep running — if
         you'd like to help cover that, it's completely optional and always appreciated. Tap the
-        menu button and look the bottom-right corner of the screen, or use the link below.
+        menu button and look the bottom corners of the screen, or use the link below.
       </Typography>
       <Link href="https://supportkori.com/theabmmohi" target="_blank" rel="noopener noreferrer" underline="hover" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}><LocalCafeIcon sx={{ fontSize: 16 }}/>supportkori.com/theabmmohi</Link>
     </Stack>
