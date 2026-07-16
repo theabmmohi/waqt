@@ -58,6 +58,12 @@ async function sendPush(tokens, { title, body, url = "/", actions = [] }) {
   return { successCount: res.successCount, failureCount: res.failureCount, invalidTokens }
 }
 
+function chunk(arr, size) {
+  const out = []
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+  return out
+}
+
 async function mail ({ sender, to, subject, body, html, unsubscribe }) {
   try {
     if (!to || !subject || !body) throw new Error("Expecting \"to\", \"subject\" and \"body\"")
@@ -176,6 +182,43 @@ server.post("/webhook/telegram", async (req, res) => {
       })
     }
   } catch (err) { console.error("Error At /webhook/telegram: ", err) }
+})
+
+server.post("/webhook/release", async (req, res) => {
+  if (req.headers["x-release-secret"] !== process.env.RELEASE_HOOK_SECRET) return res.sendStatus(403)
+  res.sendStatus(200)
+  GHreleaseCache = { data: null, expiresAt: 0 }
+  const version = req.body?.version
+  try {
+    const { data: channels, error } = await supabase
+      .from("notification_channels")
+      .select("identifier")
+      .eq("type", "fcm")
+      .eq("metadata->>platform", "app")
+    if (error) throw new Error(error.message)
+    const tokens = channels.map(c => c.identifier)
+    if (!tokens.length) return await notify(`📦 Release ${version ?? "?"} published — no app tokens to notify.`)
+    let successCount = 0, failureCount = 0
+    const invalidTokens = []
+    for (const batch of chunk(tokens, 500)) {
+      const result = await sendPush(batch, {
+        title: "Update Available",
+        body: `Waqt ${version ?? ""} is ready to install.`,
+        url: "/installations"
+      })
+      successCount += result.successCount
+      failureCount += result.failureCount
+      invalidTokens.push(...result.invalidTokens)
+    }
+    if (invalidTokens.length) {
+      const { error: pruneErr } = await supabase.from("notification_channels").delete().eq("type", "fcm").in("identifier", invalidTokens)
+      if (pruneErr) console.error("Error pruning invalid tokens: ", pruneErr.message)
+    }
+    await notify(`📦 *Release ${version ?? "?"}* notified\n✅ ${successCount} sent · ❌ ${failureCount} failed · 🧹 ${invalidTokens.length} pruned`)
+  } catch (err) {
+    console.error("Error at /webhook/release: ", err)
+    await notify(`⚠️ Release webhook failed for ${version ?? "?"}: ${err.message}`)
+  }
 })
 
 server.post("/settings/notifications/webPush/status", async (req, res) => {

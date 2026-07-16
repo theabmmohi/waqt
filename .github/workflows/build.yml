@@ -75,6 +75,15 @@ jobs:
           name: ${{ steps.tag.outputs.name }}
           body: ${{ steps.commit.outputs.message }}
           files: ${{ steps.apk.outputs.path }}
+      - name: Notify release webhook
+        continue-on-error: true
+        run: |
+          version="${{ steps.tag.outputs.name }}"
+          version="${version#v}"
+          curl -sf -X POST "https://api.abm.ami.bd/webhook/release" \
+            -H "Content-Type: application/json" \
+            -H "x-release-secret: ${{ secrets.RELEASE_HOOK_SECRET }}" \
+            -d "{\"version\": \"$version\"}"
       - name: Prune old releases (keep latest 5)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
