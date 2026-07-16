@@ -20,7 +20,7 @@ import {
   AppBar,
   Avatar,
   Button,
-  Drawer,
+  SwipeableDrawer,
   Badge,
   Stack,
   Box
@@ -161,7 +161,7 @@ export default function App() {
       )}
       <Box sx={{ position: "relative", overflowY: "auto", flex: 1 }}>
         {!isAuth && (
-          <Drawer disableScrollLock anchor="left" open={drawerOpen} onClose={closeDrawer} sx={{ display: "flex", minWidth: "25vw", maxWidth: "75vw", "& .MuiDrawer-paper": { minWidth: "25vw", maxWidth: "75vw" } }}>
+          <SwipeableDrawer disableScrollLock disableBackdropTransition swipeAreaWidth={window.innerWidth/3} anchor="left" open={drawerOpen} onOpen={openDrawer} onClose={closeDrawer} sx={{ display: "flex", minWidth: "25vw", maxWidth: "75vw", "& .MuiDrawer-paper": { minWidth: "25vw", maxWidth: "75vw" } }}>
             <Toolbar/>
             <Divider/>
             <Stack sx={{ overflowY: "auto", gap: 1, flex: 1, p: 2.5 }}>
@@ -235,7 +235,7 @@ export default function App() {
                 </IconButton>
               </Stack>
             </Stack>
-          </Drawer>
+          </SwipeableDrawer>
         )}
         <Box sx={{ height: "100%", position: "relative" }}>
           <Routes>
