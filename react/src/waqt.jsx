@@ -88,37 +88,6 @@ export default function App() {
   const isAuth = location.pathname === "/auth"
   const rowDir = drawerPos === "r" ? "row-reverse" : "row"
   useEffect(() => {
-    if (!user) return
-    document.querySelectorAll(".sk-widget-btn, .sk-widget-iframe-container, script[src*=\"supportkori\"]").forEach(el => el.remove())
-    const script = document.createElement("script")
-    script.src = "https://www.supportkori.com/widget.js"
-    script.dataset.id = "theabmmohi"
-    script.dataset.message = "CupHi?"
-    script.dataset.color = "#FFDD00"
-    script.dataset.position = drawerPos === "r" ? "left" : "right"
-    document.body.appendChild(script)
-    return () => {
-      script.remove()
-      document.querySelectorAll(".sk-widget-btn, .sk-widget-iframe-container").forEach(el => el.remove())
-    }
-  }, [user?.id, drawerPos])
-  useEffect(() => {
-    document.querySelectorAll(".sk-widget-btn").forEach(el => {
-      el.style.transition = "opacity 0.2s ease"
-      el.style.opacity = drawerOpen ? "1" : "0"
-      el.style.pointerEvents = drawerOpen ? "auto" : "none"
-    })
-    if (!drawerOpen) {
-      document.querySelectorAll(".sk-widget-iframe-container").forEach(el => {
-        el.style.display = "none"
-      })
-    } else {
-      document.querySelectorAll(".sk-widget-iframe-container").forEach(el => {
-        el.style.display = ""
-      })
-    }
-  }, [drawerOpen])
-  useEffect(() => {
     if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return
     Promise.all([
       Cap.getInfo().then((info) => info.version).catch(() => null),
@@ -130,6 +99,21 @@ export default function App() {
       setUpdateAvail(Boolean(current && latest && current !== latest))
     })
   }, [])
+  useEffect(() => {
+    if (document.querySelector('script[src="/supportKori.js"]')) return
+    const script = document.createElement("script")
+    script.src = "/supportKori.js"
+    script.onload = () => document.querySelectorAll(".sk-button, .sk-iframe-container").forEach(el => el.style.display = "none")
+    document.body.appendChild(script)
+  }, [])
+  useEffect(() => {
+    document.querySelectorAll(".sk-button, .sk-iframe-container").forEach(el => {
+      el.style.display = drawerOpen ? "" : "none"
+      el.style.right = drawerOpen && drawerPos === "l" ? "20px" : ""
+      el.style.left  = drawerOpen && drawerPos === "r" ? "20px" : ""
+    })
+    if (!drawerOpen) window.postMessage("close-sk-widget", "*")
+  }, [drawerOpen, drawerPos])
   return (
     <Box sx={{ flexDirection: "column", height: "100dvh", display: "flex", width: "100vw" }}>
       {!isAuth && (

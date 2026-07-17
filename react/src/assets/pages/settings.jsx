@@ -471,6 +471,7 @@ function Preferences({setSnack}) {
           if (!v) return
           setDrawerPos(v)
           localStorage.setItem("drawerPos", v)
+          setSnack(`Drawer Position Set To ${v === "r" ? "Right" : "Left"}`)
           window.dispatchEvent(new CustomEvent("drawerpos-change", { detail: v }))
         }}>
           <ToggleButton value="l">Left</ToggleButton>
