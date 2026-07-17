@@ -226,7 +226,10 @@ function Notifications({setSnack}) {
         return api.post("/settings/notifications/webPush/status", { fcmToken }).then(({ data }) => { if (!cancelled) setBrowEnabled(!!data.subscribed) })
       }).catch(() => { if (!cancelled) setBrowEnabled(false) }))
     }
-    Promise.allSettled(tasks).then(() => { if (!cancelled) setShowCon(true) })
+    Promise.allSettled(tasks).then(() => { if (!cancelled) {
+      setBrowLoading(false)
+      setShowCon(true)
+    } })
     /* eslint-enable react-hooks/set-state-in-effect */
     return () => { cancelled = true; liveRegListener?.remove() }
   }, [user?.id])
