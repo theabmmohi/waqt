@@ -102,6 +102,7 @@ function Notifications({setSnack}) {
   const [browLoading, setBrowLoading]     = useState(true )
   const [teleLinking, setTeleLinking]     = useState(false)
   const [teleLinked, setTeleLinked]       = useState(false)
+  const [showCon, setShowCon]             = useState(false)
   const [teleId, setTeleId]               = useState("")
   const pollRef = useRef()
   const startPolling = () => {
@@ -113,7 +114,7 @@ function Notifications({setSnack}) {
           setTeleId(data.chatId)
           clearInterval(pollRef.current)
         }
-      } catch {}
+      } catch { return }
     }, 2500)
     setTimeout(() => clearInterval(pollRef.current), 120000)
   }
@@ -201,68 +202,71 @@ function Notifications({setSnack}) {
     /* eslint-disable react-hooks/set-state-in-effect */
     let cancelled = false
     let liveRegListener
-    api.post("/settings/notifications/telegram/status").then(({ data }) => {
+    const tasks = []
+    tasks.push(api.post("/settings/notifications/telegram/status").then(({ data }) => {
       if (cancelled) return
       if (data.success && data.chatId) {
         setTeleLinked(true)
         setTeleId(data.chatId)
       }
-    })
-    if (Capacitor.isNativePlatform()) PushNotifications.checkPermissions().then(({ receive }) => {
-      if (receive !== "granted") return setBrowEnabled(false)
-      const existingToken = getNativeFcmToken()
-      if (existingToken) return api.post("/settings/notifications/webPush/status", { fcmToken: existingToken }).then(({ data }) => setBrowEnabled(!!data.subscribed))
-      setBrowEnabled(false)
-      PushNotifications.addListener("registration", () => setBrowEnabled(true)).then(handle => { liveRegListener = handle })
-    }).catch(() => setBrowEnabled(false))
-    if ("serviceWorker" in navigator && "Notification" in window) {
-      if (Notification.permission === "granted") return setBrowEnabled(false)
-      subscribeWeb().then(fcmToken => {
-        if (!fcmToken) return setBrowEnabled(false)
-        return api.post("/settings/notifications/webPush/status", { fcmToken }).then(({ data }) => setBrowEnabled(!!data.subscribed))
-      }).catch(() => setBrowEnabled(false))
+    }).catch(() => {}))
+    if (Capacitor.isNativePlatform()) {
+      tasks.push(PushNotifications.checkPermissions().then(({ receive }) => {
+        if (receive !== "granted") return setBrowEnabled(false)
+        const existingToken = getNativeFcmToken()
+        if (existingToken) return api.post("/settings/notifications/webPush/status", { fcmToken: existingToken }).then(({ data }) => { if (!cancelled) setBrowEnabled(!!data.subscribed) })
+        setBrowEnabled(false)
+        PushNotifications.addListener("registration", () => { if (!cancelled) setBrowEnabled(true) }).then(handle => { liveRegListener = handle })
+      }).catch(() => { if (!cancelled) setBrowEnabled(false) }))
     }
+    if ("serviceWorker" in navigator && "Notification" in window) {
+      if (Notification.permission === "granted") setBrowEnabled(false)
+      else tasks.push(subscribeWeb().then(fcmToken => {
+        if (!fcmToken) return setBrowEnabled(false)
+        return api.post("/settings/notifications/webPush/status", { fcmToken }).then(({ data }) => { if (!cancelled) setBrowEnabled(!!data.subscribed) })
+      }).catch(() => { if (!cancelled) setBrowEnabled(false) }))
+    }
+    Promise.allSettled(tasks).then(() => { if (!cancelled) setShowCon(true) })
     /* eslint-enable react-hooks/set-state-in-effect */
     return () => { cancelled = true; liveRegListener?.remove() }
   }, [user?.id])
   return (<Stack sx={{ p: 2.5 }}>
-    <Stack sx={{ alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5 }}>
-      <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
-        <Stack sx={{ flex: 1 }}>
-          <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><WebhookIcon sx={{ fontSize: 24 }}/>{Capacitor.isNativePlatform() ? "App Notifications" : "Browser Notifications"}</Typography>
-          <Typography sx={{ color: "text.secondary" }}>
-            {browEnabled ? "Notifications are enabled." : Capacitor.isNativePlatform() ? "Allow Waqt to send you prayer reminders." : "Allow Waqt sending reminders from browser."}
-          </Typography>
+    {showCon && (
+      <Stack sx={{ alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5 }}>
+        <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
+          <Stack sx={{ flex: 1 }}>
+            <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><WebhookIcon sx={{ fontSize: 24 }}/>{Capacitor.isNativePlatform() ? "App Notifications" : "Browser Notifications"}</Typography>
+          </Stack>
+          <Stack sx={{ justifyContent: "center" }}>
+            <Switch checked={browEnabled} onChange={toggleBrow} disabled={browLoading}/>
+          </Stack>
         </Stack>
-        <Stack sx={{ justifyContent: "center" }}>
-          <Switch checked={browEnabled} onChange={toggleBrow}/>
-        </Stack>
-      </Stack>
-      <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
-        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><TelegramIcon sx={{ fontSize: 24 }}/>Telegram Notifications</Typography>
-        <Stack sx={{ "& .MuiTypography-root": { color: "text.secondary" } }}>
-          <Stack sx={{ gap: 2.5 }}>
-            {!teleLinked ?
-              (<Stack sx={{ gap: 1 }}>
-                <Typography sx={{ fontWeight: 600 }}>How to connect your Telegram account:</Typography>
-                <Typography>1. Open our official Telegram bot <Link href={`https://t.me/WaqtOfficialBot?start=${user?.id}`} target="_blank" rel="noopener noreferrer" onClick={startPolling}><strong>@WaqtOfficialBot</strong></Link></Typography>
-                <Typography>2. Start the bot — it will send your <strong>Chat ID</strong></Typography>
-                <Typography>3. Paste the Chat ID below and tap <strong>Link</strong></Typography>
-              </Stack>) :
-              (<Stack>
-                <Typography>Linked with a Telegram account. Tap <strong>Unlink</strong> to disconnect.</Typography>
-              </Stack>)
-            }
-            <FormControl component="form" onSubmit={teleSubmit} sx={{ flexDirection: "row", display: "flex", gap: 1 }}>
-              <TextField required size="small" label="Chat ID" type="number" disabled={teleLinked} value={teleId} onChange={e => setTeleId(e.target.value)}/>
-              <Button disableElevation type="submit" disabled={teleLinking || teleUnLinking} variant={(teleLinking || teleUnLinking) ? "outlined" : "contained"} startIcon={teleLinked ? (teleUnLinking ? <CircularProgress size={14}/> : <LinkOffIcon/>) : (teleLinking ? <CircularProgress size={14}/> : <LinkIcon/>)}>
-                {teleLinked ? (teleUnLinking ? "Unlinking..." : "Unlink") : (teleLinking ? "Linking..." : "Link")}
-              </Button>
-            </FormControl>
+        <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
+          <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><TelegramIcon sx={{ fontSize: 24 }}/>Telegram Notifications</Typography>
+          <Stack sx={{ "& .MuiTypography-root": { color: "text.secondary" } }}>
+            <Stack sx={{ gap: 2.5 }}>
+              {!teleLinked ?
+                (<Stack sx={{ gap: 1 }}>
+                  <Typography sx={{ fontWeight: 600 }}>How to connect your Telegram account:</Typography>
+                  <Typography>1. Open our official Telegram bot <Link href={`https://t.me/WaqtOfficialBot?start=${user?.id}`} target="_blank" rel="noopener noreferrer" onClick={startPolling}><strong>@WaqtOfficialBot</strong></Link></Typography>
+                  <Typography>2. Start the bot — it will send your <strong>Chat ID</strong></Typography>
+                  <Typography>3. Paste the Chat ID below and tap <strong>Link</strong></Typography>
+                </Stack>) :
+                (<Stack>
+                  <Typography>Linked with a Telegram account. Tap <strong>Unlink</strong> to disconnect.</Typography>
+                </Stack>)
+              }
+              <FormControl component="form" onSubmit={teleSubmit} sx={{ flexDirection: "row", display: "flex", gap: 1 }}>
+                <TextField required size="small" label="Chat ID" type="number" disabled={teleLinked} value={teleId} onChange={e => setTeleId(e.target.value)}/>
+                <Button disableElevation type="submit" disabled={teleLinking || teleUnLinking} variant={(teleLinking || teleUnLinking) ? "outlined" : "contained"} startIcon={teleLinked ? (teleUnLinking ? <CircularProgress size={14}/> : <LinkOffIcon/>) : (teleLinking ? <CircularProgress size={14}/> : <LinkIcon/>)}>
+                  {teleLinked ? (teleUnLinking ? "Unlinking..." : "Unlink") : (teleLinking ? "Linking..." : "Link")}
+                </Button>
+              </FormControl>
+            </Stack>
           </Stack>
         </Stack>
       </Stack>
-    </Stack>
+    )}
   </Stack>)
 }
 
@@ -358,6 +362,7 @@ function Preferences({setSnack}) {
       if (data.coords) setCoords(data.coords)
     }
     /* eslint-enable react-hooks/set-state-in-effect */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
   return (<Stack sx={{ gap: 2.5, p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5, p: 2.5 }}>
