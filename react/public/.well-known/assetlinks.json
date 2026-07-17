@@ -1,11 +1,14 @@
 [
   {
-    "relation": ["delegate_permission/common.get_login_creds"],
+    "relation": [
+      "delegate_permission/common.get_login_creds"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.theabmmohi.waqt",
       "sha256_cert_fingerprints": [
-        "08:42:EB:92:AD:4F:02:BC:A1:B5:3C:6B:00:A3:59:43:BD:BA:56:D0:8D:8D:C4:E2:17:DC:31:FA:43:1A:FA:11"
+        "84:48:8D:21:E7:AC:B0:8A:FB:00:C7:60:4D:F1:AF:9B:37:F9:76:B7:F7:88:33:F3:98:9A:04:24:A1:B3:C1:03",
+        "08:42:EB:92:AD:4F:02:BC:A1:B5:3C:6B:00:A3:59:43:BD:BA:56:D0:8D:8D:C4:E2:17:DC:31:FA:43:1A:FA:11",
       ]
     }
   }
