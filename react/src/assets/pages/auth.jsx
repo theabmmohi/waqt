@@ -135,7 +135,7 @@ export default function Auth() {
           <Button variant="outlined" startIcon={googleLoading ? <CircularProgress size={14}/> : <GoogleIcon/>} onClick={handleGoogle} disabled={googleLoading} sx={{ color: "text.primary" }}>{googleLoading ? "Redirecting..." : "Google"}</Button>
           {!isSignUp && isPasskeySupported && (<Button variant="outlined" startIcon={passkeyLoading ? <CircularProgress size={14}/> : <KeyIcon/>} onClick={handlePasskey} disabled={passkeyLoading} sx={{ color: "text.primary" }}>{passkeyLoading ? "Verifying..." : "Passkey"}</Button>)}
         </Stack>
-        <Turnstile ref={turnstileRef} onVerify={setCaptchaToken} onError={() => setCaptchaToken(null)}/>
+        <Turnstile ref={turnstileRef} onVerify={setCaptchaToken} onError={() => { setCaptchaToken(null); turnstileRef.current?.reset() }}/>
         <Snackbar open={open} onClose={() => setOpen(false)} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}/>
       </FormControl>
     </Box>
