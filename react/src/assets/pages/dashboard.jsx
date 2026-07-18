@@ -121,7 +121,7 @@ export default function Dashboard() {
     if (!hijri) return
     const yearMatch = hijri.match(/(\d{4}) AH/)
     if (!yearMatch) return
-    fetch(`https://api.aladhan.com/v1/holidays/${yearMatch[1]}`)
+    fetch(`https://api.aladhan.com/v1/islamicHolidaysByHijriYear/${yearMatch[1]}`)
       .then(res => res.json())
       .then(data => setHolidays(Array.isArray(data?.data) ? data.data.slice(0, 3) : []))
       .catch(() => setHolidays([]))
