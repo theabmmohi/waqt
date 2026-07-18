@@ -116,16 +116,6 @@ export default function Dashboard() {
   }, [todayKey])
   const gregorian = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric", timeZone: tz }).format(now)
   const imsak = prayerTimes ? new Date(prayerTimes.fajr.getTime() - 10 * 60000) : null
-  const [holidays, setHolidays] = useState([])
-  useEffect(() => {
-    if (!hijri) return
-    const yearMatch = hijri.match(/(\d{4}) AH/)
-    if (!yearMatch) return
-    fetch(`https://api.aladhan.com/v1/islamicHolidaysByHijriYear/${yearMatch[1]}`)
-      .then(res => res.json())
-      .then(data => setHolidays(Array.isArray(data?.data) ? data.data.slice(0, 3) : []))
-      .catch(() => setHolidays([]))
-  }, [hijri])
   return(<Stack sx={{ gap: 2.5, p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", alignSelf: "center", width: "100%", borderRadius: 1, overflow: "hidden", maxWidth: 600, p: 2.5 }}>
       <Typography variant="h6" sx={{ fontWeight: 700 }}>{gregorian}</Typography>
@@ -185,15 +175,6 @@ export default function Dashboard() {
         <Typography sx={{ color: "text.secondary" }}>Last Third of Night</Typography>
         <Typography sx={{ fontFamily: "monospace" }}>{timeStr(sunnahTimes?.lastThirdOfTheNight)}</Typography>
       </Stack>
-      {holidays.length > 0 && (<>
-        <Typography sx={{ fontWeight: 700, mt: 1 }}>Upcoming Islamic Holidays</Typography>
-        {holidays.map((h, i) => (
-          <Stack key={i} sx={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Typography sx={{ color: "text.secondary" }}>{h.name}</Typography>
-            <Typography sx={{ color: "text.secondary" }}>{h.date}</Typography>
-          </Stack>
-        ))}
-      </>)}
     </Stack>
     <Snackbar open={!!snack} onClose={() => setSnack("")} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}/>
   </Stack>)

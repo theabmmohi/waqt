@@ -33,6 +33,7 @@ import { Capacitor } from "@capacitor/core"
 import Dashboard from "@page/dashboard"
 import Settings from "@page/settings"
 import Forgot from "@page/forgot"
+import Tasbih from "@page/tasbih"
 import Verify from "@page/verify"
 import Supabase from "@/supabase"
 import About from "@page/about"
@@ -47,6 +48,7 @@ import DarkModeIcon from "@mui/icons-material/DarkMode"
 import GpsFixedIcon from "@mui/icons-material/GpsFixed"
 import SettingsIcon from "@mui/icons-material/Settings"
 import AndroidIcon from "@mui/icons-material/Android"
+import PlusOneIcon from "@mui/icons-material/PlusOne"
 import AcUnitIcon from "@mui/icons-material/AcUnit"
 import LogoutIcon from "@mui/icons-material/Logout"
 import CloseIcon from "@mui/icons-material/Close"
@@ -82,8 +84,9 @@ export default function App() {
     navigate("/")
   }
   const navs = [
-    { icon: <DashboardIcon/>, label: "Dashboard", route: "/" },
-    { icon: <GpsFixedIcon/>, label: "Qibla", route: "/qibla" }
+    { icon: <DashboardIcon/>, label: "Dashboard", route: "/"       },
+    { icon: <GpsFixedIcon/>,  label: "Qibla",     route: "/qibla"  },
+    { icon: <PlusOneIcon/>,   label: "Tasbih",    route: "/tasbih" },
   ]
   const isAuth = location.pathname === "/auth"
   const rowDir = drawerPos === "r" ? "row-reverse" : "row"
@@ -237,6 +240,7 @@ export default function App() {
             <Route path="/about" element={<About/>}/>
             <Route path="/installations" element={<Installations/>}/>
             <Route path="/qibla" element={<Qibla/>}/>
+            <Route path="/tasbih" element={<Tasbih/>}/>
             <Route path="/*" element={user ? <Dashboard/> : <Auth/>}/>
           </Routes>
         </Box>
