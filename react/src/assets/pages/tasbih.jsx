@@ -16,6 +16,8 @@ import {
   Fade,
   Box
 } from "@mui/material"
+import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics"
+import { Capacitor } from "@capacitor/core"
 
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight"
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft"
@@ -64,7 +66,15 @@ export default function Tasbih() {
   const dhikr = DHIKR[wrap(dhikrIdx, DHIKR.length)]
   const progress = Math.min(count / target, 1)
   const offset = CIRCUMFERENCE * (1 - progress)
-  const buzz = (pattern) => { if (haptic && navigator.vibrate) navigator.vibrate(pattern) }
+  const buzz = (pattern) => {
+    if (!haptic) return
+    if (Capacitor.isNativePlatform()) {
+      if (pattern.length > 1) Haptics.notification({ type: NotificationType.Success }).catch(() => {})
+      else Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {})
+      return
+    }
+    if (navigator.vibrate) navigator.vibrate(pattern)
+  }
   const logHistory = (entry) => {
     setHistory((h) => [{ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, timestamp: Date.now(), ...entry }, ...h].slice(0, HISTORY_MAX))
   }
