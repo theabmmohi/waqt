@@ -24,7 +24,7 @@ import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft"
 import SensorsOffIcon from "@mui/icons-material/SensorsOff"
 import RepeatOnIcon from "@mui/icons-material/RepeatOn"
 import SensorsIcon from "@mui/icons-material/Sensors"
-import RestoreIcon from "@mui/icons-material/Restore"
+import AdjustIcon from "@mui/icons-material/Adjust"
 import DeleteIcon from "@mui/icons-material/Delete"
 import RepeatIcon from "@mui/icons-material/Repeat"
 
@@ -50,7 +50,7 @@ export default function Tasbih() {
     return Number.isInteger(saved) ? saved : 0
   })
   const [instant,  setInstant]  = useState(false)
-  const [repeat,   setRepeat]   = useState(false)
+  const [repeat,   setRepeat]   = useState(true)
   const [haptic,   setHaptic]   = useState(true)
   const [target,   setTarget]   = useState(100)
   const [snack,    setSnack]    = useState("")
@@ -159,7 +159,7 @@ export default function Tasbih() {
         <Divider flexItem orientation="vertical"/>
         <Button fullWidth variant="outlined" onClick={() => { buzz([50]); setRepeat(!repeat); setSnack(`Dhikr Switching Turned ${repeat ? "Off" : "On"}`) }}>{repeat ? <RepeatOnIcon/> : <RepeatIcon/>}</Button>
         <Divider flexItem orientation="vertical"/>
-        <Button fullWidth variant="outlined" onClick={() => { buzz([50]); if (count > 0) logHistory({ dhikr: dhikr.tr, count }); setCount(0); setSnack("Reset!") }}><RestoreIcon/></Button>
+        <Button fullWidth variant="outlined" onClick={() => { buzz([50]); if (count > 0) logHistory({ dhikr: dhikr.tr, count }); setCount(0); setSnack("Reset!") }}><AdjustIcon/></Button>
       </Stack>
     </Stack>
     <Stack sx={{ border: "1px solid", borderColor: "divider", alignSelf: "center", width: "100%", borderRadius: 1, maxWidth: 600 }}>

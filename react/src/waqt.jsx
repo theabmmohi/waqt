@@ -42,13 +42,13 @@ import Auth from "@page/auth"
 import api from "@/api"
 
 import PersonalVideoIcon from "@mui/icons-material/PersonalVideo"
+import LinearScaleIcon from "@mui/icons-material/LinearScale"
 import DashboardIcon from "@mui/icons-material/Dashboard"
 import LightModeIcon from "@mui/icons-material/LightMode"
 import DarkModeIcon from "@mui/icons-material/DarkMode"
 import GpsFixedIcon from "@mui/icons-material/GpsFixed"
 import SettingsIcon from "@mui/icons-material/Settings"
 import AndroidIcon from "@mui/icons-material/Android"
-import PlusOneIcon from "@mui/icons-material/PlusOne"
 import AcUnitIcon from "@mui/icons-material/AcUnit"
 import LogoutIcon from "@mui/icons-material/Logout"
 import CloseIcon from "@mui/icons-material/Close"
@@ -84,9 +84,9 @@ export default function App() {
     navigate("/")
   }
   const navs = [
-    { icon: <DashboardIcon/>, label: "Dashboard", route: "/"       },
-    { icon: <GpsFixedIcon/>,  label: "Qibla",     route: "/qibla"  },
-    { icon: <PlusOneIcon/>,   label: "Tasbih",    route: "/tasbih" },
+    { icon: <DashboardIcon/>, label: "Dashboard", route: "/" },
+    { icon: <LinearScaleIcon sx={{ transform: "rotate(-45deg)" }}/>, label: "Tasbih", route: "/tasbih" },
+    { icon: <GpsFixedIcon/>, label: "Qibla", route: "/qibla" },
   ]
   const isAuth = location.pathname === "/auth"
   const rowDir = drawerPos === "r" ? "row-reverse" : "row"
