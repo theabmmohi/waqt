@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom"
 import { Capacitor } from "@capacitor/core"
 import { Browser } from "@capacitor/browser"
 import Turnstile from "@asset/turnstile"
+import { passkeyShimReady } from "@/main"
 import Supabase from "@/supabase"
 
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff"
@@ -46,11 +47,16 @@ export default function Auth() {
   const titleCase = (str) => str.replace(/\b\w/g, c => c.toUpperCase())
   const resetCaptcha = () => { turnstileRef.current?.reset(); setCaptchaToken(null) }
   useEffect(() => {
-    if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
-      PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-        .then((result) => { if (result) setIsPasskeySupported(true) })
-        .catch(() => setIsPasskeySupported(false))
-    }
+    let cancelled = false
+    passkeyShimReady.then(() => {
+      if (cancelled) return
+      if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+        PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+          .then((result) => { if (result) setIsPasskeySupported(true) })
+          .catch(() => setIsPasskeySupported(false))
+      }
+    })
+    return () => { cancelled = true }
   }, [])
   const handleSubmit = async (e) => {
     e.preventDefault()

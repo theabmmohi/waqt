@@ -47,11 +47,11 @@ window.addEventListener("beforeinstallprompt", (e) => {
 if (Capacitor.isNativePlatform()) ScreenOrientation.lock({ orientation: "portrait" }).catch((err) => console.error("Native orientation lock failed:", err))
 else if (screen.orientation?.lock) screen.orientation.lock("portrait").catch((err) => console.error("Web orientation lock failed:", err))
 
-if (Capacitor.isNativePlatform()) {
-  import("@capgo/capacitor-passkey")
-    .then(({ CapacitorPasskey }) => CapacitorPasskey.autoShimWebAuthn())
-    .catch((err) => console.error("Native passkey shim failed:", err))
-}
+export const passkeyShimReady = Capacitor.isNativePlatform()
+  ? import("@capgo/capacitor-passkey")
+      .then(({ CapacitorPasskey }) => CapacitorPasskey.autoShimWebAuthn())
+      .catch((err) => console.error("Native passkey shim failed:", err))
+  : Promise.resolve()
 
 function useNativePush() {
   const { user } = useContext(Theme)
