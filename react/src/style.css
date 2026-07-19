@@ -7,4 +7,4 @@
   padding: 0;
   margin: 0;
 }
-.sk-widget-btn { opacity: 0; pointer-events: none; }
+html.native-app, html.native-app body { touch-action: manipulation; }
