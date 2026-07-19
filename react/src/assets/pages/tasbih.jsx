@@ -4,7 +4,6 @@ import {
 } from "react"
 import {
   ToggleButtonGroup,
-  CircularProgress,
   ToggleButton,
   IconButton,
   Typography,
@@ -79,10 +78,10 @@ export default function Tasbih() {
     setHistory((h) => [{ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, timestamp: Date.now(), ...entry }, ...h].slice(0, HISTORY_MAX))
   }
   useEffect(() => {
-    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)) } catch {}
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)) } catch { return }
   }, [history])
   useEffect(() => {
-    try { localStorage.setItem(DHIKR_IDX_KEY, String(dhikrIdx)) } catch {}
+    try { localStorage.setItem(DHIKR_IDX_KEY, String(dhikrIdx)) } catch { return }
   }, [dhikrIdx])
   useEffect(() => {
     if (!instant) return
@@ -108,6 +107,7 @@ export default function Tasbih() {
     })
   }
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (count !== target) return
     logHistory({ dhikr: dhikr.tr, count: target })
     const id = setTimeout(() => {
@@ -116,6 +116,8 @@ export default function Tasbih() {
       if (repeat) changeDhikr(+1, false)
     }, 500)
     return () => clearTimeout(id)
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count, target])
   return (<Stack sx={{ gap: 2.5, p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", alignSelf: "center", width: "100%", borderRadius: 1, maxWidth: 600 }}>
