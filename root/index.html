@@ -6,12 +6,16 @@
     <title>Waqt – Islamic Prayer Times, Qibla Finder & Salah Tracker</title>
     <meta name="description" content="Waqt is a free Islamic prayer times platform with accurate Salah times, Qibla direction, prayer tracker, Makruh timings, daily Hadith, prayer statistics, and multiple calculation methods. Available on the web, as a Progressive Web App, and on Android.">
     <meta name="author" content="theabmmohi">
-    <meta name="theme-color" content="#f57c00">
+    <meta name="theme-color" content="#f97316">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <meta property="og:title" content="Waqt - Every prayer, right on time">
     <meta property="og:description" content="Islamic prayer times app with accurate Salah times">
     <meta property="og:image" content="https://abm.ami.bd/og-image.png">
     <meta property="og:url" content="https://abm.ami.bd">
     <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Waqt">
+    <meta property="og:locale" content="en_US">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="Waqt - Islamic Prayer Times App">
@@ -224,6 +228,17 @@ body {
       font-weight: 400;
       color: var(--orange);
     }
+    & span {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
   }
   & .tagline {
     font-size: clamp(12px, 3vw, 14px);
@@ -432,8 +447,7 @@ body {
         align-items: center;
         justify-content: space-between;
         gap: 16px;
-        background: none;
-        border: none;
+        list-style: none;
         text-align: left;
         font-family: "DM Sans", sans-serif;
         font-size: 15px;
@@ -441,6 +455,9 @@ body {
         color: var(--text);
         padding: 16px 0;
         cursor: pointer;
+        &::-webkit-details-marker {
+          display: none;
+        }
         & svg {
           flex-shrink: 0;
           width: 16px;
@@ -449,17 +466,21 @@ body {
           fill: currentColor;
           transition: transform 0.3s ease;
         }
-        &[aria-expanded="true"] svg {
-          transform: rotate(45deg);
-        }
+      }
+      &[open] .faq-q svg {
+        transform: rotate(45deg);
+      }
+      &::details-content {
+        overflow: clip;
+        height: 0;
+        opacity: 0;
+        transition: height 0.3s ease, opacity 0.3s ease, content-visibility 0.3s ease allow-discrete;
+      }
+      &[open]::details-content {
+        opacity: 1;
       }
       & .faq-a {
-        display: grid;
-        grid-template-rows: 0fr;
-        transition: grid-template-rows 0.3s ease;
-        & > div {
-          overflow: hidden;
-        }
+        padding-bottom: 16px;
         & p {
           font-size: 14px;
           line-height: 1.9;
@@ -473,14 +494,33 @@ body {
           flex-direction: column;
           gap: 6px;
         }
-        &.open {
-          grid-template-rows: 1fr;
-          & > div {
-            padding-bottom: 16px;
-          }
-        }
       }
     }
+  }
+}
+
+/* Animate details/summary content to/from height:auto.
+   Falls back to a fixed max-height + scroll on browsers without
+   interpolate-size support; on browsers without ::details-content
+   support the accordion still works, just without animation. */
+@supports (interpolate-size: allow-keywords) {
+  :root {
+    interpolate-size: allow-keywords;
+  }
+  .about .faq-item[open]::details-content {
+    height: auto;
+  }
+}
+@supports not (interpolate-size: allow-keywords) {
+  .about .faq-item[open]::details-content {
+    height: 280px;
+    overflow-y: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .about .faq-item::details-content,
+  .about .faq-item .faq-q svg {
+    transition: none;
   }
 }
 
@@ -500,6 +540,7 @@ body {
   </head>
   <body>
     <svg class="skyline" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMax meet" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true" focusable="false">
+      <title>Decorative city skyline silhouette</title>
       <rect x="30" y="180" width="18" height="220"/>
       <rect x="24" y="170" width="30" height="14"/>
       <rect x="27" y="158" width="24" height="14"/>
@@ -565,41 +606,41 @@ body {
         <span class="badge-dot"></span>
         <span id="badge-text"></span>
       </div>
-      <h1><em>Waqt</em></h1>
-      <p class="tagline">Every prayer, right on time.</p>
+      <h1><em>Waqt</em><span> - Islamic Prayer Times App</span></h1>
+      <h2 class="tagline">Every prayer, right on time.</h2>
       <p class="sub">
         Prayer times, Qibla direction,<br>
         streaks &amp; stats — all in one place.<br>
         Never miss a prayer again.
       </p>
-      <button class="cta" onclick="go('app')">
+      <a class="cta" href="https://app.abm.ami.bd/" onclick="return go('app', event)">
         Open Waqt
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
-      </button>
-      <button class="cta-secondary" onclick="go('ins')">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><title>Right arrow</title><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+      </a>
+      <a class="cta-secondary" href="https://app.abm.ami.bd/installations" onclick="return go('ins', event)">
         Installations
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
-      </button>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><title>Install icon</title><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
+      </a>
       <div class="divider"></div>
       <div class="tags">
         <span class="tag">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><title>Clock icon</title><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
           Prayer Times
         </span>
         <span class="tag">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-9.28L9.19 16 12 14.5 14.81 16 13 10.72 12 8l-1 2.72z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><title>Compass icon</title><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-9.28L9.19 16 12 14.5 14.81 16 13 10.72 12 8l-1 2.72z"/></svg>
           Qibla
         </span>
         <span class="tag">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13.5 0.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5 0.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><title>Flame icon</title><path d="M13.5 0.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5 0.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/></svg>
           Streaks
         </span>
         <span class="tag">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><title>Open book icon</title><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z"/></svg>
           Daily Hadith
         </span>
         <span class="tag">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><title>Bar chart icon</title><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z"/></svg>
           Stats
         </span>
       </div>
@@ -623,7 +664,69 @@ body {
         <li>And so on, Coming soon...</li>
       </ul>
       <h3>FAQ</h3>
-      <div class="faq-list" id="faq-list"></div>
+      <div class="faq-list" id="faq-list">
+        <details class="faq-item" name="faq">
+          <summary class="faq-q">
+            <span>How does Waqt calculate prayer times?</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><title>Expand icon</title><path d="M11 5h2v14h-2z"/><path d="M5 11h14v2H5z"/></svg>
+          </summary>
+          <div class="faq-a">
+              <p>Prayer times are calculated using the open-source adhan.js library, based on your location (GPS or manually set) and a calculation method of your choice — Muslim World League, ISNA, Egyptian, Umm al-Qura, Karachi, Tehran, Moonsighting Committee, or Singapore — configurable in Settings. Hijri calendar dates are sourced from the AlAdhan API. Calculated times are estimates; please verify against your local mosque for precise guidance.</p>
+            </div>
+        </details>
+        <details class="faq-item" name="faq">
+          <summary class="faq-q">
+            <span>Who built Waqt?</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><title>Expand icon</title><path d="M11 5h2v14h-2z"/><path d="M5 11h14v2H5z"/></svg>
+          </summary>
+          <div class="faq-a">
+              <p>I built and maintain Waqt on my own. I'm not a professional developer, so you might spot some unconventional approaches here and there — sorry in advance! If something's broken or you'd just like to say hi, reach out by email or find me on GitHub.</p>
+              <ul class="faq-links">
+                <li><a href="mailto:admin@mail.abm.ami.bd">admin@mail.abm.ami.bd</a></li>
+                <li><a href="https://github.com/theabmmohi" target="_blank" rel="noopener noreferrer">github.com/theabmmohi</a></li>
+              </ul>
+            </div>
+        </details>
+        <details class="faq-item" name="faq">
+          <summary class="faq-q">
+            <span>Can I contribute to Waqt?</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><title>Expand icon</title><path d="M11 5h2v14h-2z"/><path d="M5 11h14v2H5z"/></svg>
+          </summary>
+          <div class="faq-a">
+              <p>Waqt is open source. Contributions, bug reports, and feature suggestions are welcome — check out the repository on GitHub to get involved.</p>
+              <ul class="faq-links">
+                <li><a href="https://github.com/theabmmohi/waqt" target="_blank" rel="noopener noreferrer">github.com/theabmmohi/waqt</a></li>
+              </ul>
+            </div>
+        </details>
+        <details class="faq-item" name="faq">
+          <summary class="faq-q">
+            <span>What open-source projects and services power Waqt?</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><title>Expand icon</title><path d="M11 5h2v14h-2z"/><path d="M5 11h14v2H5z"/></svg>
+          </summary>
+          <div class="faq-a">
+              <p>Waqt wouldn't be possible without these open-source projects and services: adhan.js for prayer time calculations, the AlAdhan API for Hijri calendar data, Material UI for the interface, Capacitor for native app packaging, and Supabase for authentication and data.</p>
+            </div>
+        </details>
+        <details class="faq-item" name="faq">
+          <summary class="faq-q">
+            <span>What data does Waqt collect?</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><title>Expand icon</title><path d="M11 5h2v14h-2z"/><path d="M5 11h14v2H5z"/></svg>
+          </summary>
+          <div class="faq-a">
+              <p>We collect only what's needed to run Waqt: your email for account sign-in, your location (when you enable GPS) to calculate accurate prayer times, and a device token to deliver prayer and reminder notifications. Account and authentication data is handled by Supabase; notifications are delivered via Firebase Cloud Messaging; sign-in forms are protected by Cloudflare Turnstile. We do not sell your data or share it with advertisers. You can request deletion of your account and associated data at any time by contacting us.</p>
+            </div>
+        </details>
+        <details class="faq-item" name="faq">
+          <summary class="faq-q">
+            <span>What are Waqt's terms of service?</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><title>Expand icon</title><path d="M11 5h2v14h-2z"/><path d="M5 11h14v2H5z"/></svg>
+          </summary>
+          <div class="faq-a">
+              <p>By using Waqt, you agree to use the app for its intended purpose and not to misuse, disrupt, or attempt unauthorized access to its services. Waqt is provided "as is," without warranty of any kind; prayer times and related information are calculated estimates and should not be relied upon as the sole source for religious observance — please verify with your local mosque or community. We may update these terms or the app's features from time to time. Continued use of Waqt after changes constitutes acceptance of the updated terms.</p>
+            </div>
+        </details>
+      </div>
     </section>
     <p class="sig">@theabmmohi</p>
     <script>
@@ -638,85 +741,19 @@ if (isLIVE) {
   badge.textContent = "Under Development 💔"
   dot.style.background = "#f97316"
 }
-function go(wh) {
+function go(wh, ev) {
+  if (ev) ev.preventDefault()
   const url = new URL(window.location.href)
   url.hostname = "app." + url.hostname
   if (wh === "ins") url.pathname = "/installations"
   if (wh === "app") url.pathname = "/"
   window.location.replace(url.toString())
+  return false
 }
 const sig = document.querySelector(".sig")
 const toggleSig = () => sig.classList.toggle("hidden", window.scrollY > 0)
 window.addEventListener("scroll", toggleSig, { passive: true })
 toggleSig()
-
-const faqData = [
-  {
-    q: "How does Waqt calculate prayer times?",
-    a: "Prayer times are calculated using the open-source adhan.js library, based on your location (GPS or manually set) and a calculation method of your choice — Muslim World League, ISNA, Egyptian, Umm al-Qura, Karachi, Tehran, Moonsighting Committee, or Singapore — configurable in Settings. Hijri calendar dates are sourced from the AlAdhan API. Calculated times are estimates; please verify against your local mosque for precise guidance."
-  },
-  {
-    q: "Who built Waqt?",
-    a: "I built and maintain Waqt on my own. I'm not a professional developer, so you might spot some unconventional approaches here and there — sorry in advance! If something's broken or you'd just like to say hi, reach out by email or find me on GitHub.",
-    links: [
-      { text: "admin@mail.abm.ami.bd", href: "mailto:admin@mail.abm.ami.bd" },
-      { text: "github.com/theabmmohi", href: "https://github.com/theabmmohi", external: true }
-    ]
-  },
-  {
-    q: "Can I contribute to Waqt?",
-    a: "Waqt is open source. Contributions, bug reports, and feature suggestions are welcome — check out the repository on GitHub to get involved.",
-    links: [
-      { text: "github.com/theabmmohi/waqt", href: "https://github.com/theabmmohi/waqt", external: true }
-    ]
-  },
-  {
-    q: "What open-source projects and services power Waqt?",
-    a: "Waqt wouldn't be possible without these open-source projects and services: adhan.js for prayer time calculations, the AlAdhan API for Hijri calendar data, Material UI for the interface, Capacitor for native app packaging, and Supabase for authentication and data."
-  },
-  {
-    q: "What data does Waqt collect?",
-    a: "We collect only what's needed to run Waqt: your email for account sign-in, your location (when you enable GPS) to calculate accurate prayer times, and a device token to deliver prayer and reminder notifications. Account and authentication data is handled by Supabase; notifications are delivered via Firebase Cloud Messaging; sign-in forms are protected by Cloudflare Turnstile. We do not sell your data or share it with advertisers. You can request deletion of your account and associated data at any time by contacting us."
-  },
-  {
-    q: "What are Waqt's terms of service?",
-    a: "By using Waqt, you agree to use the app for its intended purpose and not to misuse, disrupt, or attempt unauthorized access to its services. Waqt is provided \"as is,\" without warranty of any kind; prayer times and related information are calculated estimates and should not be relied upon as the sole source for religious observance — please verify with your local mosque or community. We may update these terms or the app's features from time to time. Continued use of Waqt after changes constitutes acceptance of the updated terms."
-  }
-]
-
-const faqList = document.getElementById("faq-list")
-faqData.forEach((item, i) => {
-  const btnId = `faq-q-${i}`
-  const panelId = `faq-a-${i}`
-  const linksHtml = item.links
-    ? `<ul class="faq-links">${item.links.map(l => `<li><a href="${l.href}"${l.external ? ' target="_blank" rel="noopener noreferrer"' : ""}>${l.text}</a></li>`).join("")}</ul>`
-    : ""
-  const wrap = document.createElement("div")
-  wrap.className = "faq-item"
-  wrap.innerHTML = `
-    <button class="faq-q" id="${btnId}" aria-expanded="false" aria-controls="${panelId}">
-      <span>${item.q}</span>
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M11 5h2v14h-2z"/><path d="M5 11h14v2H5z"/></svg>
-    </button>
-    <div class="faq-a" id="${panelId}" role="region" aria-labelledby="${btnId}">
-      <div><p>${item.a}</p>${linksHtml}</div>
-    </div>
-  `
-  const btn = wrap.querySelector(".faq-q")
-  const panel = wrap.querySelector(".faq-a")
-  btn.addEventListener("click", () => {
-    const willOpen = !panel.classList.contains("open")
-    faqList.querySelectorAll(".faq-a.open").forEach(openPanel => {
-      openPanel.classList.remove("open")
-      openPanel.previousElementSibling.setAttribute("aria-expanded", "false")
-    })
-    if (willOpen) {
-      panel.classList.add("open")
-      btn.setAttribute("aria-expanded", "true")
-    }
-  })
-  faqList.appendChild(wrap)
-})
     </script>
   </body>
 </html>
