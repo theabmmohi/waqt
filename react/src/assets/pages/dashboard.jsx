@@ -22,14 +22,14 @@ import {
 import { useTheme, alpha } from "@mui/material/styles"
 import { Theme } from "@/main"
 
-import LinearScaleIcon from "@mui/icons-material/LinearScale"
-import WbTwilightIcon from "@mui/icons-material/WbTwilight"
+import HourglassBottomIcon from "@mui/icons-material/HourglassBottom"
 import WarningAmberIcon from "@mui/icons-material/WarningAmber"
-import WbSunnyIcon from "@mui/icons-material/WbSunny"
+import LinearScaleIcon from "@mui/icons-material/LinearScale"
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
 import NightsStayIcon from "@mui/icons-material/NightsStay"
 import RestaurantIcon from "@mui/icons-material/Restaurant"
-import HourglassBottomIcon from "@mui/icons-material/HourglassBottom"
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
+import WbTwilightIcon from "@mui/icons-material/WbTwilight"
+import WbSunnyIcon from "@mui/icons-material/WbSunny"
 
 const SIZE   = 200
 const STROKE = 10
@@ -191,7 +191,7 @@ export default function Dashboard() {
       <Typography variant="h6" sx={{ fontWeight: 700 }}>{gregorian}</Typography>
       <Typography sx={{ color: "text.secondary" }}>{hijri}</Typography>
     </Stack>
-    <Stack sx={{ flexDirection: "column", alignItems: "center", gap: 2.5, border: "1px solid", borderColor: "primary.main", backgroundColor: alpha(theme.palette.primary.main, 0.05), alignSelf: "center", width: "100%", borderRadius: 1, overflow: "hidden", maxWidth: 600, p: 2.5 }}>
+    <Stack sx={{ flexDirection: "row", alignItems: "center", gap: 2.5, border: "1px solid", borderColor: "primary.main", backgroundColor: alpha(theme.palette.primary.main, 0.05), alignSelf: "center", width: "100%", borderRadius: 1, overflow: "hidden", maxWidth: 600, p: 2.5 }}>
       <Box sx={{ position: "relative", width: 132, height: 132, flexShrink: 0 }}>
         <Box component="svg" viewBox={`0 0 ${SIZE} ${SIZE}`} sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
           <Box component="circle" cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" strokeWidth={STROKE} sx={{ stroke: (t) => t.palette.divider }}/>
@@ -209,10 +209,10 @@ export default function Dashboard() {
           )}
         </Stack>
       </Box>
-      <Stack sx={{ alignItems: "center", gap: 0.25 }}>
-        <Typography variant="overline" sx={{ color: "text.secondary", lineHeight: 1.2 }}>Time remaining</Typography>
-        <Typography variant="h4" sx={{ fontWeight: 700, fontFamily: "monospace", lineHeight: 1.1 }}>{next ? countdownStr : "--:--:--"}</Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "center" }}>{next ? `until ${next.name} begins at ${timeStr(next.time)}` : "Set your location to see prayer times"}</Typography>
+      <Stack sx={{ alignItems: "flex-end", gap: 0.25, flex: 1 }}>
+        <Typography variant="overline" sx={{ color: "text.secondary", lineHeight: 1.2, textAlign: "right" }}>Time remaining</Typography>
+        <Typography variant="h4" sx={{ fontWeight: 700, fontFamily: "monospace", lineHeight: 1.1, textAlign: "right" }}>{next ? countdownStr : "--:--:--"}</Typography>
+        <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "right" }}>{next ? `until ${next.name} begins at ${timeStr(next.time)}` : "Set your location to see prayer times"}</Typography>
       </Stack>
     </Stack>
     {isFasting && (
