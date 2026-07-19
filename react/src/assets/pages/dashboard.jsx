@@ -143,11 +143,14 @@ export default function Dashboard() {
       .catch(() => setHijri(""))
   }, [todayKey])
   const gregorian = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric", timeZone: tz }).format(now)
-  const windowStart = current ? current.time : null
-  const windowEnd   = next ? next.time : null
-  const progress = windowStart && windowEnd
-    ? Math.min(1, Math.max(0, (now.getTime() - windowStart.getTime()) / (windowEnd.getTime() - windowStart.getTime())))
-    : 0
+  const activeWindow = current
+    ? { start: current.time, end: current.end }
+    : activeForbidden
+      ? { start: activeForbidden.start, end: activeForbidden.end }
+      : null
+  const progress = activeWindow
+    ? Math.min(1, Math.max(0, (now.getTime() - activeWindow.start.getTime()) / (activeWindow.end.getTime() - activeWindow.start.getTime())))
+    : 1
   const offset = CIRCUMFERENCE * (1 - progress)
   const fastStart = endAdj(prayerTimes?.fajr)
   const fastEnd   = prayerTimes?.maghrib ?? null
@@ -195,14 +198,20 @@ export default function Dashboard() {
       <Box sx={{ position: "relative", width: 132, height: 132, flexShrink: 0 }}>
         <Box component="svg" viewBox={`0 0 ${SIZE} ${SIZE}`} sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
           <Box component="circle" cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" strokeWidth={STROKE} sx={{ stroke: (t) => t.palette.divider }}/>
-          <Box component="circle" cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" strokeWidth={STROKE} strokeLinecap="round" strokeDasharray={CIRCUMFERENCE} strokeDashoffset={offset} sx={{ stroke: (t) => t.palette.primary.main, transition: "stroke-dashoffset 0.3s linear" }}/>
+          <Box component="circle" cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" strokeWidth={STROKE} strokeLinecap="round" strokeDasharray={CIRCUMFERENCE} strokeDashoffset={offset} sx={{ stroke: (t) => activeForbidden ? t.palette.error.main : current ? t.palette.primary.main : t.palette.text.disabled, transition: "stroke-dashoffset 0.3s linear, stroke 0.3s linear" }}/>
         </Box>
         <Stack sx={{ position: "absolute", inset: 0, alignItems: "center", justifyContent: "center", gap: 0.25 }}>
-          {current ? (
+          {activeForbidden ? (
+            <>
+              <WarningAmberIcon sx={{ color: "error.main" }}/>
+              <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.1, textAlign: "center", color: "error.main" }}>Forbidden</Typography>
+              <Typography variant="caption" sx={{ color: "text.secondary" }}>{timeStr(activeForbidden.end)}</Typography>
+            </>
+          ) : current ? (
             <>
               <Typography variant="overline" sx={{ color: "text.secondary", lineHeight: 1 }}>Now</Typography>
               <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.1, textAlign: "center" }}>{current.name}</Typography>
-              <Typography variant="caption" sx={{ color: "text.secondary" }}>{timeStr(current.time)}</Typography>
+              <Typography variant="caption" sx={{ color: "text.secondary" }}>{timeStr(current.end)}</Typography>
             </>
           ) : (
             <Button fullWidth variant="outlined" size="small" sx={{ borderRadius: "50%", aspectRatio: 1, minWidth: 0, px: 2 }} startIcon={<LinearScaleIcon sx={{ transform: "rotate(-45deg)" }}/>} onClick={() => navigate("/tasbih")}>Tasbih</Button>
