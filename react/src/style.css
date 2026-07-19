@@ -8,3 +8,8 @@
   margin: 0;
 }
 html.native-app, html.native-app body { touch-action: manipulation; }
+/* html.native-app input,
+html.native-app select,
+html.native-app textarea {
+  font-size: 16px !important;
+} */

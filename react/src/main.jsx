@@ -47,7 +47,11 @@ window.addEventListener("beforeinstallprompt", (e) => {
 if (Capacitor.isNativePlatform()) ScreenOrientation.lock({ orientation: "portrait" }).catch((err) => console.error("Native orientation lock failed:", err))
 else if (screen.orientation?.lock) screen.orientation.lock("portrait").catch((err) => console.error("Web orientation lock failed:", err))
 
-if (Capacitor.isNativePlatform()) document.documentElement.classList.add("native-app")
+if (Capacitor.isNativePlatform()) {
+  document.documentElement.classList.add("native-app")
+  const viewport = document.querySelector('meta[name="viewport"]')
+  if (viewport) viewport.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no")
+}
 
 export const passkeyShimReady = Capacitor.isNativePlatform()
   ? import("@capgo/capacitor-passkey")
