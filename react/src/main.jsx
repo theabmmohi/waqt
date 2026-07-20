@@ -98,8 +98,6 @@ function useNativePush() {
         console.error("Silent FCM re-registration failed:", err)
       }
     })()
-    // Intentionally track only user.id and the platformNotif flag, not the whole
-    // user object, so this doesn't re-run on unrelated metadata changes (name, bio, etc).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.user_metadata?.platformNotif])
 }
@@ -114,8 +112,6 @@ function useWebPushResync() {
     subscribeWeb()
       .then(fcmToken => fcmToken && api.post("/settings/notifications/webPush/subscribe", { fcmToken, platform: "web" }))
       .catch(err => console.error("Web push token re-sync failed:", err))
-    // Intentionally track only user.id and the webPushNotif flag, not the whole
-    // user object, so this doesn't re-run on unrelated metadata changes (name, bio, etc).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.user_metadata?.webPushNotif])
 }

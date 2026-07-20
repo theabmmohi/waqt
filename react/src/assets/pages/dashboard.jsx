@@ -92,6 +92,12 @@ export default function Dashboard() {
   }
   const tomorrowFajrRaw = prayerTimes ? new PrayerTimes(coords, new Date(calcDate.getTime() + 86400000), params).fajr : null
   const tomorrowFajr    = startAdj(tomorrowFajrRaw)
+  const yesterdayPrayerTimes = coords ? new PrayerTimes(coords, new Date(calcDate.getTime() - 86400000), params) : null
+  const yesterdayIsha = (prayerTimes && yesterdayPrayerTimes) ? {
+    name: "Isha",
+    time: startAdj(yesterdayPrayerTimes.isha),
+    end: endAdj(prayerTimes.fajr)
+  } : null
   const namedPrayers = prayerTimes ? [
     { name: "Fajr",    time: startAdj(prayerTimes.fajr),               end: endAdj(prayerTimes.sunrise) },
     { name: "Dhuhr",   time: startAdj(prayerTimes.dhuhr),              end: endAdj(prayerTimes.asr) },
@@ -109,11 +115,15 @@ export default function Dashboard() {
     ...namedPrayers.map(p => ({ kind: "prayer", name: p.name, time: p.time, end: p.end })),
     ...forbiddenWindows.map(w => ({ kind: "forbidden", name: w.name, time: w.start, end: w.end }))
   ].sort((a, b) => a.time.getTime() - b.time.getTime()) : []
-  let currentIndex = -1
+  let current = null
   if (prayerTimes) {
-    currentIndex = namedPrayers.findIndex(p => now >= p.time && now < p.end)
+    if (yesterdayIsha && now >= yesterdayIsha.time && now < yesterdayIsha.end) {
+      current = yesterdayIsha
+    } else {
+      const currentIndex = namedPrayers.findIndex(p => now >= p.time && now < p.end)
+      current = currentIndex >= 0 ? namedPrayers[currentIndex] : null
+    }
   }
-  const current = currentIndex >= 0 ? namedPrayers[currentIndex] : null
   const upcomingIndex = prayerTimes ? namedPrayers.findIndex(p => p.time > now) : -1
   const next = prayerTimes
     ? (upcomingIndex >= 0 ? namedPrayers[upcomingIndex] : { name: "Fajr", time: tomorrowFajr })
