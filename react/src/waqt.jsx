@@ -88,6 +88,11 @@ export default function App() {
     { icon: <LinearScaleIcon sx={{ transform: "rotate(-45deg)" }}/>, label: "Tasbih", route: "/tasbih" },
     { icon: <GpsFixedIcon/>, label: "Qibla", route: "/qibla" },
   ]
+  useEffect(() => {
+    const segments = location.pathname.split("/").filter(Boolean)
+      .map(seg => seg.charAt(0).toUpperCase() + seg.slice(1))
+    document.title = segments.length ? `${segments.join(" | ")} - Waqt` : "Waqt"
+  }, [location.pathname])
   const isAuth = location.pathname === "/auth"
   const rowDir = drawerPos === "r" ? "row-reverse" : "row"
   useEffect(() => {
