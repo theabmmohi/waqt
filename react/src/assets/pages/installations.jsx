@@ -14,6 +14,7 @@ import { FileTransfer } from "@capacitor/file-transfer"
 import { getPwaPrompt, clearPwaPrompt } from "@/main"
 import { Browser } from "@capacitor/browser"
 import { App as Cap } from "@capacitor/app"
+import { useTranslation } from "@/i18n"
 import api from "@/api"
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt"
 import InstallDesktopIcon from "@mui/icons-material/InstallDesktop"
@@ -24,6 +25,7 @@ const ApkDownloadManager = registerPlugin("ApkDownloadManager")
 const APK_DOWNLOAD_URL = `${api.defaults.baseURL}/download/android/latest`
 const APK_VERSION_URL = `${api.defaults.baseURL}/download/android/version`
 export default function Installations() {
+  const { t } = useTranslation()
   const isNativeApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"
   const [snack, setSnack] = useState("")
   const [currentVersion, setCurrentVersion] = useState(null)
@@ -100,7 +102,7 @@ export default function Installations() {
       await FileTransfer.downloadFile({ url: APK_DOWNLOAD_URL, path: uri, progress: true })
       setDownloadedApk({ uri, filename })
     } catch (err) {
-      setSnack(err?.message ?? "Sorry, download failed")
+      setSnack(err?.message ?? t("install.snack.downloadFailed"))
     } finally {
       progressListener.remove()
       setDownloading(false)
@@ -112,7 +114,7 @@ export default function Installations() {
       await FileOpener.open({ filePath: downloadedApk.uri, contentType: "application/vnd.android.package-archive" })
     } catch (err) {
       console.error("Opening installer failed:", err)
-      setSnack(err?.message ?? "Sorry, couldn't open the installer")
+      setSnack(err?.message ?? t("install.snack.openInstallerFailed"))
     }
   }
   const saveApk = async () => {
@@ -120,10 +122,10 @@ export default function Installations() {
     try {
       await ApkDownloadManager.enqueue({ url: APK_DOWNLOAD_URL, filename: downloadedApk.filename })
       setSavedToDownloads(true)
-      setSnack("Saving to Downloads — check your notifications")
+      setSnack(t("install.snack.savingToDownloads"))
     } catch (err) {
       console.error("Save to Downloads failed:", err)
-      setSnack(err?.message ?? "Sorry, couldn't save to Downloads")
+      setSnack(err?.message ?? t("install.snack.saveFailed"))
     }
   }
   const downloadApkInBrowser = async () => {
@@ -131,7 +133,7 @@ export default function Installations() {
     else window.open(APK_DOWNLOAD_URL, "_blank", "noopener,noreferrer")
   }
   const installPwa = async () => {
-    if (!pwaPrompt) return setSnack("Open your browser's menu (⋮) and tap \"Install app\" or \"Add to Home screen\"")
+    if (!pwaPrompt) return setSnack(t("install.snack.pwaManualPrompt"))
     await pwaPrompt.prompt()
     const { outcome } = await pwaPrompt.userChoice
     if (outcome === "accepted") setPwaInstalled(true)
@@ -141,36 +143,36 @@ export default function Installations() {
   const cardSx = { flexDirection: "row", alignItems: "center", minHeight: 76, border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }
   if (mode === "native") return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5, p: 2.5 }}>
-      <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><AndroidIcon sx={{ fontSize: 24 }}/>App Version</Typography>
+      <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><AndroidIcon sx={{ fontSize: 24 }}/>{t("install.native.title")}</Typography>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Typography sx={{ color: "text.secondary" }}>Current version</Typography>
+        <Typography sx={{ color: "text.secondary" }}>{t("install.native.currentVersion")}</Typography>
         <Typography sx={{ fontWeight: 600 }}>{currentVersion ?? "—"}</Typography>
       </Stack>
       <Divider/>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Typography sx={{ color: "text.secondary" }}>Latest version</Typography>
+        <Typography sx={{ color: "text.secondary" }}>{t("install.native.latestVersion")}</Typography>
         <Typography sx={{ fontWeight: 600 }}>{latestVersion ?? "—"}</Typography>
       </Stack>
       <Divider/>
       {downloading ? (
         <Stack sx={{ gap: 0.5 }}>
-          <Typography variant="caption" sx={{ color: "text.secondary" }}>Downloading update… {downloadProgress}%</Typography>
+          <Typography variant="caption" sx={{ color: "text.secondary" }}>{t("install.native.downloading", { progress: downloadProgress })}</Typography>
           <LinearProgress variant="determinate" value={downloadProgress} sx={{ borderRadius: 1 }} />
         </Stack>
       ) : downloadedApk ? (
         <Stack sx={{ gap: 1 }}>
-          <Typography variant="caption" sx={{ color: "text.secondary" }}>Update downloaded — install now or save it for later</Typography>
+          <Typography variant="caption" sx={{ color: "text.secondary" }}>{t("install.native.downloadedReady")}</Typography>
           <Stack sx={{ flexDirection: "row", gap: 1.5 }}>
-            {!savedToDownloads && <Button fullWidth disableElevation variant="outlined" onClick={saveApk}>Save</Button>}
-            <Button fullWidth disableElevation variant="contained" startIcon={<SystemUpdateAltIcon />} onClick={installApk}>Install</Button>
+            {!savedToDownloads && <Button fullWidth disableElevation variant="outlined" onClick={saveApk}>{t("install.native.save")}</Button>}
+            <Button fullWidth disableElevation variant="contained" startIcon={<SystemUpdateAltIcon />} onClick={installApk}>{t("install.native.install")}</Button>
           </Stack>
         </Stack>
       ) : apkUpdateAvailable ? (
-        <Button disableElevation variant="contained" startIcon={<SystemUpdateAltIcon />} onClick={downloadApk}>Update to {latestVersion}</Button>
+        <Button disableElevation variant="contained" startIcon={<SystemUpdateAltIcon />} onClick={downloadApk}>{t("install.native.updateTo", { version: latestVersion })}</Button>
       ) : (
         <Stack sx={{ flexDirection: "row", alignItems: "center", gap: 1 }}>
           <CheckCircleIcon sx={{ fontSize: 18, color: "success.main" }} />
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>You&apos;re on the latest version</Typography>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>{t("install.native.upToDate")}</Typography>
         </Stack>
       )}
     </Stack>
@@ -181,20 +183,20 @@ export default function Installations() {
       <Stack sx={cardSx}>
         <AndroidIcon sx={{ fontSize: 32, flexShrink: 0 }}/>
         <Stack sx={{ flex: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>Android APK</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>{t("install.web.androidApk")}</Typography>
         </Stack>
         <Stack sx={{ alignItems: "flex-end", width: 110, flexShrink: 0 }}>
-          <Button size="small" variant="outlined" onClick={downloadApkInBrowser} sx={{ width: 100 }}>Download</Button>
+          <Button size="small" variant="outlined" onClick={downloadApkInBrowser} sx={{ width: 100 }}>{t("install.web.download")}</Button>
         </Stack>
       </Stack>
       {!isNativeApp && pwaInstalled === false && (
         <Stack sx={cardSx}>
           <InstallDesktopIcon sx={{ fontSize: 32, flexShrink: 0 }}/>
           <Stack sx={{ flex: 1 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>Web App</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>{t("install.web.webApp")}</Typography>
           </Stack>
           <Stack sx={{ alignItems: "flex-end", width: 110, flexShrink: 0 }}>
-            <Button size="small" variant="outlined" onClick={installPwa} sx={{ width: 100 }}>Install</Button>
+            <Button size="small" variant="outlined" onClick={installPwa} sx={{ width: 100 }}>{t("install.web.installBtn")}</Button>
           </Stack>
         </Stack>
       )}

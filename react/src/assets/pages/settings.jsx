@@ -13,6 +13,7 @@ import {
   Divider, Avatar, Dialog, Select, Button, Switch, Slide, Stack, Link,
 } from "@mui/material"
 import { Theme, getNativeFcmToken, clearNativeFcmToken } from "@/main"
+import { useTranslation } from "@/i18n"
 import { LocalNotifications } from "@capacitor/local-notifications"
 import { PushNotifications } from "@capacitor/push-notifications"
 import { Geolocation } from "@capacitor/geolocation"
@@ -44,6 +45,7 @@ import AddIcon from "@mui/icons-material/Add"
 
 function Profile({setSnack}) {
   const { user } = useContext(Theme)
+  const { t } = useTranslation()
   const fileRef = useRef()
   const email = user?.email ?? ""
   const [name, setName]     = useState(user?.user_metadata?.full_name  ?? "")
@@ -65,31 +67,31 @@ function Profile({setSnack}) {
       }
       const { error } = await Supabase.auth.updateUser({ data: { full_name: name.trim(), bio: bio.trim(), avatar_url } })
       if (error) throw error
-      setSnack("Profile Saved")
-    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setSaving(false)}
+      setSnack(t("settings.profile.saved"))
+    } catch (err) {setSnack(err?.message ?? t("settings.profile.internalError"))} finally {setSaving(false)}
   }
   return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", alignItems: "center" }}>
         <Avatar src={avatar} onClick={() => fileRef.current.click()} sx={{ border: "2px solid", borderColor: "text.primary", cursor: "pointer", height: 72, width: 72 }}>{user?.user_metadata?.full_name?.[0]?.toUpperCase() ?? "?"}</Avatar>
         <Stack sx={{ px: 2.5 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>Profile Photo</Typography>
-          <Typography variant="caption" sx={{ color: "text.secondary" }}>Click to change | Max 2 MB</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>{t("settings.profile.photoLabel")}</Typography>
+          <Typography variant="caption" sx={{ color: "text.secondary" }}>{t("settings.profile.photoHint")}</Typography>
         </Stack>
         <input hidden type="file" accept="image/*" ref={fileRef} onChange={e => {
           const file = e.target.files[0]
           if (!file) return
-          if (file.size > 2 * 1048576) return setSnack("File Too Large, MAX 2 MB")
-          if (file.type === "image/heic" || file.type === "image/heif") return setSnack("HEIC/HEIF Images Not Supported")
+          if (file.size > 2 * 1048576) return setSnack(t("settings.profile.fileTooLarge"))
+          if (file.type === "image/heic" || file.type === "image/heif") return setSnack(t("settings.profile.heicUnsupported"))
           setAvatar(URL.createObjectURL(file))
           setFile(file)
         }}/>
       </Stack>
-      <TextField size="small" label="Full Name" value={name} onChange={e => setName(e.target.value)}/>
-      <TextField size="small" label="Email" value={email} disabled slotProps={{ input: { readOnly: true } }} helperText="Email cannot be changed"/>
-      <TextField size="small" label="Bio" value={bio} multiline rows={4} onChange={e => {if (e.target.value.length <= 160) setBio(e.target.value)}} helperText={bio.length !== 160 ? `${bio.length}/160` : "Max Character Limit Reached"}/>
+      <TextField size="small" label={t("settings.profile.fullName")} value={name} onChange={e => setName(e.target.value)}/>
+      <TextField size="small" label={t("settings.profile.email")} value={email} disabled slotProps={{ input: { readOnly: true } }} helperText={t("settings.profile.emailHelper")}/>
+      <TextField size="small" label={t("settings.profile.bio")} value={bio} multiline rows={4} onChange={e => {if (e.target.value.length <= 160) setBio(e.target.value)}} helperText={bio.length !== 160 ? `${bio.length}/160` : t("settings.profile.charLimitReached")}/>
       <Button disableElevation onClick={save} disabled={saving} variant={saving ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={saving ? <CircularProgress size={14}/> : <SaveIcon/>}>
-        {saving ? "Saving..." : "Save"}
+        {saving ? t("settings.profile.saving") : t("settings.profile.save")}
       </Button>
     </Stack>
   </Stack>)
@@ -97,6 +99,7 @@ function Profile({setSnack}) {
 
 function Notifications({setSnack}) {
   const { user } = useContext(Theme)
+  const { t } = useTranslation()
   const [teleUnLinking, setTeleUnLinking] = useState(false)
   const [browEnabled, setBrowEnabled]     = useState(false)
   const [browLoading, setBrowLoading]     = useState(true )
@@ -119,7 +122,7 @@ function Notifications({setSnack}) {
     setTimeout(() => clearInterval(pollRef.current), 120000)
   }
   const toggleBrowWeb = async () => {
-    if (!("Notification" in window) || !("serviceWorker" in navigator)) return setSnack("Push notifications not supported on this device")
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) return setSnack(t("settings.notif.notSupported"))
     setBrowLoading(true)
     try {
       if (browEnabled) {
@@ -127,19 +130,19 @@ function Notifications({setSnack}) {
         if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
         await Supabase.auth.updateUser({ data: { webPushNotif: false } })
         setBrowEnabled(false)
-        setSnack("Browser notifications disabled")
+        setSnack(t("settings.notif.browserDisabled"))
       } else {
         const fcmToken = await subscribeWeb()
-        if (!fcmToken) throw new Error("Push notifications not supported on this device")
+        if (!fcmToken) throw new Error(t("settings.notif.notSupported"))
         const { data } = await api.post("/settings/notifications/webPush/subscribe", { fcmToken, platform: "web" })
         if (!data.success) throw new Error(data.message)
         await Supabase.auth.updateUser({ data: { webPushNotif: true } })
         setBrowEnabled(true)
-        setSnack("Browser notifications enabled")
+        setSnack(t("settings.notif.browserEnabled"))
       }
     } catch (err) {
-      if (err.name === "NotAllowedError") setSnack("Permission denied — allow notifications in browser settings")
-      else setSnack(err?.message ?? "Something went wrong")
+      if (err.name === "NotAllowedError") setSnack(t("settings.notif.permissionDenied"))
+      else setSnack(err?.message ?? t("settings.notif.somethingWrong"))
     } finally { setBrowLoading(false) }
   }
   const toggleBrowNative = async () => {
@@ -151,27 +154,27 @@ function Notifications({setSnack}) {
         clearNativeFcmToken()
         await Supabase.auth.updateUser({ data: { platformNotif: false } })
         setBrowEnabled(false)
-        setSnack("Notifications disabled for this device")
+        setSnack(t("settings.notif.deviceDisabled"))
       } else {
         let { receive } = await PushNotifications.checkPermissions()
         if (receive === "prompt") ({ receive } = await PushNotifications.requestPermissions())
         if (receive !== "granted") {
-          setSnack("Permission denied — enable notifications for Waqt in your device settings")
+          setSnack(t("settings.notif.permissionDeniedDevice"))
           return
         }
         let { display } = await LocalNotifications.checkPermissions()
         if (display === "prompt") ({ display } = await LocalNotifications.requestPermissions())
         if (display !== "granted") {
-          setSnack("Permission denied — enable notifications for Waqt in your device settings")
+          setSnack(t("settings.notif.permissionDeniedLocal"))
           return
         }
         await PushNotifications.register()
         await Supabase.auth.updateUser({ data: { platformNotif: true } })
         setBrowEnabled(true)
-        setSnack("Notifications enabled")
+        setSnack(t("settings.notif.enabled"))
       }
     } catch (err) {
-      setSnack(err?.message ?? "Something went wrong")
+      setSnack(err?.message ?? t("settings.notif.somethingWrong"))
     } finally { setBrowLoading(false) }
   }
   const toggleBrow = Capacitor.isNativePlatform() ? toggleBrowNative : toggleBrowWeb
@@ -186,7 +189,7 @@ function Notifications({setSnack}) {
         setTeleLinked(true)
         setTeleId(data.chatId)
         setSnack(data.message)
-      } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setTeleLinking(false)}
+      } catch (err) {setSnack(err?.message ?? t("settings.notif.internalError"))} finally {setTeleLinking(false)}
     } else {
       setTeleUnLinking(true)
       try {
@@ -195,7 +198,7 @@ function Notifications({setSnack}) {
         setTeleLinked(false)
         setTeleId("")
         setSnack(data.message)
-      } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setTeleUnLinking(false)}
+      } catch (err) {setSnack(err?.message ?? t("settings.notif.internalError"))} finally {setTeleUnLinking(false)}
     }
   }
   useEffect(() => {
@@ -238,31 +241,31 @@ function Notifications({setSnack}) {
       <Stack sx={{ alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5 }}>
         <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
           <Stack sx={{ flex: 1 }}>
-            <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><WebhookIcon sx={{ fontSize: 24 }}/>{Capacitor.isNativePlatform() ? "App Notifications" : "Browser Notifications"}</Typography>
+            <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><WebhookIcon sx={{ fontSize: 24 }}/>{Capacitor.isNativePlatform() ? t("settings.notif.appNotifications") : t("settings.notif.browserNotifications")}</Typography>
           </Stack>
           <Stack sx={{ justifyContent: "center" }}>
             <Switch checked={browEnabled} onChange={toggleBrow} disabled={browLoading}/>
           </Stack>
         </Stack>
         <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
-          <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><TelegramIcon sx={{ fontSize: 24 }}/>Telegram Notifications</Typography>
+          <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><TelegramIcon sx={{ fontSize: 24 }}/>{t("settings.notif.telegramNotifications")}</Typography>
           <Stack sx={{ "& .MuiTypography-root": { color: "text.secondary" } }}>
             <Stack sx={{ gap: 2.5 }}>
               {!teleLinked ?
                 (<Stack sx={{ gap: 1 }}>
-                  <Typography sx={{ fontWeight: 600 }}>How to connect your Telegram account:</Typography>
-                  <Typography>1. Open our official Telegram bot <Link href={`https://t.me/WaqtOfficialBot?start=${user?.id}`} target="_blank" rel="noopener noreferrer" onClick={startPolling}><strong>@WaqtOfficialBot</strong></Link></Typography>
-                  <Typography>2. Start the bot — it will send your <strong>Chat ID</strong></Typography>
-                  <Typography>3. Paste the Chat ID below and tap <strong>Link</strong></Typography>
+                  <Typography sx={{ fontWeight: 600 }}>{t("settings.notif.howToConnect")}</Typography>
+                  <Typography>{t("settings.notif.step1")} <Link href={`https://t.me/WaqtOfficialBot?start=${user?.id}`} target="_blank" rel="noopener noreferrer" onClick={startPolling}><strong>@WaqtOfficialBot</strong></Link></Typography>
+                  <Typography>{t("settings.notif.step2")}</Typography>
+                  <Typography>{t("settings.notif.step3")}</Typography>
                 </Stack>) :
                 (<Stack>
-                  <Typography>Linked with a Telegram account. Tap <strong>Unlink</strong> to disconnect.</Typography>
+                  <Typography>{t("settings.notif.linkedMessage")}</Typography>
                 </Stack>)
               }
               <FormControl component="form" onSubmit={teleSubmit} sx={{ flexDirection: "row", display: "flex", gap: 1 }}>
-                <TextField required size="small" label="Chat ID" type="number" disabled={teleLinked} value={teleId} onChange={e => setTeleId(e.target.value)}/>
+                <TextField required size="small" label={t("settings.notif.chatIdLabel")} type="number" disabled={teleLinked} value={teleId} onChange={e => setTeleId(e.target.value)}/>
                 <Button disableElevation type="submit" disabled={teleLinking || teleUnLinking} variant={(teleLinking || teleUnLinking) ? "outlined" : "contained"} startIcon={teleLinked ? (teleUnLinking ? <CircularProgress size={14}/> : <LinkOffIcon/>) : (teleLinking ? <CircularProgress size={14}/> : <LinkIcon/>)}>
-                  {teleLinked ? (teleUnLinking ? "Unlinking..." : "Unlink") : (teleLinking ? "Linking..." : "Link")}
+                  {teleLinked ? (teleUnLinking ? t("settings.notif.unlinking") : t("settings.notif.unlink")) : (teleLinking ? t("settings.notif.linking") : t("settings.notif.link"))}
                 </Button>
               </FormControl>
             </Stack>
@@ -275,6 +278,7 @@ function Notifications({setSnack}) {
 
 function Preferences({setSnack}) {
   const { user } = useContext(Theme)
+  const { t, setLang } = useTranslation()
   const [drawerPos, setDrawerPos] =         useState(() => localStorage.getItem("drawerPos") || "l")
   const [locationType, setLocationType] =   useState("gps")
   const [timeFormat, setTimeFormat] =       useState("12h")
@@ -298,14 +302,14 @@ function Preferences({setSnack}) {
         let { location } = await Geolocation.checkPermissions()
         if (location === "prompt" || location === "prompt-with-rationale") ({ location } = await Geolocation.requestPermissions())
         if (location !== "granted") {
-          setSnack("Permission denied — enable location for Waqt in your device settings")
+          setSnack(t("settings.pref.locationPermissionDenied"))
           return
         }
         const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 })
         lat = pos.coords.latitude
         lon = pos.coords.longitude
       } else {
-        if (!navigator.geolocation) return setSnack("This Device Doesn't Support GPS")
+        if (!navigator.geolocation) return setSnack(t("settings.pref.gpsNotSupported"))
         const pos = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 }))
         lat = pos.coords.latitude
         lon = pos.coords.longitude
@@ -317,7 +321,7 @@ function Preferences({setSnack}) {
         setTz(timezone)
       } catch { setTz("") }
     } catch (err) {
-      setSnack(err?.message ?? "Failed To Get Location")
+      setSnack(err?.message ?? t("settings.pref.locationFailed"))
     } finally {
       setCoordsLoading(false)
     }
@@ -335,8 +339,8 @@ function Preferences({setSnack}) {
     }, 250)
   }
   const save = async () => {
-    if (locationType === "gps"    && !coords) return setSnack("Please set your current location. Required for calculation")
-    if (locationType === "manual" && !city  ) return setSnack("Please select a city. Required for calculation")
+    if (locationType === "gps"    && !coords) return setSnack(t("settings.pref.locationRequired"))
+    if (locationType === "manual" && !city  ) return setSnack(t("settings.pref.cityRequired"))
     setSaving(true)
     try {
       const { error } = await Supabase.auth.updateUser({ data: {
@@ -345,14 +349,14 @@ function Preferences({setSnack}) {
         coords, calcMethod, madhab, tz
       } })
       if (error) throw error
-      setSnack("Preferences Saved")
-    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setSaving(false)}
+      setSnack(t("settings.pref.saved"))
+    } catch (err) {setSnack(err?.message ?? t("settings.pref.internalError"))} finally {setSaving(false)}
   }
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     const data = user?.user_metadata
     if (!data) return
-    if (data.language)     setLanguage(data.language)
+    if (data.language)     { setLanguage(data.language); setLang(data.language) }
     if (data.timeFormat)   setTimeFormat(data.timeFormat)
     if (data.locationType) setLocationType(data.locationType)
     if (data.coords)       setCoords(data.coords)
@@ -370,32 +374,32 @@ function Preferences({setSnack}) {
   return (<Stack sx={{ gap: 2.5, p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
-        <Typography sx={{ minWidth: "50%" }}>Language :</Typography>
-        <ToggleButtonGroup exclusive fullWidth size="small" sx={{ flex: 1 }} value={language} onChange={(_, v) => { if (v) setLanguage(v) }}>
-          <ToggleButton value="en">English</ToggleButton>
+        <Typography sx={{ minWidth: "50%" }}>{t("settings.pref.language")}</Typography>
+        <ToggleButtonGroup exclusive fullWidth size="small" sx={{ flex: 1 }} value={language} onChange={(_, v) => { if (v) { setLanguage(v); setLang(v) } }}>
+          <ToggleButton value="en">{t("settings.pref.english")}</ToggleButton>
           <ToggleButton value="bn">বাংলা</ToggleButton>
         </ToggleButtonGroup>
       </Stack>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
-        <Typography sx={{ minWidth: "50%" }}>Time Format :</Typography>
+        <Typography sx={{ minWidth: "50%" }}>{t("settings.pref.timeFormat")}</Typography>
         <ToggleButtonGroup exclusive fullWidth size="small" sx={{ flex: 1 }} value={timeFormat} onChange={(_, v) => { if (v) setTimeFormat(v) }}>
           <ToggleButton value="24h">24H</ToggleButton>
           <ToggleButton value="12h">12H</ToggleButton>
         </ToggleButtonGroup>
       </Stack>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
-        <Typography sx={{ minWidth: "50%" }}>Location Type :</Typography>
+        <Typography sx={{ minWidth: "50%" }}>{t("settings.pref.locationType")}</Typography>
         <ToggleButtonGroup exclusive fullWidth size="small" sx={{ flex: 1 }} value={locationType} onChange={(_, v) => { if (v) setLocationType(v) }}>
-          <ToggleButton value="gps">GPS</ToggleButton>
-          <ToggleButton value="manual">Manual</ToggleButton>
+          <ToggleButton value="gps">{t("settings.pref.gps")}</ToggleButton>
+          <ToggleButton value="manual">{t("settings.pref.manual")}</ToggleButton>
         </ToggleButtonGroup>
       </Stack>
       <Stack>
         {locationType === "gps" && (
           <Stack sx={{ flexDirection: "row", gap: 2.5 }}>
-            <TextField fullWidth size="small" label="Coordinates" disabled value={coords ? `${coords.lat}, ${coords.lon}` : ""} slotProps={{ input: { readOnly: true } }}></TextField>
+            <TextField fullWidth size="small" label={t("settings.pref.coordinates")} disabled value={coords ? `${coords.lat}, ${coords.lon}` : ""} slotProps={{ input: { readOnly: true } }}></TextField>
             <Button disableElevation onClick={getCoords} disabled={coordsLoading} variant={coordsLoading ? "outlined" : "contained"} sx={{ px: 2.5 }} startIcon={coordsLoading ? <CircularProgress size={14}/> : <MyLocationIcon/>}>
-              {coordsLoading ? "updating..." : "Update"}
+              {coordsLoading ? t("settings.pref.updating") : t("settings.pref.update")}
             </Button>
           </Stack>
         )}
@@ -410,7 +414,7 @@ function Preferences({setSnack}) {
             getOptionKey={(o) => o.id}
             isOptionEqualToValue={(o, v) => o.id === v.id}
             filterOptions={(x) => x}
-            renderInput={(params) => <TextField {...params} size="small" label="Find City"/>}
+            renderInput={(params) => <TextField {...params} size="small" label={t("settings.pref.findCity")}/>}
             onChange={(_, v) => {
               setCity(v)
               setTz(v?.timezone ?? "")
@@ -421,11 +425,11 @@ function Preferences({setSnack}) {
         )}
       </Stack>
       <Stack>
-        <TextField fullWidth size="small" label="Timezone" disabled value={tz} slotProps={{ input: { readOnly: true } }}></TextField>
+        <TextField fullWidth size="small" label={t("settings.pref.timezone")} disabled value={tz} slotProps={{ input: { readOnly: true } }}></TextField>
       </Stack>
       <FormControl>
-        <InputLabel id="calcMethodLabel">Calculation Method</InputLabel>
-        <Select labelId="calcMethodLabel" id="calcMethod" label="Calculation Method" value={calcMethod} onChange={(e) => setCalcMethod(e.target.value)}>
+        <InputLabel id="calcMethodLabel">{t("settings.pref.calcMethod")}</InputLabel>
+        <Select labelId="calcMethodLabel" id="calcMethod" label={t("settings.pref.calcMethod")} value={calcMethod} onChange={(e) => setCalcMethod(e.target.value)}>
           <MenuItem value="MuslimWorldLeague">Muslim World League</MenuItem>
           <MenuItem value="NorthAmerica">Islamic Society of North America</MenuItem>
           <MenuItem value="Egyptian">Egyptian General Authority</MenuItem>
@@ -437,30 +441,30 @@ function Preferences({setSnack}) {
         </Select>
       </FormControl>
       <FormControl>
-        <InputLabel id="madhabLabel">Madhab</InputLabel>
-        <Select labelId="madhabLabel" id="madhab" label="Madhab" value={madhab} onChange={(e) => setMadhab(e.target.value)}>
-          <MenuItem value="hanafi">Hanafi</MenuItem>
-          <MenuItem value="shafi">Shafi'i</MenuItem>
-          <MenuItem value="maliki">Maliki</MenuItem>
-          <MenuItem value="hanbali">Hanbali</MenuItem>
+        <InputLabel id="madhabLabel">{t("settings.pref.madhabLabel")}</InputLabel>
+        <Select labelId="madhabLabel" id="madhab" label={t("settings.pref.madhabLabel")} value={madhab} onChange={(e) => setMadhab(e.target.value)}>
+          <MenuItem value="hanafi">{t("madhab.hanafi")}</MenuItem>
+          <MenuItem value="shafi">{t("madhab.shafii")}</MenuItem>
+          <MenuItem value="maliki">{t("madhab.maliki")}</MenuItem>
+          <MenuItem value="hanbali">{t("madhab.hanbali")}</MenuItem>
         </Select>
       </FormControl>
       <Button disableElevation onClick={save} disabled={saving} variant={saving ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={saving ? <CircularProgress size={14}/> : <SaveIcon/>}>
-        {saving ? "Saving..." : "Save"}
+        {saving ? t("settings.pref.saving") : t("settings.pref.save")}
       </Button>
     </Stack>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
-        <Typography sx={{ minWidth: "50%" }}>App Drawer Position :</Typography>
+        <Typography sx={{ minWidth: "50%" }}>{t("settings.pref.drawerPosition")}</Typography>
         <ToggleButtonGroup exclusive fullWidth size="small" sx={{ flex: 1 }} value={drawerPos} onChange={(_, v) => {
           if (!v) return
           setDrawerPos(v)
           localStorage.setItem("drawerPos", v)
-          setSnack(`Drawer Position Set To ${v === "r" ? "Right" : "Left"}`)
+          setSnack(t("settings.pref.drawerSetTo", { side: v === "r" ? t("settings.pref.right") : t("settings.pref.left") }))
           window.dispatchEvent(new CustomEvent("drawerpos-change", { detail: v }))
         }}>
-          <ToggleButton value="l">Left</ToggleButton>
-          <ToggleButton value="r">Right</ToggleButton>
+          <ToggleButton value="l">{t("settings.pref.left")}</ToggleButton>
+          <ToggleButton value="r">{t("settings.pref.right")}</ToggleButton>
         </ToggleButtonGroup>
       </Stack>
     </Stack>
@@ -468,6 +472,7 @@ function Preferences({setSnack}) {
 }
 
 function Security({setSnack}) {
+  const { t } = useTranslation()
   const [editingPasskey, setEditingPasskey] = useState(null)
   const [passUpdating, setPassUpdating]     = useState(false)
   const [pkRemoving, setPkRemoving]         = useState(false)
@@ -482,9 +487,9 @@ function Security({setSnack}) {
   const updatePassword = async (e) => {
     e.preventDefault()
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
-    if (!oldPass) return setSnack("Please enter your old password")
-    if (!newPass) return setSnack("Please enter a new password")
-    if (newPass !== conPass) return setSnack("Passwords do not match")
+    if (!oldPass) return setSnack(t("settings.security.oldPasswordRequired"))
+    if (!newPass) return setSnack(t("settings.security.newPasswordRequired"))
+    if (newPass !== conPass) return setSnack(t("settings.security.passwordMismatch"))
     setPassUpdating(true)
     try {
       const { error } = await Supabase.auth.updateUser({ password: newPass, current_password: oldPass })
@@ -492,8 +497,8 @@ function Security({setSnack}) {
       setOldPass("")
       setNewPass("")
       setConPass("")
-      setSnack("Password Updated Successfully")
-    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setPassUpdating(false)}
+      setSnack(t("settings.security.passwordUpdated"))
+    } catch (err) {setSnack(err?.message ?? t("settings.security.internalError"))} finally {setPassUpdating(false)}
   }
   const addPasskey = async () => {
     setPkAdding(true)
@@ -502,8 +507,8 @@ function Security({setSnack}) {
       if (error) throw error
       const fn = data?.friendly_name
       setPasskeys(prev => [...prev, data])
-      setSnack(`Added Passkey${fn ? ` - ${fn}` : ""}`)
-    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setPkAdding(false)}
+      setSnack(t("settings.security.addedPasskey", { name: fn ? ` - ${fn}` : "" }))
+    } catch (err) {setSnack(err?.message ?? t("settings.security.internalError"))} finally {setPkAdding(false)}
   }
   const renamePasskey = async () => {
     try {
@@ -513,8 +518,8 @@ function Security({setSnack}) {
       })
       if (error) throw error
       setPasskeys(prev => prev.map(passkey => passkey.id === editingPasskey.id ? {...passkey, friendly_name: editingPasskey.friendly_name} : passkey))
-      setSnack("Passkey Renamed")
-    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally{setEditingPasskey(null)}
+      setSnack(t("settings.security.passkeyRenamed"))
+    } catch (err) {setSnack(err?.message ?? t("settings.security.internalError"))} finally{setEditingPasskey(null)}
   }
   const removePasskey = async () => {
     setPkRemoving(true)
@@ -523,8 +528,8 @@ function Security({setSnack}) {
       if (error) throw error
       setPasskeys(prev => prev.filter(passkey => passkey.id !== editingPasskey.id))
       setEditingPasskey(null)
-      setSnack("Passkey Deleted")
-    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally{setPkRemoving(false)}
+      setSnack(t("settings.security.passkeyDeleted"))
+    } catch (err) {setSnack(err?.message ?? t("settings.security.internalError"))} finally{setPkRemoving(false)}
   }
   const logout = async (scope) => {
     setOthersR(true)
@@ -536,8 +541,8 @@ function Security({setSnack}) {
       if (scope === "global" && "serviceWorker" in navigator) await unsubscribeWeb().catch(() => {})
       const { error } = await Supabase.auth.signOut({ scope })
       if (error) throw error
-      setSnack(scope === "global" ? "Logged Out From All Devices" : "Logged Out From Other Devices")
-    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally{setOthersR(false)}
+      setSnack(scope === "global" ? t("settings.security.loggedOutAll") : t("settings.security.loggedOutOthers"))
+    } catch (err) {setSnack(err?.message ?? t("settings.security.internalError"))} finally{setOthersR(false)}
   }
   useEffect(() => {
     (async () => {
@@ -545,70 +550,70 @@ function Security({setSnack}) {
         const { data, error } = await Supabase.auth.passkey.list()
         if (error) throw error
         setPasskeys(data ?? [])
-      } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")}
+      } catch (err) {setSnack(err?.message ?? t("settings.security.internalError"))}
     })()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5 }}>
       <Stack component="form" onSubmit={updatePassword} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
-        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><LockResetIcon sx={{ fontSize: 24 }}/>Update Password</Typography>
-        <TextField fullWidth size="small" label="Old password" type={seOPass ? "text" : "password"} value={oldPass} onChange={e => setOldPass(e.target.value)} slotProps={{ input: { endAdornment: (
+        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><LockResetIcon sx={{ fontSize: 24 }}/>{t("settings.security.updatePassword")}</Typography>
+        <TextField fullWidth size="small" label={t("settings.security.oldPassword")} type={seOPass ? "text" : "password"} value={oldPass} onChange={e => setOldPass(e.target.value)} slotProps={{ input: { endAdornment: (
           <InputAdornment>
             <IconButton onClick={() => setSeOPass(!seOPass)}>
               {seOPass ? <VisibilityOffIcon/> : <VisibilityIcon/>}
             </IconButton>
           </InputAdornment>
         ) } }}/>
-        <TextField fullWidth size="small" label="New password" type={seNPass ? "text" : "password"} value={newPass} onChange={e => setNewPass(e.target.value)} slotProps={{ input: { endAdornment: (
+        <TextField fullWidth size="small" label={t("settings.security.newPassword")} type={seNPass ? "text" : "password"} value={newPass} onChange={e => setNewPass(e.target.value)} slotProps={{ input: { endAdornment: (
           <InputAdornment>
             <IconButton onClick={() => setSeNPass(!seNPass)}>
               {seNPass ? <VisibilityOffIcon/> : <VisibilityIcon/>}
             </IconButton>
           </InputAdornment>
         ) } }}/>
-        <TextField fullWidth size="small" label="Confirm password" type="password" value={conPass} onChange={e => setConPass(e.target.value)}/>
+        <TextField fullWidth size="small" label={t("settings.security.confirmPassword")} type="password" value={conPass} onChange={e => setConPass(e.target.value)}/>
         <Button disableElevation type="submit" disabled={passUpdating} variant={passUpdating ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={passUpdating ? <CircularProgress size={14}/> : <LockIcon/>}>
-          {passUpdating ? "Updating..." : "Update"}
+          {passUpdating ? t("settings.security.updating") : t("settings.security.update")}
         </Button>
       </Stack>
       <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
-        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><FingerprintIcon sx={{ fontSize: 24 }}/>Manage Passkeys</Typography>
+        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><FingerprintIcon sx={{ fontSize: 24 }}/>{t("settings.security.managePasskeys")}</Typography>
         {passkeys.length === 0 ? (
-          <Typography>No Passkeys Added Yet</Typography>
+          <Typography>{t("settings.security.noPasskeys")}</Typography>
         ) : (
           passkeys.map(passkey => (
             <Stack key={passkey.id} sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5 }}>
               <Stack sx={{ flex: 1 }}>
                 <Typography sx={{ fontWeight: 600 }}>{passkey.friendly_name}</Typography>
-                <Typography>Added:<span sx={{ fontFamily: "monospace" }}> {new Date(passkey.created_at).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"})} </span></Typography>
+                <Typography>{t("settings.security.added")}<span sx={{ fontFamily: "monospace" }}> {new Date(passkey.created_at).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"})} </span></Typography>
               </Stack>
               <IconButton onClick={() => {if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); setEditingPasskey(passkey)}} sx={{ alignSelf: "center" }}><EditIcon/></IconButton>
             </Stack>
           ))
         )}
         <Button disableElevation onClick={addPasskey} disabled={pkAdding} variant={pkAdding ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={pkAdding ? <CircularProgress size={14}/> : <AddIcon/>}>
-          {pkAdding ? "Adding..." : "Add Passkey"}
+          {pkAdding ? t("settings.security.adding") : t("settings.security.addPasskey")}
         </Button>
         <Dialog component="form" open={Boolean(editingPasskey)} onClose={() => setEditingPasskey(null)} onSubmit={e => {e.preventDefault(); if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); renamePasskey()}}>
-          <DialogTitle>Edit Passkey</DialogTitle>
+          <DialogTitle>{t("settings.security.editPasskey")}</DialogTitle>
           <DialogContent>
-            <TextField label="Passkey Name" size="small" value={editingPasskey?.friendly_name} onChange={e => setEditingPasskey(prev => ({...prev, friendly_name: e.target.value}))} sx={{ mt: 1 }}/>
+            <TextField label={t("settings.security.passkeyName")} size="small" value={editingPasskey?.friendly_name} onChange={e => setEditingPasskey(prev => ({...prev, friendly_name: e.target.value}))} sx={{ mt: 1 }}/>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setEditingPasskey(null)} disabled={pkRemoving}>Cancel</Button>
-            <Button type="submit" disabled={pkRemoving}>Rename</Button>
+            <Button onClick={() => setEditingPasskey(null)} disabled={pkRemoving}>{t("settings.security.cancel")}</Button>
+            <Button type="submit" disabled={pkRemoving}>{t("settings.security.rename")}</Button>
             <Button onClick={removePasskey} disabled={pkRemoving} sx={{ color: "error.main" }} startIcon={pkRemoving ? <CircularProgress size={14}/> : null}>
-              {pkRemoving ? "Deleting..." : "Delete"}
+              {pkRemoving ? t("settings.security.deleting") : t("settings.security.delete")}
             </Button>
           </DialogActions>
         </Dialog>
       </Stack>
       <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
-        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><PowerSettingsNewIcon sx={{ fontSize: 24 }}/>Manage Sessions</Typography>
-        <Typography>Logout From:</Typography>
+        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><PowerSettingsNewIcon sx={{ fontSize: 24 }}/>{t("settings.security.manageSessions")}</Typography>
+        <Typography>{t("settings.security.logoutFrom")}</Typography>
         <Stack sx={{ flexDirection: "row", gap: 2.5 }}>
-          <Button fullWidth disableElevation onClick={() => logout("others")} variant={othersR ? "outlined" : "contained"} disabled={othersR}>Other Devices</Button>
-          <Button fullWidth disableElevation onClick={() => logout("global")} variant="contained">All Devices</Button>
+          <Button fullWidth disableElevation onClick={() => logout("others")} variant={othersR ? "outlined" : "contained"} disabled={othersR}>{t("settings.security.otherDevices")}</Button>
+          <Button fullWidth disableElevation onClick={() => logout("global")} variant="contained">{t("settings.security.allDevices")}</Button>
         </Stack>
       </Stack>
     </Stack>

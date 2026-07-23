@@ -17,6 +17,7 @@ import {
 } from "@mui/material"
 import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics"
 import { Capacitor } from "@capacitor/core"
+import { useTranslation } from "@/i18n"
 
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight"
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft"
@@ -35,15 +36,17 @@ const STROKE = 10
 const RADIUS = (SIZE - STROKE) / 2
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 const DHIKR = [
-  { ar: "سُبْحَانَ اللَّهِ", tr: "Subhan Allah" },
-  { ar: "الْحَمْدُ لِلَّهِ", tr: "Alhamdulillah" },
-  { ar: "أَسْتَغْفِرُ اللَّهَ", tr: "Astaghfirullah" },
-  { ar: "اللَّهُ أَكْبَرُ", tr: "Allahu Akbar" },
-  { ar: "لَا إِلَٰهَ إِلَّا اللَّهُ", tr: "La ilaha illallah" },
+  { key: "subhanAllah",     ar: "سُبْحَانَ اللَّهِ" },
+  { key: "alhamdulillah",   ar: "الْحَمْدُ لِلَّهِ" },
+  { key: "astaghfirullah",  ar: "أَسْتَغْفِرُ اللَّهَ" },
+  { key: "allahuAkbar",     ar: "اللَّهُ أَكْبَرُ" },
+  { key: "laIlahaIllallah", ar: "لَا إِلَٰهَ إِلَّا اللَّهُ" },
 ]
 const wrap = (i, len) => ((i % len) + len) % len
 
 export default function Tasbih() {
+  const { t } = useTranslation()
+  const trOf = (key) => t(`tasbih.dhikr.${key}`)
   const [dhikrIdx, setDhikrIdx] = useState(() => {
     const saved = parseInt(localStorage.getItem(DHIKR_IDX_KEY), 10)
     return Number.isInteger(saved) ? saved : 0
@@ -91,7 +94,7 @@ export default function Tasbih() {
   const changeDhikr = (delta, log = true) => {
     buzz([50])
     const nextIdx = dhikrIdx + delta
-    if (log && count > 0) logHistory({ dhikr: dhikr.tr, count })
+    if (log && count > 0) logHistory({ dhikrKey: dhikr.key, count })
     setDhikrIdx(nextIdx)
     setCount(0)
   }
@@ -100,7 +103,7 @@ export default function Tasbih() {
     setCount((c) => {
       if (c + 1 >= target) {
         buzz([60, 80, 60, 80, 100])
-        setSnack(`${dhikr.tr} × ${target} completed`)
+        setSnack(t("tasbih.snack.completed", { dhikr: trOf(dhikr.key), target }))
         return target
       }
       return c + 1
@@ -109,7 +112,7 @@ export default function Tasbih() {
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     if (count !== target) return
-    logHistory({ dhikr: dhikr.tr, count: target })
+    logHistory({ dhikrKey: dhikr.key, count: target })
     const id = setTimeout(() => {
       setInstant(true)
       setCount(0)
@@ -128,7 +131,7 @@ export default function Tasbih() {
           <Fade key={dhikrIdx} in appear timeout={250}>
             <Box sx={{ textAlign: "center" }}>
               <Typography sx={{ color: "text.primary", fontSize: 20 }}>{dhikr.ar}</Typography>
-              <Typography variant="caption" sx={{ color: "text.secondary" }}>{dhikr.tr}</Typography>
+              <Typography variant="caption" sx={{ color: "text.secondary" }}>{trOf(dhikr.key)}</Typography>
             </Box>
           </Fade>
         </Box>
@@ -151,37 +154,37 @@ export default function Tasbih() {
           </Box>
           <Stack sx={{ position: "absolute", inset: 0, alignItems: "center", justifyContent: "center" }}>
             <Typography variant="h3" sx={{ color: "text.primary", fontWeight: 600, lineHeight: 1 }}>{count}</Typography>
-            <Typography variant="caption" sx={{ color: "text.secondary" }}>of {target}</Typography>
+            <Typography variant="caption" sx={{ color: "text.secondary" }}>{t("tasbih.count.of", { target })}</Typography>
           </Stack>
         </Box>
       </Stack>
       <Divider/>
       <Stack sx={{ flexDirection: "row", "& .MuiButton-root": { border: "none", borderRadius: 0, py: 1.25, color: "text.primary", "&:first-of-type": { borderBottomLeftRadius: (theme) => theme.shape.borderRadius }, "&:last-of-type": { borderBottomRightRadius: (theme) => theme.shape.borderRadius } } }}>
-        <Button fullWidth variant="outlined" onClick={() => { buzz([50]); setHaptic(!haptic); setSnack(`Haptic Feedback Turned ${haptic ? "Off" : "On"}`) }}>{haptic ? <SensorsOffIcon/> : <SensorsIcon/>}</Button>
+        <Button fullWidth variant="outlined" onClick={() => { buzz([50]); setHaptic(!haptic); setSnack(haptic ? t("tasbih.snack.hapticOff") : t("tasbih.snack.hapticOn")) }}>{haptic ? <SensorsOffIcon/> : <SensorsIcon/>}</Button>
         <Divider flexItem orientation="vertical"/>
-        <Button fullWidth variant="outlined" onClick={() => { buzz([50]); setRepeat(!repeat); setSnack(`Dhikr Switching Turned ${repeat ? "Off" : "On"}`) }}>{repeat ? <RepeatOnIcon/> : <RepeatIcon/>}</Button>
+        <Button fullWidth variant="outlined" onClick={() => { buzz([50]); setRepeat(!repeat); setSnack(repeat ? t("tasbih.snack.repeatOff") : t("tasbih.snack.repeatOn")) }}>{repeat ? <RepeatOnIcon/> : <RepeatIcon/>}</Button>
         <Divider flexItem orientation="vertical"/>
-        <Button fullWidth variant="outlined" onClick={() => { buzz([50]); if (count > 0) logHistory({ dhikr: dhikr.tr, count }); setCount(0); setSnack("Reset!") }}><AdjustIcon/></Button>
+        <Button fullWidth variant="outlined" onClick={() => { buzz([50]); if (count > 0) logHistory({ dhikrKey: dhikr.key, count }); setCount(0); setSnack(t("tasbih.snack.reset")) }}><AdjustIcon/></Button>
       </Stack>
     </Stack>
     <Stack sx={{ border: "1px solid", borderColor: "divider", alignSelf: "center", width: "100%", borderRadius: 1, maxWidth: 600 }}>
       <Stack sx={{ flexDirection: "row", alignItems: "center", p: 2.5, pb: 1.5 }}>
-        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, flex: 1 }}>History</Typography>
-        <IconButton disabled={!history.length} onClick={() => { setHistory([]); setSnack("History cleared") }}><DeleteIcon/></IconButton>
+        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, flex: 1 }}>{t("tasbih.history.title")}</Typography>
+        <IconButton disabled={!history.length} onClick={() => { setHistory([]); setSnack(t("tasbih.snack.historyCleared")) }}><DeleteIcon/></IconButton>
       </Stack>
       <Divider/>
       <Stack sx={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", px: 2.5, py: 1.25 }}>
-        <Typography variant="body2" sx={{ color: "text.primary" }}>{dhikr.tr} (current)</Typography>
+        <Typography variant="body2" sx={{ color: "text.primary" }}>{t("tasbih.history.current", { dhikr: trOf(dhikr.key) })}</Typography>
         <Typography variant="body2" sx={{ color: "text.primary" }}>{count}/{target}</Typography>
       </Stack>
       <Divider/>
       <Stack sx={{ maxHeight: 320, overflowY: "auto" }}>
         {!history.length && (
-          <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "center", py: 2.5 }}>No history yet</Typography>
+          <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "center", py: 2.5 }}>{t("tasbih.history.empty")}</Typography>
         )}
         {history.map((h, i) => (
           <Stack key={h.id} sx={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", px: 2.5, py: 1.25, ...(i !== history.length - 1 && { borderBottom: "1px solid", borderColor: "divider" }) }}>
-            <Typography variant="body2" sx={{ color: "text.primary" }}>{h.dhikr}</Typography>
+            <Typography variant="body2" sx={{ color: "text.primary" }}>{h.dhikrKey ? trOf(h.dhikrKey) : h.dhikr}</Typography>
             <Typography variant="body2" sx={{ color: "text.primary" }}>{h.count}</Typography>
           </Stack>
         ))}

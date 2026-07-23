@@ -21,6 +21,7 @@ import { Capacitor } from "@capacitor/core"
 import { Browser } from "@capacitor/browser"
 import Turnstile from "@asset/turnstile"
 import { passkeyShimReady } from "@/main"
+import { useTranslation } from "@/i18n"
 import Supabase from "@/supabase"
 
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff"
@@ -30,6 +31,7 @@ import KeyIcon from "@mui/icons-material/Key"
 
 export default function Auth() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const turnstileRef = useRef()
   const [isSignUp, setIsSignUp] = useState(false)
   const [isPasskeySupported, setIsPasskeySupported] = useState(false)
@@ -62,10 +64,10 @@ export default function Auth() {
     e.preventDefault()
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
     const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    if (!email || !password) return show("Email and password are required")
-    if (!validEmail) return show("Please enter a valid email address")
-    if (isSignUp && !name.trim()) return show("Please enter your name")
-    if (!captchaToken) return show("Please complete the CAPTCHA")
+    if (!email || !password) return show(t("auth.snack.emailPasswordRequired"))
+    if (!validEmail) return show(t("auth.snack.invalidEmail"))
+    if (isSignUp && !name.trim()) return show(t("auth.snack.nameRequired"))
+    if (!captchaToken) return show(t("auth.snack.captchaRequired"))
     setSubmitting(true)
     try {
       if (isSignUp) {
@@ -78,12 +80,12 @@ export default function Auth() {
           }
         })
         if (error) throw error
-        if (data.user?.identities?.length === 0) return show("An account with this email already exists!")
-        if (data.user?.confirmed_at) return show("Account already confirmed! Please sign in.")
+        if (data.user?.identities?.length === 0) return show(t("auth.snack.accountExists"))
+        if (data.user?.confirmed_at) return show(t("auth.snack.alreadyConfirmed"))
         navigate("/verify", { state: {
           email, type: "signup",
-          title: "Verify your Email",
-          desc: `We sent a 6-digit code to ${email}`
+          title: t("auth.verify.title"),
+          desc: t("auth.verify.desc", { email })
         } })
       } else {
         const { error } = await Supabase.auth.signInWithPassword({ email, password, options: { captchaToken } })
@@ -93,7 +95,7 @@ export default function Auth() {
     } catch (e) {show(titleCase(e.message))} finally {setSubmitting(false); resetCaptcha()}
   }
   const handlePasskey = async () => {
-    if(!captchaToken) return show("Please complete the CAPTCHA")
+    if(!captchaToken) return show(t("auth.snack.captchaRequired"))
     setPasskeyLoading(true)
     try {
       const { error } = await Supabase.auth.signInWithPasskey({ options: {captchaToken} })
@@ -118,22 +120,22 @@ export default function Auth() {
   }
   return (
     <Box sx={{ maxWidth: 500, mx: "auto", p: 5 }}>
-      <Typography variant="h5" sx={{ textAlign: "center", my: 2.5 }}>{isSignUp ? "Create Account" : "Sign In"}</Typography>
+      <Typography variant="h5" sx={{ textAlign: "center", my: 2.5 }}>{isSignUp ? t("auth.title.signup") : t("auth.title.signin")}</Typography>
       <FormControl component="form" onSubmit={handleSubmit} sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
-        {isSignUp && (<TextField fullWidth size="small" label="Full Name" value={name} onChange={e => setName(e.target.value)}/>)}
-        <TextField fullWidth size="small" label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)}/>
-        <TextField fullWidth size="small" label="Password" type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} slotProps={{ input: { endAdornment: (<IconButton size="small" onClick={() => setShowPass(!showPass)}>{showPass ? <VisibilityIcon/> : <VisibilityOffIcon/>}</IconButton>) } }}/>
+        {isSignUp && (<TextField fullWidth size="small" label={t("auth.label.fullName")} value={name} onChange={e => setName(e.target.value)}/>)}
+        <TextField fullWidth size="small" label={t("auth.label.email")} type="email" value={email} onChange={e => setEmail(e.target.value)}/>
+        <TextField fullWidth size="small" label={t("auth.label.password")} type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} slotProps={{ input: { endAdornment: (<IconButton size="small" onClick={() => setShowPass(!showPass)}>{showPass ? <VisibilityIcon/> : <VisibilityOffIcon/>}</IconButton>) } }}/>
         <Stack direction="row" sx={{ width: "100%", justifyContent: "space-between" }}>
-          <Button onClick={() => navigate("/forgot", { state: { type: "email" } })}>Forgot Password</Button>
-          <Button onClick={() => { setIsSignUp(!isSignUp); setPassword(""); setName("") }}>{isSignUp ? "Sign In Instead" : "Create Account"}</Button>
+          <Button onClick={() => navigate("/forgot", { state: { type: "email" } })}>{t("auth.button.forgotPassword")}</Button>
+          <Button onClick={() => { setIsSignUp(!isSignUp); setPassword(""); setName("") }}>{isSignUp ? t("auth.button.signinInstead") : t("auth.button.createAccount")}</Button>
         </Stack>
         <Button disableElevation sx={{ width: "75%" }} type="submit" disabled={submitting} variant={submitting ? "outlined" : "contained"} startIcon={submitting ? <CircularProgress size={14}/> : null}>
-          {submitting ? (isSignUp ? "Signing Up..." : "Signing In...") : (isSignUp ? "Sign Up" : "Sign In")}
+          {submitting ? (isSignUp ? t("auth.button.signingUp") : t("auth.button.signingIn")) : (isSignUp ? t("auth.button.signUp") : t("auth.button.signIn"))}
         </Button>
-        <Divider sx={{ width: "100%" }}>Or Continue With</Divider>
+        <Divider sx={{ width: "100%" }}>{t("auth.divider.orContinueWith")}</Divider>
         <Stack sx={{ width: "75%", gap: 2.5 }}>
-          <Button variant="outlined" startIcon={googleLoading ? <CircularProgress size={14}/> : <GoogleIcon/>} onClick={handleGoogle} disabled={googleLoading} sx={{ color: "text.primary" }}>{googleLoading ? "Redirecting..." : "Google"}</Button>
-          {!isSignUp && isPasskeySupported && (<Button variant="outlined" startIcon={passkeyLoading ? <CircularProgress size={14}/> : <KeyIcon/>} onClick={handlePasskey} disabled={passkeyLoading} sx={{ color: "text.primary" }}>{passkeyLoading ? "Verifying..." : "Passkey"}</Button>)}
+          <Button variant="outlined" startIcon={googleLoading ? <CircularProgress size={14}/> : <GoogleIcon/>} onClick={handleGoogle} disabled={googleLoading} sx={{ color: "text.primary" }}>{googleLoading ? t("auth.button.redirecting") : t("auth.button.google")}</Button>
+          {!isSignUp && isPasskeySupported && (<Button variant="outlined" startIcon={passkeyLoading ? <CircularProgress size={14}/> : <KeyIcon/>} onClick={handlePasskey} disabled={passkeyLoading} sx={{ color: "text.primary" }}>{passkeyLoading ? t("auth.button.verifying") : t("auth.button.passkey")}</Button>)}
         </Stack>
         <Turnstile ref={turnstileRef} onVerify={setCaptchaToken} onError={() => { setCaptchaToken(null); turnstileRef.current?.reset() }}/>
         <Snackbar open={open} onClose={() => setOpen(false)} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}/>

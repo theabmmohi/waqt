@@ -25,6 +25,7 @@ import {
   darkTheme
 } from "@/theme"
 import Preloader from "@asset/preloader"
+import { LanguageProvider } from "@/i18n"
 import { subscribeWeb } from "@/firebase"
 import Supabase from "@/supabase"
 import api from "@/api"
@@ -137,13 +138,13 @@ function Helper() {
       if (!url.includes("login-callback")) return
       try {
         const code = new URL(url).searchParams.get("code")
-        if (!code) { alert("No code in callback URL: " + url); return }
+        if (!code) { console.error("No code in callback URL:", url); return }
         const { error } = await Supabase.auth.exchangeCodeForSession(code)
-        if (error) { alert("Exchange failed: " + error.message); return }
+        if (error) { console.error("Exchange failed:", error.message); return }
         await Browser.close()
         window.location.href = "/"
       } catch (e) {
-        alert("Callback error: " + e.message)
+        console.error("Callback error:", e.message)
       }
     })
     return () => { backListener.remove(); urlListener.remove() }
@@ -208,8 +209,10 @@ function React() {
         {showPreloader && !ready && <Preloader leaving={leaving}/>}
         {(ready || (showPreloader && leaving)) && (
           <BrowserRouter>
-            <Helper/>
-            <App/>
+            <LanguageProvider>
+              <Helper/>
+              <App/>
+            </LanguageProvider>
           </BrowserRouter>
         )}
       </ThemeProvider>

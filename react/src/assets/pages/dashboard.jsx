@@ -20,6 +20,7 @@ import {
   Madhab
 } from "adhan"
 import { useTheme, alpha } from "@mui/material/styles"
+import { useTranslation } from "@/i18n"
 import { Theme } from "@/main"
 
 import HourglassBottomIcon from "@mui/icons-material/HourglassBottom"
@@ -35,15 +36,22 @@ const SIZE   = 200
 const STROKE = 10
 const RADIUS = (SIZE - STROKE) / 2
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
+const PRAYER_LABEL_KEY = {
+  Fajr: "prayer.fajr", Dhuhr: "prayer.dhuhr", Asr: "prayer.asr",
+  Maghrib: "prayer.maghrib", Isha: "prayer.isha",
+  Sunrise: "window.sunrise", Zawal: "window.zawal", Sunset: "window.sunset"
+}
 
 export default function Dashboard() {
   const navigate   = useNavigate()
+  const { t }      = useTranslation()
   const { user }   = useContext(Theme)
   const theme      = useTheme()
   const meta       = user?.user_metadata
   const fmt        = meta?.timeFormat ?? "12h"
   const tz         = meta?.tz || Intl.DateTimeFormat().resolvedOptions().timeZone
-  const [snack, setSnack]         = useState(() => !meta?.coords ? "Set Your Location In Settings To Get Prayer Times" : "")
+  const [snack, setSnack]         = useState(() => !meta?.coords ? t("dash.snack.setLocation") : "")
+  const prayerLabel = (name) => t(PRAYER_LABEL_KEY[name] ?? name)
   const [now, setNow]             = useState(new Date())
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
@@ -133,7 +141,7 @@ export default function Dashboard() {
   const cm = Math.floor((countdown % 3600000) / 60000)
   const cs = Math.floor((countdown % 60000) / 1000)
   const countdownStr = `${String(ch).padStart(2,"0")}:${String(cm).padStart(2,"0")}:${String(cs).padStart(2,"0")}`
-  const [hijri, setHijri] = useState("Loading…")
+  const [hijri, setHijri] = useState(() => t("dash.hijri.loading"))
   const [hijriMonth, setHijriMonth] = useState(null)
   useEffect(() => {
     const [yyyy, month, day] = todayKey.split("-")
@@ -144,7 +152,8 @@ export default function Dashboard() {
       .then(data => {
         const h = data?.data?.hijri
         if (h) {
-          setHijri(`${h.day} ${h.month.en.normalize("NFD").replace(/[\u0300-\u036f]/g, "")} ${h.year} AH`)
+          const monthName = t(`hijri.month.${h.month.number}`)
+          setHijri(`${h.day} ${monthName} ${h.year} AH`)
           setHijriMonth(Number(h.month.number))
         } else {
           setHijri("")
@@ -176,26 +185,26 @@ export default function Dashboard() {
   const fastRemainingStr = `${String(fh).padStart(2,"0")}:${String(fm).padStart(2,"0")}:${String(fs).padStart(2,"0")}`
   const fastPct = Math.round(fastProgress * 100)
   const fastHeadline = !prayerTimes
-    ? "Set your location to track your fast"
+    ? t("fast.headline.setLocation")
     : isFasting
-      ? `Fasting | ${fastPct}% done`
+      ? t("fast.headline.fasting", { pct: fastPct })
       : fastNotStarted
-        ? "Fast begins once Sehri ends"
-        : "Fast complete for today"
+        ? t("fast.headline.notStarted")
+        : t("fast.headline.complete")
   const fastMessage = () => {
-    if (!prayerTimes) return "Add your location in settings to see fasting progress."
-    if (fastNotStarted) return `Sehri ends at ${timeStr(fastStart)}. Your fast will begin then.`
-    if (!isFasting) return "You've completed today's fast. Enjoy your Iftar!"
-    if (fastProgress < 0.1)  return "Just getting started — the day is ahead of you."
-    if (fastProgress < 0.25) return "Early hours, stay strong and set your intentions."
-    if (fastProgress < 0.4)  return "Good progress so far, keep going."
-    if (fastProgress < 0.5)  return "Approaching the halfway mark."
-    if (fastProgress < 0.6)  return "Past the halfway mark, the hardest part is behind you."
-    if (fastProgress < 0.75) return "More than halfway there, keep your momentum."
-    if (fastProgress < 0.85) return "The afternoon stretch — stay patient, you're close."
-    if (fastProgress < 0.95) return "Almost there, Iftar is just around the corner."
-    if (fastProgress < 0.99) return "So close now — Iftar is only moments away."
-    return "Iftar time is here!"
+    if (!prayerTimes) return t("fast.msg.noLocation")
+    if (fastNotStarted) return t("fast.msg.notStarted", { time: timeStr(fastStart) })
+    if (!isFasting) return t("fast.msg.complete")
+    if (fastProgress < 0.1)  return t("fast.msg.p10")
+    if (fastProgress < 0.25) return t("fast.msg.p25")
+    if (fastProgress < 0.4)  return t("fast.msg.p40")
+    if (fastProgress < 0.5)  return t("fast.msg.p50")
+    if (fastProgress < 0.6)  return t("fast.msg.p60")
+    if (fastProgress < 0.75) return t("fast.msg.p75")
+    if (fastProgress < 0.85) return t("fast.msg.p85")
+    if (fastProgress < 0.95) return t("fast.msg.p95")
+    if (fastProgress < 0.99) return t("fast.msg.p99")
+    return t("fast.msg.done")
   }
   const isRamadan = hijriMonth === 9
   const fastConfirmed = isRamadan || fastAnswer === "yes"
@@ -214,24 +223,24 @@ export default function Dashboard() {
           {activeForbidden ? (
             <>
               <WarningAmberIcon sx={{ color: "error.main" }}/>
-              <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.1, textAlign: "center", color: "error.main" }}>Forbidden</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.1, textAlign: "center", color: "error.main" }}>{t("window.forbidden")}</Typography>
               <Typography variant="caption" sx={{ color: "text.secondary" }}>{timeStr(activeForbidden.end)}</Typography>
             </>
           ) : current ? (
             <>
-              <Typography variant="overline" sx={{ color: "text.secondary", lineHeight: 1 }}>Now</Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.1, textAlign: "center" }}>{current.name}</Typography>
+              <Typography variant="overline" sx={{ color: "text.secondary", lineHeight: 1 }}>{t("dash.now")}</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.1, textAlign: "center" }}>{prayerLabel(current.name)}</Typography>
               <Typography variant="caption" sx={{ color: "text.secondary" }}>{timeStr(current.end)}</Typography>
             </>
           ) : (
-            <Button fullWidth variant="outlined" size="small" sx={{ borderRadius: "50%", aspectRatio: 1, minWidth: 0, px: 2 }} startIcon={<LinearScaleIcon sx={{ transform: "rotate(-45deg)" }}/>} onClick={() => navigate("/tasbih")}>Tasbih</Button>
+            <Button fullWidth variant="outlined" size="small" sx={{ borderRadius: "50%", aspectRatio: 1, minWidth: 0, px: 2 }} startIcon={<LinearScaleIcon sx={{ transform: "rotate(-45deg)" }}/>} onClick={() => navigate("/tasbih")}>{t("dash.tasbihButton")}</Button>
           )}
         </Stack>
       </Box>
       <Stack sx={{ alignItems: "flex-end", gap: 0.25, flex: 1 }}>
-        <Typography variant="overline" sx={{ color: "text.secondary", lineHeight: 1.2, textAlign: "right" }}>Time remaining</Typography>
+        <Typography variant="overline" sx={{ color: "text.secondary", lineHeight: 1.2, textAlign: "right" }}>{t("dash.timeRemaining")}</Typography>
         <Typography variant="h4" sx={{ fontWeight: 700, fontFamily: "monospace", lineHeight: 1.1, textAlign: "right" }}>{next ? countdownStr : "--:--:--"}</Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "right" }}>{next ? `until ${next.name} begins at ${timeStr(next.time)}` : "Set your location to see prayer times"}</Typography>
+        <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "right" }}>{next ? t("dash.untilNext", { name: prayerLabel(next.name), time: timeStr(next.time) }) : t("dash.setLocationShort")}</Typography>
       </Stack>
     </Stack>
     {isFasting && (
@@ -241,15 +250,15 @@ export default function Dashboard() {
       >
         <Stack sx={{ flexDirection: "row", alignItems: "center", gap: 1.5, p: 2.5 }}>
           <HourglassBottomIcon sx={{ color: "text.secondary" }}/>
-          <Typography sx={{ fontWeight: 600, flex: 1 }}>{fastConfirmed ? fastHeadline : "Are you fasting today?"}</Typography>
+          <Typography sx={{ fontWeight: 600, flex: 1 }}>{fastConfirmed ? fastHeadline : t("dash.areYouFasting")}</Typography>
           {!fastConfirmed && <ExpandMoreIcon sx={{ color: "text.secondary" }}/>}
         </Stack>
         {fastConfirmed && (
           <Stack sx={{ gap: 1, px: 2.5, pb: 2.5 }}>
             <LinearProgress variant="determinate" value={fastPct} sx={{ height: 8, borderRadius: 4 }}/>
             <Stack sx={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Typography variant="caption" sx={{ color: "text.secondary" }}>{fastPct}% complete</Typography>
-              <Typography variant="caption" sx={{ color: "text.secondary", fontFamily: "monospace" }}>{fastRemainingStr} left</Typography>
+              <Typography variant="caption" sx={{ color: "text.secondary" }}>{t("fast.pctComplete", { pct: fastPct })}</Typography>
+              <Typography variant="caption" sx={{ color: "text.secondary", fontFamily: "monospace" }}>{t("fast.remainingLeft", { time: fastRemainingStr })}</Typography>
             </Stack>
             <Typography variant="body2" sx={{ color: "text.secondary" }}>{fastMessage()}</Typography>
           </Stack>
@@ -259,24 +268,24 @@ export default function Dashboard() {
     <Stack sx={{ flexDirection: "row", alignSelf: "center", width: "100%", maxWidth: 600, gap: 2.5 }}>
       <Stack sx={{ flex: 1, alignItems: "center", gap: 0.5, border: "1px solid", borderColor: "divider", borderRadius: 1, overflow: "hidden", p: 2.5 }}>
         <WbTwilightIcon sx={{ color: "text.secondary" }}/>
-        <Typography sx={{ color: "text.secondary" }}>Sunrise</Typography>
+        <Typography sx={{ color: "text.secondary" }}>{t("window.sunrise")}</Typography>
         <Typography sx={{ fontWeight: 600 }}>{timeStr(startAdj(prayerTimes?.sunrise))}</Typography>
       </Stack>
       <Stack sx={{ flex: 1, alignItems: "center", gap: 0.5, border: "1px solid", borderColor: "divider", borderRadius: 1, overflow: "hidden", p: 2.5 }}>
         <WbSunnyIcon sx={{ color: "text.secondary" }}/>
-        <Typography sx={{ color: "text.secondary" }}>Sunset</Typography>
+        <Typography sx={{ color: "text.secondary" }}>{t("window.sunset")}</Typography>
         <Typography sx={{ fontWeight: 600 }}>{timeStr(prayerTimes?.maghrib)}</Typography>
       </Stack>
     </Stack>
     <Stack sx={{ flexDirection: "row", alignSelf: "center", width: "100%", maxWidth: 600, gap: 2.5 }}>
       <Stack sx={{ flex: 1, alignItems: "center", gap: 0.5, border: "1px solid", borderColor: "divider", borderRadius: 1, overflow: "hidden", p: 2.5 }}>
         <NightsStayIcon sx={{ color: "text.secondary" }}/>
-        <Typography sx={{ color: "text.secondary" }}>Sehri Ends</Typography>
+        <Typography sx={{ color: "text.secondary" }}>{t("fast.sehriEnds")}</Typography>
         <Typography sx={{ fontWeight: 600 }}>{timeStr(endAdj(prayerTimes?.fajr))}</Typography>
       </Stack>
       <Stack sx={{ flex: 1, alignItems: "center", gap: 0.5, border: "1px solid", borderColor: "divider", borderRadius: 1, overflow: "hidden", p: 2.5 }}>
         <RestaurantIcon sx={{ color: "text.secondary" }}/>
-        <Typography sx={{ color: "text.secondary" }}>Iftar</Typography>
+        <Typography sx={{ color: "text.secondary" }}>{t("fast.iftar")}</Typography>
         <Typography sx={{ fontWeight: 600 }}>{timeStr(prayerTimes?.maghrib)}</Typography>
       </Stack>
     </Stack>
@@ -289,7 +298,7 @@ export default function Dashboard() {
           <Stack key={`${r.kind}-${r.name}`} sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", p: 2, gap: 1, borderBottom: i < mergedRows.length - 1 ? "1px solid" : "none", borderColor: "divider", backgroundColor: isActiveForbidden ? alpha(theme.palette.error.main, 0.08) : (isCurrentPrayer ? alpha(theme.palette.primary.main, 0.08) : "transparent") }}>
             <Stack sx={{ flexDirection: "row", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
               {isForbidden && <WarningAmberIcon sx={{ fontSize: 16, color: "error.main" }}/>}
-              <Typography sx={{ fontWeight: isCurrentPrayer || isActiveForbidden ? 700 : 400, color: isForbidden ? "error.main" : "text.primary" }}>{isForbidden ? "Forbidden" : r.name}</Typography>
+              <Typography sx={{ fontWeight: isCurrentPrayer || isActiveForbidden ? 700 : 400, color: isForbidden ? "error.main" : "text.primary" }}>{isForbidden ? t("window.forbidden") : prayerLabel(r.name)}</Typography>
             </Stack>
             <Typography sx={{ fontWeight: isCurrentPrayer || isActiveForbidden ? 700 : 400, color: isForbidden ? "error.main" : "text.primary", fontFamily: "monospace", whiteSpace: "nowrap" }}>{timeStr(r.time)} - {timeStr(r.end)}</Typography>
           </Stack>
