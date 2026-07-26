@@ -16,7 +16,6 @@ import {
   Box
 } from "@mui/material"
 import Turnstile from "@asset/turnstile"
-import { useTranslation } from "@/i18n"
 import Supabase from "@/supabase"
 
 const OTP_LENGTH = 6
@@ -24,7 +23,6 @@ const OTP_LENGTH = 6
 export default function Verify() {
   const { state } = useLocation()
   const navigate = useNavigate()
-  const { t } = useTranslation()
   const [digits, setDigits] = useState(Array(OTP_LENGTH).fill(""))
   const [verifying, setVerifying] = useState(false)
   const [snack, setSnack] = useState("")
@@ -67,7 +65,7 @@ export default function Verify() {
     if (next.every(d => d !== "") && !verifying) verify(next.join(""))
   }
   const resend = async () => {
-    if (!captchaToken) return setSnack(t("verify.snack.captchaRequired"))
+    if (!captchaToken) return setSnack("Please complete the CAPTCHA first")
     if (state?.type === "signup") try {
       const { error } = await Supabase.auth.resend({
         email: state?.email,
@@ -75,12 +73,12 @@ export default function Verify() {
         options: { captchaToken }
       })
       if (error) throw error
-      setSnack(t("verify.snack.emailSent"))
+      setSnack("Email Sent Successfully")
     } catch (err) {setSnack(err.message)} finally {resetCaptcha()}
     if (state?.type === "recovery") try {
       const { error } = await Supabase.auth.resetPasswordForEmail(state?.email, { captchaToken })
       if (error) throw error
-      setSnack(t("verify.snack.emailSent"))
+      setSnack("Email Sent Successfully")
     } catch (err) {setSnack(err.message)} finally {resetCaptcha()}
   }
   if (!state) return null
@@ -147,7 +145,7 @@ export default function Verify() {
         ))}
       </Stack>
       <Typography sx={{ alignSelf: "end" }}>
-        <Link onClick={() => resend()}>{t("verify.link.resend")}</Link>
+        <Link onClick={() => resend()}>Resend?</Link>
       </Typography>
     </Stack>
     <Stack sx={{ alignItems: "center" }}>

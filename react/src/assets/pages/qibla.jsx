@@ -18,7 +18,6 @@ import {
 import { red, green, blue } from "@mui/material/colors"
 import { useTheme, alpha } from "@mui/material/styles"
 import { Qibla as AQ, Coordinates } from "adhan"
-import { useTranslation } from "@/i18n"
 import { Theme } from "@/main"
 
 import StraightenIcon from "@mui/icons-material/Straighten"
@@ -47,7 +46,6 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 export default function Qibla() {
   const { user } = useContext(Theme)
-  const { t } = useTranslation()
   const theme = useTheme()
   const textPrimary   = theme.palette.text.primary
   const textSecondary = theme.palette.text.secondary
@@ -56,7 +54,7 @@ export default function Qibla() {
   const primary       = theme.palette.primary.main
   const [comStatus, setComStatus]   = useState("idle")
   const [heading, setHeading]       = useState(0)
-  const [snack, setSnack]           = useState(() => !user?.user_metadata?.coords ? t("qibla.snack.setLocation") : "")
+  const [snack, setSnack]           = useState(() => !user?.user_metadata?.coords ? "Set Your Location In Settings To Get Direction And Distance" : "")
   const coords = user?.user_metadata?.coords
   const qibla = coords ? Math.round(AQ(new Coordinates(coords.lat, coords.lon))) : 0
   const dist  = coords ? haversine(Kaaba.lat, Kaaba.lon, coords.lat, coords.lon) : "0 km"
@@ -177,15 +175,15 @@ export default function Qibla() {
           <Stack onClick={comStatus === "idle" || comStatus === "unsupported" ? startCompass : undefined} sx={{ cursor: comStatus === "idle" || comStatus === "unsupported" ? "pointer" : "default", position: "absolute", borderRadius: "50%", alignItems: "center", justifyContent: "center", backdropFilter: "blur(5px)", backgroundColor: alpha(textPrimary, 0.25), inset: 0, gap: 2.5 }}>
             {comStatus === "idle" && (<>
               <ExploreIcon sx={{ fontSize: 64, color: bgPaper }} />
-              <Typography variant="h6" sx={{ textAlign: "center", width: "70%", color: bgPaper, fontWeight: 600, textShadow: `0 1px 4px ${alpha(textPrimary, 0.5)}` }}>{t("qibla.overlay.tapToEnable")}</Typography>
+              <Typography variant="h6" sx={{ textAlign: "center", width: "70%", color: bgPaper, fontWeight: 600, textShadow: `0 1px 4px ${alpha(textPrimary, 0.5)}` }}>Tap to enable compass</Typography>
             </>)}
             {comStatus === "measuring" && (<>
               <CircularProgress size={32} sx={{ color: bgPaper }} />
-              <Typography variant="h6" sx={{ color: bgPaper, fontWeight: 600 }}>{t("qibla.overlay.detecting")}</Typography>
+              <Typography variant="h6" sx={{ color: bgPaper, fontWeight: 600 }}>Detecting…</Typography>
             </>)}
             {comStatus === "unsupported" && (<>
               <ErrorIcon sx={{ fontSize: 64, color: bgPaper }} />
-              <Typography variant="h6" sx={{ textAlign: "center", width: "70%", color: bgPaper, fontWeight: 600, textShadow: `0 1px 4px ${alpha(textPrimary, 0.5)}` }}>{t("qibla.overlay.unsupported")}</Typography>
+              <Typography variant="h6" sx={{ textAlign: "center", width: "70%", color: bgPaper, fontWeight: 600, textShadow: `0 1px 4px ${alpha(textPrimary, 0.5)}` }}>Compass not available. Tap to retry.</Typography>
             </>)}
           </Stack>
         )}

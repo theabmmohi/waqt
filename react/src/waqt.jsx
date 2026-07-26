@@ -26,7 +26,6 @@ import {
   Box
 } from "@mui/material"
 import { subscribeWeb } from "@/firebase"
-import { useTranslation } from "@/i18n"
 import { Theme, getNativeFcmToken } from "@/main"
 import Installations from "@page/installations"
 import { App as Cap } from "@capacitor/app"
@@ -59,7 +58,6 @@ import MenuIcon from "@mui/icons-material/Menu"
 export default function App() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { t } = useTranslation()
   const { dark, toggle, user } = useContext(Theme)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerPos, setDrawerPos] = useState(() => localStorage.getItem("drawerPos") || "l")
@@ -86,9 +84,9 @@ export default function App() {
     navigate("/")
   }
   const navs = [
-    { icon: <DashboardIcon/>, label: t("nav.dashboard"), route: "/" },
-    { icon: <LinearScaleIcon sx={{ transform: "rotate(-45deg)" }}/>, label: t("nav.tasbih"), route: "/tasbih" },
-    { icon: <GpsFixedIcon/>, label: t("nav.qibla"), route: "/qibla" },
+    { icon: <DashboardIcon/>, label: "Dashboard", route: "/" },
+    { icon: <LinearScaleIcon sx={{ transform: "rotate(-45deg)" }}/>, label: "Tasbih", route: "/tasbih" },
+    { icon: <GpsFixedIcon/>, label: "Qibla", route: "/qibla" },
   ]
   useEffect(() => {
     const segments = location.pathname.split("/").filter(Boolean)
@@ -171,7 +169,7 @@ export default function App() {
                 return (
                   <Button
                     fullWidth disableElevation
-                    key={item.route}
+                    key={item.label}
                     variant={active ? "contained" : "outlined"}
                     color={active ? "primary" : "inherit"}
                     startIcon={item.icon}
@@ -190,7 +188,7 @@ export default function App() {
                   color={location.pathname === "/installations" ? "primary" : "inherit"}
                   onClick={() => { navigate("/installations"); closeDrawer() }}
                   startIcon={<AndroidIcon/>}
-                >{t("nav.installations")}</Button>
+                >Installations</Button>
               </Badge>
               <Divider orientation="vertical"/>
               <Stack sx={{ p: 0.5, justifyContent: "center", backgroundColor: location.pathname.startsWith("/about") ? "primary.main" : "" }}>
@@ -223,7 +221,7 @@ export default function App() {
               <Divider orientation="vertical"/>
               <Stack sx={{ justifyContent: "center", overflowX: "hidden", flex: 1, p: 1 }}>
                 <Typography noWrap variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1 }}>
-                  {user?.user_metadata?.full_name ?? t("nav.userFallback")}
+                  {user?.user_metadata?.full_name ?? "User"}
                 </Typography>
                 <Typography noWrap variant="caption" sx={{ color: "text.secondary", lineHeight: 1 }}>
                   {user?.email ?? ""}
