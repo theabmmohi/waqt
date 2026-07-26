@@ -279,7 +279,6 @@ function Preferences({setSnack}) {
   const [locationType, setLocationType] =   useState("gps")
   const [timeFormat, setTimeFormat] =       useState("12h")
   const [calcMethod, setCalcMethod] =       useState("Karachi")
-  const [language, setLanguage] =           useState("en")
   const [madhab, setMadhab] =               useState("hanafi")
   const [coords, setCoords] =               useState(null)
   const [coordsLoading, setCoordsLoading] = useState(false)
@@ -341,8 +340,8 @@ function Preferences({setSnack}) {
     try {
       const { error } = await Supabase.auth.updateUser({ data: {
         ...(locationType === "gps" ? {city: null} : {city}),
-        language, timeFormat, locationType,
-        coords, calcMethod, madhab, tz
+        timeFormat, locationType, tz,
+        coords, calcMethod, madhab
       } })
       if (error) throw error
       setSnack("Preferences Saved")
@@ -352,7 +351,6 @@ function Preferences({setSnack}) {
     /* eslint-disable react-hooks/set-state-in-effect */
     const data = user?.user_metadata
     if (!data) return
-    if (data.language)     setLanguage(data.language)
     if (data.timeFormat)   setTimeFormat(data.timeFormat)
     if (data.locationType) setLocationType(data.locationType)
     if (data.coords)       setCoords(data.coords)
@@ -369,13 +367,6 @@ function Preferences({setSnack}) {
   }, [user?.id])
   return (<Stack sx={{ gap: 2.5, p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5, p: 2.5 }}>
-      <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
-        <Typography sx={{ minWidth: "50%" }}>Language :</Typography>
-        <ToggleButtonGroup exclusive fullWidth size="small" sx={{ flex: 1 }} value={language} onChange={(_, v) => { if (v) setLanguage(v) }}>
-          <ToggleButton value="en">English</ToggleButton>
-          <ToggleButton value="bn">বাংলা</ToggleButton>
-        </ToggleButtonGroup>
-      </Stack>
       <Stack sx={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 2.5 }}>
         <Typography sx={{ minWidth: "50%" }}>Time Format :</Typography>
         <ToggleButtonGroup exclusive fullWidth size="small" sx={{ flex: 1 }} value={timeFormat} onChange={(_, v) => { if (v) setTimeFormat(v) }}>

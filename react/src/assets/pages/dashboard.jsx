@@ -87,7 +87,7 @@ export default function Dashboard() {
     try { return localStorage.getItem(`fastAnswer:${todayKey}`) } catch { return null }
   })
   const confirmFasting = () => {
-    try { localStorage.setItem(`fastAnswer:${todayKey}`, "yes") } catch {}
+    try { localStorage.setItem(`fastAnswer:${todayKey}`, "yes") } catch { return null }
     setFastAnswer("yes")
   }
   const tomorrowFajrRaw = prayerTimes ? new PrayerTimes(coords, new Date(calcDate.getTime() + 86400000), params).fajr : null
