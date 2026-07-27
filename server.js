@@ -13,6 +13,22 @@ import {
   Madhab
 } from "adhan"
 
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught exception — exiting for supervisor restart:", err)
+  process.exit(1)
+})
+process.on("unhandledRejection", (err) => {
+  console.error("Unhandled rejection — exiting for supervisor restart:", err)
+  process.exit(1)
+})
+
+const REQUIRED_ENV = ["SB_URL", "SB_SECRET", "FB_PRIVATE_KEY", "FB_CLIENT_EMAIL", "FB_PROJECT_ID"]
+const missingEnv = REQUIRED_ENV.filter(k => !process.env[k])
+if (missingEnv.length) {
+  console.error(`Missing required env vars: ${missingEnv.join(", ")}`)
+  process.exit(1)
+}
+
 const supabase = createClient(process.env.SB_URL, process.env.SB_SECRET)
 const firebase = initializeApp({ credential: cert({
   privateKey: process.env.FB_PRIVATE_KEY?.replace(/\\n/g, "\n"),
@@ -32,8 +48,6 @@ const mailer = nodemailer.createTransport({
 const APP_ORIGIN = "https://app.abm.ami.bd"
 server.use(cors({origin: APP_ORIGIN}))
 server.use(express.json())
-cron.schedule("* * * * *", dispatchDueNotifications)
-cron.schedule("0 * * * *", syncAllUsers)
 
 let GHreleaseCache = { data: null, expiresAt: 0 }
 
@@ -55,6 +69,8 @@ const civilDate = (d, timeZone) => {
   return new Date(y, m - 1, dd, 12, 0, 0)
 }
 
+// Mirrors the +1min/-1min window adjustment used on the dashboard so server-scheduled
+// reminders line up exactly with what the user sees in the app.
 function todaysWaqts(meta, dayOffset = 0) {
   if (!meta?.coords || !meta?.tz) return []
   const coords = new Coordinates(meta.coords.lat, meta.coords.lon)
@@ -136,8 +152,11 @@ async function dispatchDueNotifications() {
     .order("fire_at", { ascending: true }).limit(300)
   if (error) return console.error("Error fetching due notifications: ", error.message)
   for (const row of due) {
-    try { await deliverWaqtReminder(row) }
-    catch (err) { console.error(`Error delivering reminder ${row.id}: `, err.message) }
+    const alreadyEnded = new Date(row.waqt_end).getTime() <= Date.now()
+    if (!alreadyEnded) {
+      try { await deliverWaqtReminder(row) }
+      catch (err) { console.error(`Error delivering reminder ${row.id}: `, err.message) }
+    }
     await supabase.from("scheduled_notifications").update({ sent: true }).eq("id", row.id)
   }
 }
@@ -174,6 +193,20 @@ async function deliverWaqtReminder(row) {
     })
   }
 }
+
+let syncing = false
+cron.schedule("0 * * * *", async () => {
+  if (syncing) return console.warn("Skipped waqt sync — previous run still in progress")
+  syncing = true
+  try { await syncAllUsers() } finally { syncing = false }
+})
+
+let dispatching = false
+cron.schedule("* * * * *", async () => {
+  if (dispatching) return console.warn("Skipped notification dispatch — previous run still in progress")
+  dispatching = true
+  try { await dispatchDueNotifications() } finally { dispatching = false }
+})
 
 
 
@@ -375,6 +408,8 @@ server.post("/webhook/release", async (req, res) => {
   }
 })
 
+// Called from the notification action buttons (App + PWA). No auth header — the row id
+// itself is the unbguessable capability token, scoped to one waqt, single-use via `handled`.
 server.post("/prayer/action", async (req, res) => {
   try {
     const { id, action } = req.body
@@ -384,6 +419,9 @@ server.post("/prayer/action", async (req, res) => {
   } catch (err) { res.json({ success: false, message: err?.message ?? "Server Error" }) }
 })
 
+// Recompute this user's remaining waqts right away (called after toggling prayer
+// reminders on, or after saving a new location/calc method/madhab) instead of
+// waiting for the next hourly sync.
 server.post("/prayer/resync", async (req, res) => {
   try {
     const user = await getUser(req)
@@ -568,4 +606,15 @@ server.post("/settings/security/sessions/logout", async (req, res) => {
 
 
 server.get("/", (_, res) => res.type("text").send("Im Alive!"))
-server.listen(8000, () => console.log("Server Running On Port: 8000"))
+const httpServer = server.listen(8000, () => console.log("Server Running On Port: 8000"))
+httpServer.on("error", (err) => {
+  console.error("Server failed to start:", err)
+  process.exit(1)
+})
+for (const sig of ["SIGTERM", "SIGINT"]) {
+  process.on(sig, () => {
+    console.log(`${sig} received — shutting down gracefully`)
+    httpServer.close(() => process.exit(0))
+    setTimeout(() => process.exit(1), 10000).unref() // force-exit if close hangs
+  })
+}
