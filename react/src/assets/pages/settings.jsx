@@ -104,19 +104,6 @@ function Notifications({setSnack}) {
   const [teleLinked, setTeleLinked]       = useState(false)
   const [showCon, setShowCon]             = useState(false)
   const [teleId, setTeleId]               = useState("")
-  const [prayerNotif, setPrayerNotif]     = useState(!!user?.user_metadata?.prayerNotif)
-  const [prayerLoading, setPrayerLoading] = useState(false)
-  const togglePrayerNotif = async () => {
-    setPrayerLoading(true)
-    const next = !prayerNotif
-    try {
-      const { error } = await Supabase.auth.updateUser({ data: { prayerNotif: next } })
-      if (error) throw new Error(error.message)
-      setPrayerNotif(next)
-      if (next) await api.post("/prayer/resync").catch(() => {}) // schedule today's remaining waqts right away
-      setSnack(next ? "Prayer reminders enabled" : "Prayer reminders disabled")
-    } catch (err) { setSnack(err?.message ?? "Sorry, Internal Error") } finally { setPrayerLoading(false) }
-  }
   const pollRef = useRef()
   const startPolling = () => {
     pollRef.current = setInterval(async () => {
@@ -148,6 +135,7 @@ function Notifications({setSnack}) {
         if (!data.success) throw new Error(data.message)
         await Supabase.auth.updateUser({ data: { webPushNotif: true } })
         setBrowEnabled(true)
+        api.post("/prayer/resync").catch(() => {}) // schedule today's remaining waqts right away
         setSnack("Browser notifications enabled")
       }
     } catch (err) {
@@ -181,6 +169,7 @@ function Notifications({setSnack}) {
         await PushNotifications.register()
         await Supabase.auth.updateUser({ data: { platformNotif: true } })
         setBrowEnabled(true)
+        api.post("/prayer/resync").catch(() => {}) // schedule today's remaining waqts right away
         setSnack("Notifications enabled")
       }
     } catch (err) {
@@ -198,6 +187,7 @@ function Notifications({setSnack}) {
         if (!data.success) throw new Error(data.message)
         setTeleLinked(true)
         setTeleId(data.chatId)
+        api.post("/prayer/resync").catch(() => {}) // schedule today's remaining waqts right away
         setSnack(data.message)
       } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setTeleLinking(false)}
     } else {
@@ -251,16 +241,8 @@ function Notifications({setSnack}) {
       <Stack sx={{ alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5 }}>
         <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
           <Stack sx={{ flex: 1 }}>
-            <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><NotificationsIcon sx={{ fontSize: 24 }}/>Prayer Reminders</Typography>
-            <Typography variant="body2" color="text.secondary">Get notified when each waqt starts, with quick actions to mark as prayed or snooze.</Typography>
-          </Stack>
-          <Stack sx={{ justifyContent: "center" }}>
-            <Switch checked={prayerNotif} onChange={togglePrayerNotif} disabled={prayerLoading}/>
-          </Stack>
-        </Stack>
-        <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
-          <Stack sx={{ flex: 1 }}>
             <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}><WebhookIcon sx={{ fontSize: 24 }}/>{Capacitor.isNativePlatform() ? "App Notifications" : "Browser Notifications"}</Typography>
+            <Typography variant="body2" color="text.secondary">Includes prayer time reminders, with quick actions to mark as prayed or snooze.</Typography>
           </Stack>
           <Stack sx={{ justifyContent: "center" }}>
             <Switch checked={browEnabled} onChange={toggleBrow} disabled={browLoading}/>

@@ -69,8 +69,6 @@ const civilDate = (d, timeZone) => {
   return new Date(y, m - 1, dd, 12, 0, 0)
 }
 
-// Mirrors the +1min/-1min window adjustment used on the dashboard so server-scheduled
-// reminders line up exactly with what the user sees in the app.
 function todaysWaqts(meta, dayOffset = 0) {
   if (!meta?.coords || !meta?.tz) return []
   const coords = new Coordinates(meta.coords.lat, meta.coords.lon)
@@ -94,7 +92,7 @@ function todaysWaqts(meta, dayOffset = 0) {
 
 async function syncUserWaqts(user) {
   const meta = user.user_metadata
-  if (!meta?.prayerNotif || !meta?.coords) return
+  if (!meta?.coords) return
   const rows = [0, 1].flatMap(off => todaysWaqts(meta, off))
     .filter(w => w.start && w.start.getTime() > Date.now())
     .map(w => ({
@@ -109,11 +107,17 @@ async function syncUserWaqts(user) {
 }
 
 async function syncAllUsers() {
+  const { data: channelRows, error: chErr } = await supabase.from("notification_channels").select("user_id")
+  if (chErr) return console.error("Error listing notification channels for waqt sync: ", chErr.message)
+  const activeUserIds = new Set(channelRows.map(c => c.user_id))
+  if (!activeUserIds.size) return
   let page = 1
   while (true) {
     const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 200 })
     if (error) return console.error("Error listing users for waqt sync: ", error.message)
-    for (const user of data.users) await syncUserWaqts(user)
+    for (const user of data.users) {
+      if (activeUserIds.has(user.id)) await syncUserWaqts(user)
+    }
     if (data.users.length < 200) break
     page++
   }
@@ -171,7 +175,6 @@ async function deliverWaqtReminder(row) {
     { id: "mark_prayed", title: "Mark as Prayed" },
     ...(remainingMs > 4 * 60000 ? [{ id: "remind_later", title: "Remind Me Later" }] : [])
   ]
-
   const appTokens = channels.filter(c => c.type === "fcm" && c.metadata?.platform === "app").map(c => c.identifier)
   const webTokens = channels.filter(c => c.type === "fcm" && c.metadata?.platform === "web").map(c => c.identifier)
   const teleChat = channels.find(c => c.type === "telegram")?.identifier
@@ -408,8 +411,6 @@ server.post("/webhook/release", async (req, res) => {
   }
 })
 
-// Called from the notification action buttons (App + PWA). No auth header — the row id
-// itself is the unbguessable capability token, scoped to one waqt, single-use via `handled`.
 server.post("/prayer/action", async (req, res) => {
   try {
     const { id, action } = req.body
@@ -419,9 +420,6 @@ server.post("/prayer/action", async (req, res) => {
   } catch (err) { res.json({ success: false, message: err?.message ?? "Server Error" }) }
 })
 
-// Recompute this user's remaining waqts right away (called after toggling prayer
-// reminders on, or after saving a new location/calc method/madhab) instead of
-// waiting for the next hourly sync.
 server.post("/prayer/resync", async (req, res) => {
   try {
     const user = await getUser(req)
