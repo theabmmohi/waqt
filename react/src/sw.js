@@ -43,6 +43,16 @@ self.addEventListener("notificationclick", (e) => {
   const clickedAction = e.action
   const meta = e.notification.data?.actionsMeta?.find(a => a.id === clickedAction)
   e.notification.close()
+  if (clickedAction && meta?.api) {
+    e.waitUntil(
+      fetch(meta.api, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(meta.body ?? {})
+      }).catch(err => console.error("Prayer action failed:", err))
+    )
+    return
+  }
   e.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
       const targetUrl = meta?.url ?? e.notification.data?.url ?? "/"

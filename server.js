@@ -29,10 +29,151 @@ const mailer = nodemailer.createTransport({
   }, secure: true
 })
 
-server.use(cors({origin: "https://app.abm.ami.bd"}))
+const APP_ORIGIN = "https://app.abm.ami.bd"
+server.use(cors({origin: APP_ORIGIN}))
 server.use(express.json())
+cron.schedule("* * * * *", dispatchDueNotifications)
+cron.schedule("0 * * * *", syncAllUsers)
 
 let GHreleaseCache = { data: null, expiresAt: 0 }
+
+const CALC_METHOD_MAP = {
+  MuslimWorldLeague: CalculationMethod.MuslimWorldLeague,
+  NorthAmerica: CalculationMethod.NorthAmerica,
+  Egyptian: CalculationMethod.Egyptian,
+  UmmAlQura: CalculationMethod.UmmAlQura,
+  Karachi: CalculationMethod.Karachi,
+  Tehran: CalculationMethod.Tehran,
+  MoonsightingCommittee: CalculationMethod.MoonsightingCommittee,
+  Singapore: CalculationMethod.Singapore
+}
+const civilDate = (d, timeZone) => {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(d)
+  const y = Number(parts.find(p => p.type === "year").value)
+  const m = Number(parts.find(p => p.type === "month").value)
+  const dd = Number(parts.find(p => p.type === "day").value)
+  return new Date(y, m - 1, dd, 12, 0, 0)
+}
+
+function todaysWaqts(meta, dayOffset = 0) {
+  if (!meta?.coords || !meta?.tz) return []
+  const coords = new Coordinates(meta.coords.lat, meta.coords.lon)
+  const madhab = meta.madhab === "hanafi" ? Madhab.Hanafi : Madhab.Shafi
+  const params = (CALC_METHOD_MAP[meta.calcMethod] ?? CalculationMethod.MuslimWorldLeague)()
+  params.madhab = madhab
+  const calcDate = civilDate(new Date(Date.now() + dayOffset * 86400000), meta.tz)
+  const pt = new PrayerTimes(coords, calcDate, params)
+  const tomorrowFajr = new PrayerTimes(coords, new Date(calcDate.getTime() + 86400000), params).fajr
+  const MIN = 60000
+  const startAdj = (d, exact = false) => d ? new Date(d.getTime() + (exact ? 0 : MIN)) : null
+  const endAdj = (d) => d ? new Date(d.getTime() - MIN) : null
+  return [
+    { prayer: "Fajr",    start: startAdj(pt.fajr),          end: endAdj(pt.sunrise) },
+    { prayer: "Dhuhr",   start: startAdj(pt.dhuhr),         end: endAdj(pt.asr) },
+    { prayer: "Asr",     start: startAdj(pt.asr),           end: endAdj(pt.maghrib) },
+    { prayer: "Maghrib", start: startAdj(pt.maghrib, true), end: endAdj(pt.isha) },
+    { prayer: "Isha",    start: startAdj(pt.isha),          end: endAdj(tomorrowFajr) }
+  ]
+}
+
+async function syncUserWaqts(user) {
+  const meta = user.user_metadata
+  if (!meta?.prayerNotif || !meta?.coords) return
+  const rows = [0, 1].flatMap(off => todaysWaqts(meta, off))
+    .filter(w => w.start && w.start.getTime() > Date.now())
+    .map(w => ({
+      user_id: user.id, prayer: w.prayer,
+      waqt_start: w.start.toISOString(), waqt_end: w.end.toISOString(),
+      fire_at: w.start.toISOString(), stage: "initial"
+    }))
+  if (!rows.length) return
+  const { error } = await supabase.from("scheduled_notifications")
+    .upsert(rows, { onConflict: "user_id,prayer,waqt_start", ignoreDuplicates: true })
+  if (error) console.error(`Error syncing waqts for ${user.id}: `, error.message)
+}
+
+async function syncAllUsers() {
+  let page = 1
+  while (true) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 200 })
+    if (error) return console.error("Error listing users for waqt sync: ", error.message)
+    for (const user of data.users) await syncUserWaqts(user)
+    if (data.users.length < 200) break
+    page++
+  }
+}
+
+async function handlePrayerAction(id, action) {
+  const { data: row, error } = await supabase.from("scheduled_notifications").select("*").eq("id", id).maybeSingle()
+  if (error || !row || row.handled) return { ok: false }
+  if (action === "mark_prayed") {
+    await supabase.from("prayer_logs").upsert(
+      { user_id: row.user_id, prayer: row.prayer, waqt_start: row.waqt_start },
+      { onConflict: "user_id,prayer,waqt_start", ignoreDuplicates: true }
+    )
+    await supabase.from("scheduled_notifications").update({ handled: true }).eq("id", id)
+    return { ok: true }
+  }
+  if (action === "remind_later") {
+    await supabase.from("scheduled_notifications").update({ handled: true }).eq("id", id)
+    const now = Date.now()
+    const end = new Date(row.waqt_end).getTime()
+    if (end <= now) return { ok: true } // window already over, nothing to schedule
+    const fireAt = new Date(now + (end - now) / 2)
+    await supabase.from("scheduled_notifications").insert({
+      user_id: row.user_id, prayer: row.prayer,
+      waqt_start: row.waqt_start, waqt_end: row.waqt_end,
+      fire_at: fireAt.toISOString(), stage: "snooze"
+    })
+    return { ok: true }
+  }
+  return { ok: false }
+}
+
+async function dispatchDueNotifications() {
+  const { data: due, error } = await supabase.from("scheduled_notifications")
+    .select("*").eq("sent", false).lte("fire_at", new Date().toISOString())
+    .order("fire_at", { ascending: true }).limit(300)
+  if (error) return console.error("Error fetching due notifications: ", error.message)
+  for (const row of due) {
+    try { await deliverWaqtReminder(row) }
+    catch (err) { console.error(`Error delivering reminder ${row.id}: `, err.message) }
+    await supabase.from("scheduled_notifications").update({ sent: true }).eq("id", row.id)
+  }
+}
+
+async function deliverWaqtReminder(row) {
+  const { data: channels } = await supabase.from("notification_channels").select("*").eq("user_id", row.user_id)
+  if (!channels?.length) return
+  const remainingMs = new Date(row.waqt_end).getTime() - Date.now()
+  const title = row.stage === "snooze" ? `Reminder: ${row.prayer}` : `${row.prayer} time has started`
+  const body = row.stage === "snooze" ? `Have you prayed ${row.prayer} yet?` : `It's time for ${row.prayer}. Tap to open Waqt.`
+  const actions = [
+    { id: "mark_prayed", title: "Mark as Prayed" },
+    ...(remainingMs > 4 * 60000 ? [{ id: "remind_later", title: "Remind Me Later" }] : [])
+  ]
+
+  const appTokens = channels.filter(c => c.type === "fcm" && c.metadata?.platform === "app").map(c => c.identifier)
+  const webTokens = channels.filter(c => c.type === "fcm" && c.metadata?.platform === "web").map(c => c.identifier)
+  const teleChat = channels.find(c => c.type === "telegram")?.identifier
+
+  for (const tokens of [appTokens, webTokens]) {
+    if (!tokens.length) continue
+    const res = await sendPush(tokens, { title, body, url: "/", actions: actions.map(a => ({ id: a.id, title: a.title, api: `${process.env.API_URL}/prayer/action`, body: { id: row.id, action: a.id } })) })
+    if (res.invalidTokens?.length) await supabase.from("notification_channels").delete().eq("type", "fcm").in("identifier", res.invalidTokens)
+    if (res.successCount > 0) return
+  }
+  if (teleChat) {
+    await fetch(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: teleChat, text: `🕌 *${title}*\n${body}`, parse_mode: "Markdown",
+        reply_markup: { inline_keyboard: [actions.map(a => ({ text: a.title, callback_data: `${a.id}:${row.id}` }))] }
+      })
+    })
+  }
+}
 
 
 
@@ -149,7 +290,20 @@ server.post("/webhook/telegram", async (req, res) => {
   if (req.headers["x-telegram-bot-api-secret-token"] !== process.env.TG_HOOK_SCRT) return res.sendStatus(403)
   res.sendStatus(200)
   try {
-    const { message } = req.body
+    const { message, callback_query } = req.body
+    if (callback_query) {
+      const [action, id] = (callback_query.data ?? "").split(":")
+      const { ok } = await handlePrayerAction(id, action)
+      await fetch(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/answerCallbackQuery`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          callback_query_id: callback_query.id,
+          text: !ok ? "Couldn't process — try again in the app" : action === "mark_prayed" ? "Marked as prayed ✅" : "We'll remind you again later ⏰"
+        })
+      })
+      return
+    }
     if (!message) return
     const chatId = message.chat.id
     const text = message.text?.trim()
@@ -219,6 +373,23 @@ server.post("/webhook/release", async (req, res) => {
     console.error("Error at /webhook/release: ", err)
     await notify(`⚠️ Release webhook failed for ${version ?? "?"}:\n${err.message}`)
   }
+})
+
+server.post("/prayer/action", async (req, res) => {
+  try {
+    const { id, action } = req.body
+    if (!id || !["mark_prayed", "remind_later"].includes(action)) throw new Error("Invalid request")
+    const { ok } = await handlePrayerAction(id, action)
+    res.json({ success: ok })
+  } catch (err) { res.json({ success: false, message: err?.message ?? "Server Error" }) }
+})
+
+server.post("/prayer/resync", async (req, res) => {
+  try {
+    const user = await getUser(req)
+    await syncUserWaqts(user)
+    res.json({ success: true })
+  } catch (err) { res.json({ success: false, message: err?.message ?? "Server Error" }) }
 })
 
 server.post("/settings/notifications/webPush/status", async (req, res) => {
