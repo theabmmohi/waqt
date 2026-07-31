@@ -13,18 +13,19 @@ import {
   Madhab
 } from "adhan"
 
-process.on("uncaughtException", (err) => {
-  console.error("Uncaught exception — exiting for supervisor restart:", err)
+process.on("uncaughtException", async (err) => {
+  await notify(`🔥 *Uncaught exception* — exiting for supervisor restart:\n${err?.stack ?? err?.message ?? err}`)
   process.exit(1)
 })
-process.on("unhandledRejection", (err) => {
-  console.error("Unhandled rejection — exiting for supervisor restart:", err)
+process.on("unhandledRejection", async (err) => {
+  await notify(`🔥 *Unhandled rejection* — exiting for supervisor restart:\n${err?.stack ?? err?.message ?? err}`)
   process.exit(1)
 })
 
 const REQUIRED_ENV = ["SB_URL", "SB_SECRET", "FB_PRIVATE_KEY", "FB_CLIENT_EMAIL", "FB_PROJECT_ID"]
 const missingEnv = REQUIRED_ENV.filter(k => !process.env[k])
 if (missingEnv.length) {
+  // Can't use notify() here — TG_BOT_TOKEN/TG_ADMIN_CID may themselves be among the missing vars.
   console.error(`Missing required env vars: ${missingEnv.join(", ")}`)
   process.exit(1)
 }
@@ -103,18 +104,18 @@ async function syncUserWaqts(user) {
   if (!rows.length) return
   const { error } = await supabase.from("scheduled_notifications")
     .upsert(rows, { onConflict: "user_id,prayer,waqt_start", ignoreDuplicates: true })
-  if (error) console.error(`Error syncing waqts for ${user.id}: `, error.message)
+  if (error) await notify(`⚠️ Error syncing waqts for ${user.id}:\n${error.message}`)
 }
 
 async function syncAllUsers() {
   const { data: channelRows, error: chErr } = await supabase.from("notification_channels").select("user_id")
-  if (chErr) return console.error("Error listing notification channels for waqt sync: ", chErr.message)
+  if (chErr) return await notify(`⚠️ Error listing notification channels for waqt sync:\n${chErr.message}`)
   const activeUserIds = new Set(channelRows.map(c => c.user_id))
   if (!activeUserIds.size) return
   let page = 1
   while (true) {
     const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 200 })
-    if (error) return console.error("Error listing users for waqt sync: ", error.message)
+    if (error) return await notify(`⚠️ Error listing users for waqt sync:\n${error.message}`)
     for (const user of data.users) {
       if (activeUserIds.has(user.id)) await syncUserWaqts(user)
     }
@@ -154,19 +155,51 @@ async function dispatchDueNotifications() {
   const { data: due, error } = await supabase.from("scheduled_notifications")
     .select("*").eq("sent", false).lte("fire_at", new Date().toISOString())
     .order("fire_at", { ascending: true }).limit(300)
-  if (error) return console.error("Error fetching due notifications: ", error.message)
+  if (error) return await notify(`⚠️ Error fetching due notifications:\n${error.message}`)
+  if (!due.length) return
+
+  // Group rows whose fire_at falls within ~10 minutes of each other into the same
+  // batch, so users due around the same time share one channel lookup + one sent-update
+  // instead of each row hitting Supabase individually.
+  const MERGE_WINDOW_MS = 10 * 60000
+  const batches = []
   for (const row of due) {
-    const alreadyEnded = new Date(row.waqt_end).getTime() <= Date.now()
-    if (!alreadyEnded) {
-      try { await deliverWaqtReminder(row) }
-      catch (err) { console.error(`Error delivering reminder ${row.id}: `, err.message) }
-    }
-    await supabase.from("scheduled_notifications").update({ sent: true }).eq("id", row.id)
+    const t = new Date(row.fire_at).getTime()
+    let batch = batches.find(b => Math.abs(b.anchor - t) <= MERGE_WINDOW_MS)
+    if (!batch) { batch = { anchor: t, rows: [] }; batches.push(batch) }
+    batch.rows.push(row)
   }
+
+  const sentIds = []
+  for (const batch of batches) {
+    const userIds = [...new Set(batch.rows.map(r => r.user_id))]
+    const { data: channels, error: chErr } = await supabase
+      .from("notification_channels").select("*").in("user_id", userIds)
+    if (chErr) { await notify(`⚠️ Error batch-fetching channels for dispatch:\n${chErr.message}`); continue }
+    const channelsByUser = new Map()
+    for (const c of channels ?? []) {
+      if (!channelsByUser.has(c.user_id)) channelsByUser.set(c.user_id, [])
+      channelsByUser.get(c.user_id).push(c)
+    }
+
+    await Promise.allSettled(batch.rows.map(async row => {
+      const alreadyEnded = new Date(row.waqt_end).getTime() <= Date.now()
+      if (!alreadyEnded) {
+        try { await deliverWaqtReminder(row, channelsByUser.get(row.user_id) ?? []) }
+        catch (err) { await notify(`⚠️ Error delivering reminder ${row.id}:\n${err.message}`) }
+      }
+    }))
+    sentIds.push(...batch.rows.map(r => r.id))
+  }
+
+  if (sentIds.length) await supabase.from("scheduled_notifications").update({ sent: true }).in("id", sentIds)
 }
 
-async function deliverWaqtReminder(row) {
-  const { data: channels } = await supabase.from("notification_channels").select("*").eq("user_id", row.user_id)
+async function deliverWaqtReminder(row, channels) {
+  if (!channels) {
+    const { data } = await supabase.from("notification_channels").select("*").eq("user_id", row.user_id)
+    channels = data
+  }
   if (!channels?.length) return
   const remainingMs = new Date(row.waqt_end).getTime() - Date.now()
   const title = row.stage === "snooze" ? `Reminder: ${row.prayer}` : `${row.prayer} time has started`
@@ -199,14 +232,14 @@ async function deliverWaqtReminder(row) {
 
 let syncing = false
 cron.schedule("0 * * * *", async () => {
-  if (syncing) return console.warn("Skipped waqt sync — previous run still in progress")
+  if (syncing) return await notify("⏭️ Skipped waqt sync — previous run still in progress")
   syncing = true
   try { await syncAllUsers() } finally { syncing = false }
 })
 
 let dispatching = false
-cron.schedule("* * * * *", async () => {
-  if (dispatching) return console.warn("Skipped notification dispatch — previous run still in progress")
+cron.schedule("*/3 * * * *", async () => {
+  if (dispatching) return await notify("⏭️ Skipped notification dispatch — previous run still in progress")
   dispatching = true
   try { await dispatchDueNotifications() } finally { dispatching = false }
 })
@@ -371,7 +404,7 @@ server.post("/webhook/telegram", async (req, res) => {
         })
       })
     }
-  } catch (err) { console.error("Error At /webhook/telegram: ", err) }
+  } catch (err) { await notify(`⚠️ Error at /webhook/telegram:\n${err.message}`) }
 })
 
 server.post("/webhook/release", async (req, res) => {
@@ -402,11 +435,10 @@ server.post("/webhook/release", async (req, res) => {
     }
     if (invalidTokens.length) {
       const { error: pruneErr } = await supabase.from("notification_channels").delete().eq("type", "fcm").in("identifier", invalidTokens)
-      if (pruneErr) console.error("Error pruning invalid tokens: ", pruneErr.message)
+      if (pruneErr) await notify(`⚠️ Error pruning invalid tokens:\n${pruneErr.message}`)
     }
     await notify(`📦 *Release ${version ?? "?"}* notified\n${successCount} sent | ${failureCount} failed | ${invalidTokens.length} pruned`)
   } catch (err) {
-    console.error("Error at /webhook/release: ", err)
     await notify(`⚠️ Release webhook failed for ${version ?? "?"}:\n${err.message}`)
   }
 })
@@ -605,8 +637,8 @@ server.post("/settings/security/sessions/logout", async (req, res) => {
 
 server.get("/", (_, res) => res.type("text").send("Im Alive!"))
 const httpServer = server.listen(8000, () => console.log("Server Running On Port: 8000"))
-httpServer.on("error", (err) => {
-  console.error("Server failed to start:", err)
+httpServer.on("error", async (err) => {
+  await notify(`🔥 Server failed to start:\n${err.message}`)
   process.exit(1)
 })
 for (const sig of ["SIGTERM", "SIGINT"]) {

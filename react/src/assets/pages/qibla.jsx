@@ -18,6 +18,8 @@ import {
 import { red, green, blue } from "@mui/material/colors"
 import { useTheme, alpha } from "@mui/material/styles"
 import { Qibla as AQ, Coordinates } from "adhan"
+import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics"
+import { Capacitor } from "@capacitor/core"
 import { Theme } from "@/main"
 
 import StraightenIcon from "@mui/icons-material/Straighten"
@@ -28,6 +30,15 @@ import ErrorIcon from "@mui/icons-material/Error"
 function getCardinal(deg) {
   const dirs = ["N","NE","E","SE","S","SW","W","NW"]
   return dirs[Math.round(((deg % 360) + 360) % 360 / 45) % 8]
+}
+
+const buzz = (pattern) => {
+  if (Capacitor.isNativePlatform()) {
+    if (pattern.length > 1) Haptics.notification({ type: NotificationType.Success }).catch(() => {})
+    else Haptics.impact({ style: ImpactStyle.Light }).catch(() => {})
+    return
+  }
+  if (navigator.vibrate) navigator.vibrate(pattern)
 }
 
 function haversine(lat1, lon1, lat2, lon2) {
@@ -64,6 +75,20 @@ export default function Qibla() {
   const rawRef         = useRef(null)
   const cleanupRef     = useRef(null)
   const aligned = Math.abs(((heading - qibla + 540) % 360) - 180) < 1.5
+  const lastCardinalRef = useRef(null)
+  const wasAlignedRef   = useRef(false)
+  useEffect(() => {
+    if (comStatus !== "supported") return
+    const cardinal = getCardinal(heading)
+    const isPrimary = cardinal === "N" || cardinal === "E" || cardinal === "S" || cardinal === "W"
+    if (isPrimary && cardinal !== lastCardinalRef.current) buzz([40])
+    lastCardinalRef.current = cardinal
+  }, [heading, comStatus])
+  useEffect(() => {
+    if (comStatus !== "supported" || !coords) return
+    if (aligned && !wasAlignedRef.current) buzz([60, 70, 90])
+    wasAlignedRef.current = aligned
+  }, [aligned, comStatus, coords])
   const S  = 280
   const CX = S / 2
   const CY = S / 2
