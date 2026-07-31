@@ -71,10 +71,19 @@ public class CustomFirebaseMessagingService extends FirebaseMessagingService {
         JSONArray actions = new JSONArray(actionsJson);
         for (int i = 0; i < Math.min(actions.length(), 2); i++) {
           JSONObject action = actions.getJSONObject(i);
-          String actionUrl = action.has("url") ? action.optString("url") : url;
-          PendingIntent actionPI = PendingIntent.getActivity(
-            this, notifId + i + 1, buildDeepLinkIntent(actionUrl), piFlags
-          );
+          String api = action.optString("api", null);
+          PendingIntent actionPI;
+          if (api != null) {
+            Intent actionIntent = new Intent(this, NotificationActionReceiver.class);
+            actionIntent.putExtra(NotificationActionReceiver.EXTRA_API, api);
+            JSONObject bodyObj = action.optJSONObject("body");
+            actionIntent.putExtra(NotificationActionReceiver.EXTRA_BODY, bodyObj != null ? bodyObj.toString() : "{}");
+            actionIntent.putExtra(NotificationActionReceiver.EXTRA_NOTIF_ID, notifId);
+            actionPI = PendingIntent.getBroadcast(this, notifId + i + 1, actionIntent, piFlags);
+          } else {
+            String actionUrl = action.has("url") ? action.optString("url") : url;
+            actionPI = PendingIntent.getActivity(this, notifId + i + 1, buildDeepLinkIntent(actionUrl), piFlags);
+          }
           builder.addAction(0, action.optString("title", "Open"), actionPI);
         }
       } catch (Exception ignored) {

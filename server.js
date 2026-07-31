@@ -126,26 +126,31 @@ async function syncAllUsers() {
 
 async function handlePrayerAction(id, action) {
   const { data: row, error } = await supabase.from("scheduled_notifications").select("*").eq("id", id).maybeSingle()
-  if (error || !row || row.handled) return { ok: false }
+  if (error) { await notify(`⚠️ Error fetching row for prayer action ${id}:\n${error.message}`); return { ok: false } }
+  if (!row || row.handled) return { ok: false }
   if (action === "mark_prayed") {
-    await supabase.from("prayer_logs").upsert(
+    const { error: logErr } = await supabase.from("prayer_logs").upsert(
       { user_id: row.user_id, prayer: row.prayer, waqt_start: row.waqt_start },
       { onConflict: "user_id,prayer,waqt_start", ignoreDuplicates: true }
     )
-    await supabase.from("scheduled_notifications").update({ handled: true }).eq("id", id)
-    return { ok: true }
+    if (logErr) await notify(`⚠️ Error logging prayer for ${id}:\n${logErr.message}`)
+    const { error: updErr } = await supabase.from("scheduled_notifications").update({ handled: true }).eq("id", id)
+    if (updErr) await notify(`⚠️ Error marking notification handled for ${id}:\n${updErr.message}`)
+    return { ok: !logErr && !updErr }
   }
   if (action === "remind_later") {
-    await supabase.from("scheduled_notifications").update({ handled: true }).eq("id", id)
+    const { error: updErr } = await supabase.from("scheduled_notifications").update({ handled: true }).eq("id", id)
+    if (updErr) { await notify(`⚠️ Error marking notification handled for ${id}:\n${updErr.message}`); return { ok: false } }
     const now = Date.now()
     const end = new Date(row.waqt_end).getTime()
     if (end <= now) return { ok: true } // window already over, nothing to schedule
     const fireAt = new Date(now + (end - now) / 2)
-    await supabase.from("scheduled_notifications").insert({
+    const { error: insErr } = await supabase.from("scheduled_notifications").insert({
       user_id: row.user_id, prayer: row.prayer,
       waqt_start: row.waqt_start, waqt_end: row.waqt_end,
       fire_at: fireAt.toISOString(), stage: "snooze"
     })
+    if (insErr) { await notify(`⚠️ Error scheduling snooze reminder for ${id}:\n${insErr.message}`); return { ok: false } }
     return { ok: true }
   }
   return { ok: false }
@@ -449,7 +454,10 @@ server.post("/prayer/action", async (req, res) => {
     if (!id || !["mark_prayed", "remind_later"].includes(action)) throw new Error("Invalid request")
     const { ok } = await handlePrayerAction(id, action)
     res.json({ success: ok })
-  } catch (err) { res.json({ success: false, message: err?.message ?? "Server Error" }) }
+  } catch (err) {
+    await notify(`⚠️ Error at /prayer/action:\n${err.message}`)
+    res.json({ success: false, message: err?.message ?? "Server Error" })
+  }
 })
 
 server.post("/prayer/resync", async (req, res) => {
