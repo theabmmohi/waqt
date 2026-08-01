@@ -6,12 +6,7 @@ import express from "express"
 import cron from "node-cron"
 import cors from "cors"
 import "dotenv/config"
-import {
-  CalculationMethod,
-  Coordinates,
-  PrayerTimes,
-  Madhab
-} from "adhan"
+import { CalculationMethod, Coordinates, PrayerTimes, Madhab } from "adhan"
 
 process.on("uncaughtException", async (err) => {
   await notify(`🔥 *Uncaught exception* — exiting for supervisor restart:\n${err?.stack ?? err?.message ?? err}`)
@@ -22,7 +17,7 @@ process.on("unhandledRejection", async (err) => {
   process.exit(1)
 })
 
-const REQUIRED_ENV = ["SB_URL", "SB_SECRET", "FB_PRIVATE_KEY", "FB_CLIENT_EMAIL", "FB_PROJECT_ID"]
+const REQUIRED_ENV = ["SB_URL", "SB_SECRET", "FB_PRIVATE_KEY", "FB_CLIENT_EMAIL", "FB_PROJECT_ID", "API_URL"]
 const missingEnv = REQUIRED_ENV.filter(k => !process.env[k])
 if (missingEnv.length) {
   // Can't use notify() here — TG_BOT_TOKEN/TG_ADMIN_CID may themselves be among the missing vars.
@@ -247,6 +242,20 @@ cron.schedule("*/3 * * * *", async () => {
   if (dispatching) return await notify("⏭️ Skipped notification dispatch — previous run still in progress")
   dispatching = true
   try { await dispatchDueNotifications() } finally { dispatching = false }
+})
+
+async function pruneEndedNotifications() {
+  const { data, error } = await supabase.from("scheduled_notifications")
+    .delete().lt("waqt_end", new Date().toISOString()).select("id")
+  if (error) return await notify(`⚠️ Error pruning ended notifications:\n${error.message}`)
+  if (data?.length) await notify(`🧹 Pruned ${data.length} ended notification row(s)`)
+}
+
+let pruning = false
+cron.schedule("0 3 * * *", async () => {
+  if (pruning) return await notify("⏭️ Skipped notification pruning — previous run still in progress")
+  pruning = true
+  try { await pruneEndedNotifications() } finally { pruning = false }
 })
 
 
