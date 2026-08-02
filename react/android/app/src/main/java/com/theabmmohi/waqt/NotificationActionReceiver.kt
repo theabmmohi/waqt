@@ -52,7 +52,16 @@ class NotificationActionReceiver : BroadcastReceiver() {
         if (actionId == "remind_later") {
             scheduleLocalSnooze(context, intent)
             // Best-effort only: don't retry hard, the local alarm above is the source of truth.
-            if (api != null) enqueueAction(context, api, body, retry = false)
+            // Mark source=native so the server just flags this handled instead of also
+            // rescheduling its own reminder (which would double up with the local alarm).
+            if (api != null) {
+                val taggedBody = try {
+                    JSONObject(body).put("source", "native").toString()
+                } catch (e: Exception) {
+                    body
+                }
+                enqueueAction(context, api, taggedBody, retry = false)
+            }
             return
         }
 

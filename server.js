@@ -119,7 +119,7 @@ async function syncAllUsers() {
   }
 }
 
-async function handlePrayerAction(id, action) {
+async function handlePrayerAction(id, action, source) {
   const { data: row, error } = await supabase.from("scheduled_notifications").select("*").eq("id", id).maybeSingle()
   if (error) { await notify(`⚠️ Error fetching row for prayer action ${id}:\n${error.message}`); return { ok: false } }
   if (!row || row.handled) return { ok: false }
@@ -134,18 +134,27 @@ async function handlePrayerAction(id, action) {
     return { ok: !logErr && !updErr }
   }
   if (action === "remind_later") {
-    const { error: updErr } = await supabase.from("scheduled_notifications").update({ handled: true }).eq("id", id)
-    if (updErr) { await notify(`⚠️ Error marking notification handled for ${id}:\n${updErr.message}`); return { ok: false } }
+    // Native clients schedule their own offline-capable local reminder — the server only
+    // needs to mark this handled, not reschedule, or the user gets two reminders.
+    if (source === "native") {
+      const { error: updErr } = await supabase.from("scheduled_notifications").update({ handled: true }).eq("id", id)
+      if (updErr) await notify(`⚠️ Error marking notification handled for ${id}:\n${updErr.message}`)
+      return { ok: !updErr }
+    }
     const now = Date.now()
     const end = new Date(row.waqt_end).getTime()
-    if (end <= now) return { ok: true } // window already over, nothing to schedule
+    if (end <= now) {
+      const { error: updErr } = await supabase.from("scheduled_notifications").update({ handled: true }).eq("id", id)
+      if (updErr) { await notify(`⚠️ Error marking notification handled for ${id}:\n${updErr.message}`); return { ok: false } }
+      return { ok: true } // window already over, nothing to reschedule
+    }
+    // Update the SAME row in place rather than inserting a second one — a second row with
+    // the same (user_id, prayer, waqt_start) would violate the table's unique constraint.
     const fireAt = new Date(now + (end - now) / 2)
-    const { error: insErr } = await supabase.from("scheduled_notifications").insert({
-      user_id: row.user_id, prayer: row.prayer,
-      waqt_start: row.waqt_start, waqt_end: row.waqt_end,
-      fire_at: fireAt.toISOString(), stage: "snooze"
-    })
-    if (insErr) { await notify(`⚠️ Error scheduling snooze reminder for ${id}:\n${insErr.message}`); return { ok: false } }
+    const { error: updErr } = await supabase.from("scheduled_notifications")
+      .update({ stage: "snooze", fire_at: fireAt.toISOString(), sent: false, handled: false })
+      .eq("id", id)
+    if (updErr) { await notify(`⚠️ Error scheduling snooze reminder for ${id}:\n${updErr.message}`); return { ok: false } }
     return { ok: true }
   }
   return { ok: false }
@@ -466,9 +475,9 @@ server.post("/webhook/release", async (req, res) => {
 
 server.post("/prayer/action", async (req, res) => {
   try {
-    const { id, action } = req.body
+    const { id, action, source } = req.body
     if (!id || !["mark_prayed", "remind_later"].includes(action)) throw new Error("Invalid request")
-    const { ok } = await handlePrayerAction(id, action)
+    const { ok } = await handlePrayerAction(id, action, source)
     res.json({ success: ok })
   } catch (err) {
     await notify(`⚠️ Error at /prayer/action:\n${err.message}`)

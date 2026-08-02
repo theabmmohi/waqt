@@ -44,6 +44,7 @@ class LocalSnoozeReceiver : BroadcastReceiver() {
             val bodyObj = JSONObject()
             bodyObj.put("id", rowId)
             bodyObj.put("action", "remind_later")
+            bodyObj.put("source", "native")
             remindAgain.put("body", bodyObj)
             actions.put(remindAgain)
         }
