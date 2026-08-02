@@ -214,7 +214,12 @@ async function deliverWaqtReminder(row, channels) {
 
   for (const tokens of [appTokens, webTokens]) {
     if (!tokens.length) continue
-    const res = await sendPush(tokens, { title, body, url: "/", actions: actions.map(a => ({ id: a.id, title: a.title, api: `${process.env.API_URL}/prayer/action`, body: { id: row.id, action: a.id } })) })
+    const res = await sendPush(tokens, {
+      title, body, url: "/",
+      prayer: row.prayer,
+      waqtEnd: new Date(row.waqt_end).getTime().toString(),
+      actions: actions.map(a => ({ id: a.id, title: a.title, api: `${process.env.API_URL}/prayer/action`, body: { id: row.id, action: a.id } }))
+    })
     if (res.invalidTokens?.length) await supabase.from("notification_channels").delete().eq("type", "fcm").in("identifier", res.invalidTokens)
     if (res.successCount > 0) return
   }
@@ -262,7 +267,7 @@ cron.schedule("0 3 * * *", async () => {
 
 
 
-async function sendPush(tokens, { title, body, url = "/", actions = [] }) {
+async function sendPush(tokens, { title, body, url = "/", actions = [], prayer, waqtEnd }) {
   if (!tokens?.length) return { successCount: 0, failureCount: 0, invalidTokens: [] }
   const cappedActions = actions.slice(0, 2)
   const notifId = Date.now() % 2147483647
@@ -272,7 +277,9 @@ async function sendPush(tokens, { title, body, url = "/", actions = [] }) {
     tokens, data: {
       actions: JSON.stringify(cappedActions),
       notifId: String(notifId),
-      title, body, url
+      title, body, url,
+      ...(prayer ? { prayer } : {}),
+      ...(waqtEnd ? { waqtEnd } : {})
     }
   }
   const res = await getMessaging(firebase).sendEachForMulticast(message)

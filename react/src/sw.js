@@ -8,6 +8,12 @@ precacheAndRoute(self.__WB_MANIFEST)
 clientsClaim()
 self.skipWaiting()
 
+self.addEventListener("activate", (e) => {
+  // Fallback for browsers without Background Sync (e.g. Safari/iOS): opportunistically
+  // retry any queued offline actions whenever the service worker activates.
+  e.waitUntil(flushQueuedActions().catch(() => {}))
+})
+
 const app = initializeApp({
   appId: "1:696930371666:web:42887d9261a17671ca378b",
   apiKey: "AIzaSyDbp0UHNrX4mp5Z6SMr81sGQwjYrFIgNeA",
@@ -39,6 +45,63 @@ onBackgroundMessage(messaging, (payload) => {
   })
 })
 
+const SYNC_TAG = "waqt-retry-actions"
+const DB_NAME = "waqt-offline"
+const STORE = "pending-actions"
+
+function openQueueDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1)
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore(STORE, { keyPath: "id", autoIncrement: true })
+    }
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+async function queueAction(api, body) {
+  const db = await openQueueDb()
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite")
+    tx.objectStore(STORE).add({ api, body, queuedAt: Date.now() })
+    tx.oncomplete = resolve
+    tx.onerror = () => reject(tx.error)
+  })
+  db.close()
+}
+
+async function flushQueuedActions() {
+  const db = await openQueueDb()
+  const items = await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readonly")
+    const req = tx.objectStore(STORE).getAll()
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+  for (const item of items) {
+    try {
+      const res = await fetch(item.api, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(item.body ?? {})
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const delTx = db.transaction(STORE, "readwrite")
+      delTx.objectStore(STORE).delete(item.id)
+    } catch (err) {
+      // Still offline or server still unreachable — leave it queued, next sync/online event retries.
+      db.close()
+      throw err
+    }
+  }
+  db.close()
+}
+
+self.addEventListener("sync", (e) => {
+  if (e.tag === SYNC_TAG) e.waitUntil(flushQueuedActions().catch(() => {}))
+})
+
 self.addEventListener("notificationclick", (e) => {
   const clickedAction = e.action
   const meta = e.notification.data?.actionsMeta?.find(a => a.id === clickedAction)
@@ -49,7 +112,20 @@ self.addEventListener("notificationclick", (e) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(meta.body ?? {})
-      }).catch(err => console.error("Prayer action failed:", err))
+      }).catch(async (err) => {
+        console.error("Prayer action failed, queuing for retry:", err)
+        try {
+          await queueAction(meta.api, meta.body ?? {})
+          // Background Sync isn't supported everywhere (notably Safari/iOS) — if it's
+          // missing, the queued item just waits for the next successful notificationclick
+          // or app launch to flush; otherwise, ask the browser to retry once back online.
+          if ("sync" in self.registration) {
+            await self.registration.sync.register(SYNC_TAG)
+          }
+        } catch (queueErr) {
+          console.error("Failed to queue offline action:", queueErr)
+        }
+      })
     )
     return
   }

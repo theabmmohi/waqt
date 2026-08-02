@@ -1,0 +1,101 @@
+package com.theabmmohi.waqt;
+
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.graphics.Color;
+import android.net.Uri;
+import android.os.Build;
+import androidx.core.app.NotificationCompat;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+
+/**
+ * Shared notification-building logic used both when a push arrives (CustomFirebaseMessagingService)
+ * and when a locally-scheduled snooze alarm fires (LocalSnoozeReceiver), so both paths render an
+ * identical-looking notification with correctly wired action buttons.
+ */
+public class NotificationHelper {
+  private static final String CHANNEL_ID = "waqt_push";
+  private static final String SCHEME = "com.theabmmohi.waqt";
+
+  public static void showNotification(
+    Context context, int notifId, String title, String body, String url,
+    String actionsJson, String prayer, String waqtEnd
+  ) {
+    NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+    if (nm == null) return;
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      if (nm.getNotificationChannel(CHANNEL_ID) == null) {
+        NotificationChannel channel = new NotificationChannel(
+          CHANNEL_ID,
+          "Prayer & app notifications",
+          NotificationManager.IMPORTANCE_HIGH
+        );
+        channel.setLightColor(Color.parseColor("#F57C00"));
+        nm.createNotificationChannel(channel);
+      }
+    }
+    int piFlags = PendingIntent.FLAG_UPDATE_CURRENT
+      | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
+    PendingIntent contentPI = PendingIntent.getActivity(
+      context, notifId, buildDeepLinkIntent(context, url), piFlags
+    );
+    NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
+      .setSmallIcon(R.drawable.ic_stat_waqt)
+      .setColor(Color.parseColor("#F57C00"))
+      .setContentTitle(title != null ? title : "Waqt")
+      .setContentText(body != null ? body : "")
+      .setAutoCancel(true)
+      .setPriority(NotificationCompat.PRIORITY_HIGH)
+      .setContentIntent(contentPI);
+    if (actionsJson != null) {
+      try {
+        JSONArray actions = new JSONArray(actionsJson);
+        for (int i = 0; i < Math.min(actions.length(), 2); i++) {
+          JSONObject action = actions.getJSONObject(i);
+          String api = action.optString("api", null);
+          PendingIntent actionPI;
+          if (api != null) {
+            Intent actionIntent = new Intent(context, NotificationActionReceiver.class);
+            actionIntent.putExtra(NotificationActionReceiver.EXTRA_API, api);
+            JSONObject bodyObj = action.optJSONObject("body");
+            actionIntent.putExtra(NotificationActionReceiver.EXTRA_BODY, bodyObj != null ? bodyObj.toString() : "{}");
+            actionIntent.putExtra(NotificationActionReceiver.EXTRA_NOTIF_ID, notifId);
+            actionIntent.putExtra(NotificationActionReceiver.EXTRA_ACTION_ID, action.optString("id", null));
+            actionIntent.putExtra(NotificationActionReceiver.EXTRA_PRAYER, prayer);
+            actionIntent.putExtra(NotificationActionReceiver.EXTRA_WAQT_END, waqtEnd);
+            actionIntent.putExtra(NotificationActionReceiver.EXTRA_ACTIONS_JSON, actionsJson);
+            actionPI = PendingIntent.getBroadcast(context, notifId + i + 1, actionIntent, piFlags);
+          } else {
+            String actionUrl = action.has("url") ? action.optString("url") : url;
+            actionPI = PendingIntent.getActivity(context, notifId + i + 1, buildDeepLinkIntent(context, actionUrl), piFlags);
+          }
+          builder.addAction(0, action.optString("title", "Open"), actionPI);
+        }
+      } catch (Exception ignored) {
+      }
+    }
+    nm.notify(notifId, builder.build());
+  }
+
+  public static Intent buildDeepLinkIntent(Context context, String url) {
+    String encoded = "";
+    if (url != null) {
+      try {
+        encoded = URLEncoder.encode(url, "UTF-8");
+      } catch (UnsupportedEncodingException e) {
+        encoded = url;
+      }
+    }
+    Uri uri = Uri.parse(SCHEME + "://push?url=" + encoded);
+    Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+    intent.setPackage(context.getPackageName());
+    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+    return intent;
+  }
+}
