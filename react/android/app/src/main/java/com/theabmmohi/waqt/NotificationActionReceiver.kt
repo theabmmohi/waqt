@@ -90,9 +90,9 @@ class NotificationActionReceiver : BroadcastReceiver() {
         val prayer = intent.getStringExtra(EXTRA_PRAYER) ?: return
         val waqtEndMs = intent.getStringExtra(EXTRA_WAQT_END)?.toLongOrNull() ?: return
         val now = System.currentTimeMillis()
-        if (waqtEndMs <= now) return // window already over, nothing to schedule
+        val fireAt = now + 15 * 60_000L
+        if (waqtEndMs <= fireAt) return // not enough time left for a 15-min snooze
 
-        val fireAt = now + (waqtEndMs - now) / 2
         val originalActionsJson = intent.getStringExtra(EXTRA_ACTIONS_JSON)
 
         val alarmIntent = Intent(context, LocalSnoozeReceiver::class.java).apply {

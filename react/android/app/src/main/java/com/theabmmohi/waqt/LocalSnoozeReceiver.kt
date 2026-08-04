@@ -35,11 +35,12 @@ class LocalSnoozeReceiver : BroadcastReceiver() {
         if (markPrayedAction != null) actions.put(markPrayedAction)
 
         val remainingMs = waqtEndMs - now
-        if (remainingMs > 4 * 60_000 && apiUrl != null && rowId != null) {
-            // Still meaningful time left — allow snoozing again, mirroring server-side logic.
+        val urgent = remainingMs <= 30 * 60_000
+        if (!urgent && apiUrl != null && rowId != null) {
+            // Still more than 30 min left — allow snoozing again, mirroring server-side logic.
             val remindAgain = JSONObject()
             remindAgain.put("id", "remind_later")
-            remindAgain.put("title", "Remind Me Later")
+            remindAgain.put("title", "Remind (15 min)")
             remindAgain.put("api", apiUrl)
             val bodyObj = JSONObject()
             bodyObj.put("id", rowId)
@@ -49,12 +50,19 @@ class LocalSnoozeReceiver : BroadcastReceiver() {
             actions.put(remindAgain)
         }
 
+        val body = if (urgent) {
+            val minutesLeft = maxOf(1, Math.ceil(remainingMs / 60_000.0).toInt())
+            "$minutesLeft min remaining — pray now!"
+        } else {
+            "Have you prayed $prayer yet?"
+        }
+
         val notifId = (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
         NotificationHelper.showNotification(
             context,
             notifId,
             "Reminder: $prayer",
-            "Have you prayed $prayer yet?",
+            body,
             "/",
             actions.toString(),
             prayer,

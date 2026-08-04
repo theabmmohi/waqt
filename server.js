@@ -143,16 +143,16 @@ async function handlePrayerAction(id, action, source) {
     }
     const now = Date.now()
     const end = new Date(row.waqt_end).getTime()
-    if (end <= now) {
+    const fireAtMs = now + 15 * 60000
+    if (end <= fireAtMs) {
       const { error: updErr } = await supabase.from("scheduled_notifications").update({ handled: true }).eq("id", id)
       if (updErr) { await notify(`⚠️ Error marking notification handled for ${id}:\n${updErr.message}`); return { ok: false } }
-      return { ok: true } // window already over, nothing to reschedule
+      return { ok: true } // not enough time left for a 15-min snooze, nothing to reschedule
     }
     // Update the SAME row in place rather than inserting a second one — a second row with
     // the same (user_id, prayer, waqt_start) would violate the table's unique constraint.
-    const fireAt = new Date(now + (end - now) / 2)
     const { error: updErr } = await supabase.from("scheduled_notifications")
-      .update({ stage: "snooze", fire_at: fireAt.toISOString(), sent: false, handled: false })
+      .update({ stage: "snooze", fire_at: new Date(fireAtMs).toISOString(), sent: false, handled: false })
       .eq("id", id)
     if (updErr) { await notify(`⚠️ Error scheduling snooze reminder for ${id}:\n${updErr.message}`); return { ok: false } }
     return { ok: true }
@@ -211,11 +211,14 @@ async function deliverWaqtReminder(row, channels) {
   }
   if (!channels?.length) return
   const remainingMs = new Date(row.waqt_end).getTime() - Date.now()
+  const urgent = remainingMs <= 30 * 60000
   const title = row.stage === "snooze" ? `Reminder: ${row.prayer}` : `${row.prayer} time has started`
-  const body = row.stage === "snooze" ? `Have you prayed ${row.prayer} yet?` : `It's time for ${row.prayer}. Tap to open Waqt.`
+  const body = urgent
+    ? `${Math.max(1, Math.ceil(remainingMs / 60000))} min remaining — pray now!`
+    : (row.stage === "snooze" ? `Have you prayed ${row.prayer} yet?` : `It's time for ${row.prayer}. Tap to open Waqt.`)
   const actions = [
     { id: "mark_prayed", title: "Mark as Prayed" },
-    ...(remainingMs > 4 * 60000 ? [{ id: "remind_later", title: "Remind Me Later" }] : [])
+    ...(!urgent ? [{ id: "remind_later", title: "Remind (15 min)" }] : [])
   ]
   const appTokens = channels.filter(c => c.type === "fcm" && c.metadata?.platform === "app").map(c => c.identifier)
   const webTokens = channels.filter(c => c.type === "fcm" && c.metadata?.platform === "web").map(c => c.identifier)
