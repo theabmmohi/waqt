@@ -21,6 +21,7 @@ import {
 } from "adhan"
 import { useTheme, alpha } from "@mui/material/styles"
 import { Theme } from "@/main"
+import { getLocalSettings } from "@/localSettings"
 
 import HourglassBottomIcon from "@mui/icons-material/HourglassBottom"
 import WarningAmberIcon from "@mui/icons-material/WarningAmber"
@@ -40,10 +41,10 @@ export default function Dashboard() {
   const navigate   = useNavigate()
   const { user }   = useContext(Theme)
   const theme      = useTheme()
-  const meta       = user?.user_metadata
+  const meta       = user?.user_metadata ?? getLocalSettings()
   const fmt        = meta?.timeFormat ?? "12h"
   const tz         = meta?.tz || Intl.DateTimeFormat().resolvedOptions().timeZone
-  const [snack, setSnack]         = useState(() => !meta?.coords ? "Set Your Location In Settings To Get Prayer Times" : "")
+  const [snack, setSnack]         = useState(() => !meta?.coords ? (user ? "Set Your Location In Settings To Get Prayer Times" : "Set your location to get prayer times — sign in to sync it across devices") : "")
   const [now, setNow]             = useState(new Date())
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)

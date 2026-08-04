@@ -21,6 +21,10 @@ import useMediaQuery from "@mui/material/useMediaQuery"
 import { useTheme } from "@mui/material/styles"
 import { Capacitor } from "@capacitor/core"
 import Supabase from "@/supabase"
+import {
+  getLocalSettings,
+  saveLocalSettings
+} from "@/localSettings"
 import api from "@/api"
 
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew"
@@ -341,12 +345,21 @@ function Preferences({setSnack}) {
     if (locationType === "gps"    && !coords) return setSnack("Please set your current location. Required for calculation")
     if (locationType === "manual" && !city  ) return setSnack("Please select a city. Required for calculation")
     setSaving(true)
+    const payload = {
+      ...(locationType === "gps" ? {city: null} : {city}),
+      timeFormat, locationType, tz,
+      coords, calcMethod, madhab
+    }
+    if (!user) {
+      // Guest mode — no account yet, keep settings on-device. These get merged
+      // into the account automatically if/when this person signs up.
+      saveLocalSettings(payload)
+      setSnack("Preferences Saved (offline — sign in to sync across devices)")
+      setSaving(false)
+      return
+    }
     try {
-      const { error } = await Supabase.auth.updateUser({ data: {
-        ...(locationType === "gps" ? {city: null} : {city}),
-        timeFormat, locationType, tz,
-        coords, calcMethod, madhab
-      } })
+      const { error } = await Supabase.auth.updateUser({ data: payload })
       if (error) throw error
       api.post("/prayer/resync").catch(() => {}) // recompute waqts now instead of waiting for the hourly sync
       setSnack("Preferences Saved")
@@ -354,7 +367,7 @@ function Preferences({setSnack}) {
   }
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
-    const data = user?.user_metadata
+    const data = user?.user_metadata ?? getLocalSettings()
     if (!data) return
     if (data.timeFormat)   setTimeFormat(data.timeFormat)
     if (data.locationType) setLocationType(data.locationType)
@@ -614,26 +627,28 @@ function Security({setSnack}) {
 export default function Settings() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { user } = useContext(Theme)
   const [snack, setSnack] = useState("")
-  const active = ["profile", "notifications", "preferences", "security"].find(x => location.pathname.includes(x)) ?? "profile"
+  const tabs = user ? ["profile", "notifications", "preferences", "security"] : ["preferences"]
+  const active = tabs.find(x => location.pathname.includes(x)) ?? tabs[0]
   const mobile = useMediaQuery(useTheme().breakpoints.down("sm"))
   return (<Stack direction={{ xs: "column", sm: "row" }} sx={{ height: "100%", overflow: "hidden" }}>
     <Stack sx={{ overflowY: "auto", minHeight: 0 }}>
       <Tabs orientation={mobile ? "horizontal" : "vertical"} variant={mobile ? "fullWidth" : "standard"} value={active} onChange={(_, x) => { if (x) navigate(`/settings/${x}`, { replace: !true }) }} sx={{ minHeight: 0, flexShrink: 0, "& .MuiTabs-scroller": { overflowY: mobile ? "visible" : "auto", minHeight: 0, }, "& .MuiTab-root": { py: mobile ? undefined : 2.5 } }}>
-        <Tab value="profile" icon={<PersonIcon/>}/>
-        <Tab value="notifications" icon={<NotificationsIcon/>}/>
+        {user && <Tab value="profile" icon={<PersonIcon/>}/>}
+        {user && <Tab value="notifications" icon={<NotificationsIcon/>}/>}
         <Tab value="preferences" icon={<TuneIcon/>}/>
-        <Tab value="security" icon={<SecurityIcon/>}/>
+        {user && <Tab value="security" icon={<SecurityIcon/>}/>}
       </Tabs>
     </Stack>
     <Divider flexItem orientation={mobile ? "horizontal" : "vertical"}/>
     <Stack sx={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
       <Routes>
-        <Route path="profile" element={<Profile setSnack={setSnack}/>}/>
-        <Route path="notifications" element={<Notifications setSnack={setSnack}/>}/>
+        {user && <Route path="profile" element={<Profile setSnack={setSnack}/>}/>}
+        {user && <Route path="notifications" element={<Notifications setSnack={setSnack}/>}/>}
         <Route path="preferences" element={<Preferences setSnack={setSnack}/>}/>
-        <Route path="security" element={<Security setSnack={setSnack}/>}/>
-        <Route path="*" element={<Profile setSnack={setSnack}/>}/>
+        {user && <Route path="security" element={<Security setSnack={setSnack}/>}/>}
+        <Route path="*" element={<Preferences setSnack={setSnack}/>}/>
       </Routes>
     </Stack>
     <Snackbar open={!!snack} onClose={() => setSnack("")} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}/>

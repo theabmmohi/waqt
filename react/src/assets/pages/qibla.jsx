@@ -21,6 +21,7 @@ import { Qibla as AQ, Coordinates } from "adhan"
 import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics"
 import { Capacitor } from "@capacitor/core"
 import { Theme } from "@/main"
+import { getLocalSettings } from "@/localSettings"
 
 import StraightenIcon from "@mui/icons-material/Straighten"
 import ExploreIcon from "@mui/icons-material/Explore"
@@ -65,8 +66,9 @@ export default function Qibla() {
   const primary       = theme.palette.primary.main
   const [comStatus, setComStatus]   = useState("idle")
   const [heading, setHeading]       = useState(0)
-  const [snack, setSnack]           = useState(() => !user?.user_metadata?.coords ? "Set Your Location In Settings To Get Direction And Distance" : "")
-  const coords = user?.user_metadata?.coords
+  const localMeta = getLocalSettings()
+  const [snack, setSnack]           = useState(() => !(user?.user_metadata?.coords ?? localMeta?.coords) ? "Set Your Location In Settings To Get Direction And Distance" : "")
+  const coords = user?.user_metadata?.coords ?? localMeta?.coords
   const qibla = coords ? Math.round(AQ(new Coordinates(coords.lat, coords.lon))) : 0
   const dist  = coords ? haversine(Kaaba.lat, Kaaba.lon, coords.lat, coords.lon) : "0 km"
   const hasAbsoluteRef = useRef(false)

@@ -51,6 +51,7 @@ import SettingsIcon from "@mui/icons-material/Settings"
 import AndroidIcon from "@mui/icons-material/Android"
 import AcUnitIcon from "@mui/icons-material/AcUnit"
 import LogoutIcon from "@mui/icons-material/Logout"
+import LoginIcon from "@mui/icons-material/Login"
 import CloseIcon from "@mui/icons-material/Close"
 import InfoIcon from "@mui/icons-material/Info"
 import MenuIcon from "@mui/icons-material/Menu"
@@ -137,7 +138,7 @@ export default function App() {
                   <Typography variant="caption" sx={{ color: "text.secondary", lineHeight: 1 }}>Every Prayer, Right On Time</Typography>
                 </Stack>
               </Stack>
-              {user && <IconButton onClick={drawerOpen ? closeDrawer : openDrawer}>
+              <IconButton onClick={drawerOpen ? closeDrawer : openDrawer}>
                 <Box sx={{ position: "relative", width: 24, height: 24 }}>
                   <MenuIcon sx={{
                     top: 0, left: 0, position: "absolute",
@@ -152,7 +153,7 @@ export default function App() {
                     transform: drawerOpen ? "rotate(0deg)" : "rotate(-90deg)"
                   }}/>
                 </Box>
-              </IconButton>}
+              </IconButton>
             </Toolbar>
           </AppBar>
           <Divider/>
@@ -208,25 +209,38 @@ export default function App() {
               </Stack>
               <Divider orientation="vertical"/>
               <Stack sx={{ p: 0.5, justifyContent: "center" }}>
-                <IconButton onClick={handleLogout}>
-                  <LogoutIcon/>
-                </IconButton>
+                {user ? (
+                  <IconButton onClick={handleLogout}>
+                    <LogoutIcon/>
+                  </IconButton>
+                ) : (
+                  <IconButton onClick={() => { navigate("/auth"); closeDrawer() }}>
+                    <LoginIcon/>
+                  </IconButton>
+                )}
               </Stack>
             </Stack>
             <Divider/>
             <Stack sx={{ flexDirection: rowDir }}>
-              <Stack sx={{ px: 0.5, justifyContent: "center" }}>
-                <Avatar src={user?.user_metadata?.avatar_url}>{user?.user_metadata?.full_name?.[0]?.toUpperCase() ?? "?"}</Avatar>
-              </Stack>
-              <Divider orientation="vertical"/>
-              <Stack sx={{ justifyContent: "center", overflowX: "hidden", flex: 1, p: 1 }}>
-                <Typography noWrap variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1 }}>
-                  {user?.user_metadata?.full_name ?? "User"}
-                </Typography>
-                <Typography noWrap variant="caption" sx={{ color: "text.secondary", lineHeight: 1 }}>
-                  {user?.email ?? ""}
-                </Typography>
-              </Stack>
+              {user ? (<>
+                <Stack sx={{ px: 0.5, justifyContent: "center" }}>
+                  <Avatar src={user?.user_metadata?.avatar_url}>{user?.user_metadata?.full_name?.[0]?.toUpperCase() ?? "?"}</Avatar>
+                </Stack>
+                <Divider orientation="vertical"/>
+                <Stack sx={{ justifyContent: "center", overflowX: "hidden", flex: 1, p: 1 }}>
+                  <Typography noWrap variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1 }}>
+                    {user?.user_metadata?.full_name ?? "User"}
+                  </Typography>
+                  <Typography noWrap variant="caption" sx={{ color: "text.secondary", lineHeight: 1 }}>
+                    {user?.email ?? ""}
+                  </Typography>
+                </Stack>
+              </>) : (
+                <Stack onClick={() => { navigate("/auth"); closeDrawer() }} sx={{ justifyContent: "center", overflowX: "hidden", flex: 1, p: 1, cursor: "pointer" }}>
+                  <Typography noWrap variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1 }}>Guest</Typography>
+                  <Typography noWrap variant="caption" sx={{ color: "text.secondary", lineHeight: 1 }}>Sign in to sync your settings</Typography>
+                </Stack>
+              )}
               <Divider orientation="vertical"/>
               <Stack sx={{ p: 0.5, justifyContent: "center", backgroundColor: location.pathname.startsWith("/settings") ? "primary.main" : "" }}>
                 <IconButton onClick={() => {navigate("/settings"); closeDrawer()}}>
@@ -241,12 +255,12 @@ export default function App() {
             <Route path="/auth" element={user ? <Navigate to="/" replace/> : <Auth/>}/>
             <Route path="/forgot" element={<Forgot/>}/>
             <Route path="/verify" element={<Verify/>}/>
-            <Route path="/settings/*" element={!user ? <Navigate to="/" replace/> : <Settings/>}/>
+            <Route path="/settings/*" element={<Settings/>}/>
             <Route path="/about" element={<About/>}/>
             <Route path="/installations" element={<Installations/>}/>
             <Route path="/qibla" element={<Qibla/>}/>
             <Route path="/tasbih" element={<Tasbih/>}/>
-            <Route path="/*" element={user ? <Dashboard/> : <Auth/>}/>
+            <Route path="/*" element={<Dashboard/>}/>
           </Routes>
         </Box>
       </Box>

@@ -1,12 +1,18 @@
 /* global clients */
 import { getMessaging, onBackgroundMessage } from "firebase/messaging/sw"
-import { precacheAndRoute } from "workbox-precaching"
+import { precacheAndRoute, createHandlerBoundToURL } from "workbox-precaching"
+import { registerRoute, NavigationRoute } from "workbox-routing"
 import { initializeApp } from "firebase/app"
 import { clientsClaim } from "workbox-core"
 
 precacheAndRoute(self.__WB_MANIFEST)
 clientsClaim()
 self.skipWaiting()
+
+// SPA offline support: any navigation not otherwise precached (e.g. reloading or
+// deep-linking directly into /dashboard, /qibla, /settings/preferences while offline)
+// falls back to the cached app shell, letting React Router handle it client-side.
+registerRoute(new NavigationRoute(createHandlerBoundToURL("index.html")))
 
 self.addEventListener("activate", (e) => {
   // Fallback for browsers without Background Sync (e.g. Safari/iOS): opportunistically

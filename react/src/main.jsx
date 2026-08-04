@@ -29,6 +29,11 @@ import { subscribeWeb } from "@/firebase"
 import Supabase from "@/supabase"
 import api from "@/api"
 import App from "@/waqt"
+import {
+  getLocalSettings,
+  clearLocalSettings,
+  pickSettingsFields
+} from "@/localSettings"
 import "@/style.css"
 export const Theme = createContext()
 let nativeFcmToken = null
@@ -43,6 +48,35 @@ window.addEventListener("beforeinstallprompt", (e) => {
   deferredPwaPrompt = e
   window.dispatchEvent(new Event("pwa-prompt-ready"))
 })
+
+// Supabase doesn't emit a distinct "signed up" event — SIGNED_IN covers both new
+// accounts and returning logins. We infer which one this is by comparing timestamps:
+// a brand-new account's first sign-in happens within seconds of its creation.
+function isNewAccount(user) {
+  if (!user?.created_at || !user?.last_sign_in_at) return false
+  return Math.abs(new Date(user.last_sign_in_at) - new Date(user.created_at)) < 60000
+}
+
+async function syncGuestSettings(user) {
+  const local = getLocalSettings()
+  if (isNewAccount(user)) {
+    if (!local || !Object.keys(local).length) return
+    // New account — merge local (pre-account) settings in, without clobbering
+    // any fields the account may already have (e.g. from OAuth profile data).
+    const merged = { ...pickSettingsFields(local), ...pickSettingsFields(user.user_metadata) }
+    try {
+      const { error } = await Supabase.auth.updateUser({ data: merged })
+      if (error) throw error
+      clearLocalSettings()
+    } catch (err) {
+      console.error("Failed to merge guest settings into new account:", err)
+    }
+  } else {
+    // Returning login — the account's own saved settings take precedence over
+    // whatever was set locally as a guest on this device.
+    clearLocalSettings()
+  }
+}
 
 if (Capacitor.isNativePlatform()) ScreenOrientation.lock({ orientation: "portrait" }).catch((err) => console.error("Native orientation lock failed:", err))
 else if (screen.orientation?.lock) screen.orientation.lock("portrait").catch((err) => console.error("Web orientation lock failed:", err))
@@ -181,8 +215,9 @@ function React() {
         setUser(data?.user ?? null)
       })
     ]).then(done)
-    const { data: listener } = Supabase.auth.onAuthStateChange((_, session) => {
+    const { data: listener } = Supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
+      if (event === "SIGNED_IN" && session?.user) syncGuestSettings(session.user)
     })
     const query = window.matchMedia("(prefers-color-scheme: dark)")
     const handler = (e) => setDark(e.matches)
