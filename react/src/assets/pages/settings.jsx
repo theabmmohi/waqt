@@ -23,7 +23,9 @@ import { Capacitor } from "@capacitor/core"
 import Supabase from "@/supabase"
 import {
   getLocalSettings,
-  saveLocalSettings
+  saveLocalSettings,
+  savePendingUserSettings,
+  clearPendingUserSettings
 } from "@/localSettings"
 import api from "@/api"
 
@@ -361,12 +363,16 @@ function Preferences({setSnack}) {
     try {
       const { error } = await Supabase.auth.updateUser({ data: payload })
       if (error) throw error
+      clearPendingUserSettings(user.id) // in case an older offline save was still queued
       api.post("/prayer/resync").catch(() => {}) // recompute waqts now instead of waiting for the hourly sync
       setSnack("Preferences Saved")
     } catch (err) {
-      setSnack(!navigator.onLine
-        ? "You're offline — this couldn't be saved to your account. Try again once you're back online."
-        : (err?.message ?? "Sorry, Internal Error"))
+      if (!navigator.onLine) {
+        savePendingUserSettings(user.id, payload)
+        setSnack("You're offline — saved on this device, will sync automatically once you're back online")
+      } else {
+        setSnack(err?.message ?? "Sorry, Internal Error")
+      }
     } finally {setSaving(false)}
   }
   useEffect(() => {
