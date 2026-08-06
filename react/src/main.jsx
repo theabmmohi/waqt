@@ -211,9 +211,9 @@ function React() {
         if (document.readyState === "complete") res()
         else window.addEventListener("load", res, { once: true })
       }),
-      Supabase.auth.getUser().then(({ data }) => {
-        setUser(data?.user ?? null)
-      })
+      Supabase.auth.getSession().then(({ data }) => {
+        setUser(data?.session?.user ?? null)
+      }).catch(() => setUser(null))
     ]).then(done)
     const { data: listener } = Supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)

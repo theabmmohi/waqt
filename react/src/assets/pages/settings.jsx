@@ -363,7 +363,11 @@ function Preferences({setSnack}) {
       if (error) throw error
       api.post("/prayer/resync").catch(() => {}) // recompute waqts now instead of waiting for the hourly sync
       setSnack("Preferences Saved")
-    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setSaving(false)}
+    } catch (err) {
+      setSnack(!navigator.onLine
+        ? "You're offline — this couldn't be saved to your account. Try again once you're back online."
+        : (err?.message ?? "Sorry, Internal Error"))
+    } finally {setSaving(false)}
   }
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
