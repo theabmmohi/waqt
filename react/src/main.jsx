@@ -32,9 +32,7 @@ import App from "@/waqt"
 import {
   getLocalSettings,
   clearLocalSettings,
-  pickSettingsFields,
-  getPendingUserSettings,
-  clearPendingUserSettings
+  pickSettingsFields
 } from "@/localSettings"
 import "@/style.css"
 export const Theme = createContext()
@@ -77,23 +75,6 @@ async function syncGuestSettings(user) {
     // Returning login — the account's own saved settings take precedence over
     // whatever was set locally as a guest on this device.
     clearLocalSettings()
-  }
-}
-
-// Retries a Preferences save that failed while offline. Safe to call repeatedly —
-// it's a no-op once there's nothing queued for this user.
-async function flushPendingSettings(user) {
-  if (!user?.id || !navigator.onLine) return
-  const pending = getPendingUserSettings(user.id)
-  if (!pending || !Object.keys(pending).length) return
-  try {
-    const { error } = await Supabase.auth.updateUser({ data: pending })
-    if (error) throw error
-    clearPendingUserSettings(user.id)
-    api.post("/prayer/resync").catch(() => {})
-  } catch (err) {
-    // Still offline or request failed — leave it queued, next trigger retries.
-    console.error("Failed to flush pending settings:", err)
   }
 }
 
@@ -232,27 +213,16 @@ function React() {
       }),
       Supabase.auth.getSession().then(({ data }) => {
         setUser(data?.session?.user ?? null)
-        if (data?.session?.user) flushPendingSettings(data.session.user)
       }).catch(() => setUser(null))
     ]).then(done)
     const { data: listener } = Supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
-      if (event === "SIGNED_IN" && session?.user) {
-        syncGuestSettings(session.user)
-        flushPendingSettings(session.user)
-      }
+      if (event === "SIGNED_IN" && session?.user) syncGuestSettings(session.user)
     })
-    const handleOnline = () => {
-      Supabase.auth.getSession().then(({ data }) => {
-        if (data?.session?.user) flushPendingSettings(data.session.user)
-      }).catch(() => {})
-    }
-    window.addEventListener("online", handleOnline)
     const query = window.matchMedia("(prefers-color-scheme: dark)")
     const handler = (e) => setDark(e.matches)
     query.addEventListener("change", handler)
     return () => {
-      window.removeEventListener("online", handleOnline)
       query.removeEventListener("change", handler)
       listener.subscription.unsubscribe()
     }

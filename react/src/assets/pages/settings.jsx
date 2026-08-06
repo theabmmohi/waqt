@@ -23,13 +23,12 @@ import { Capacitor } from "@capacitor/core"
 import Supabase from "@/supabase"
 import {
   getLocalSettings,
-  saveLocalSettings,
-  savePendingUserSettings,
-  clearPendingUserSettings
+  saveLocalSettings
 } from "@/localSettings"
 import api from "@/api"
 
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew"
+import WifiOffIcon from "@mui/icons-material/WifiOff"
 import NotificationsIcon from "@mui/icons-material/Notifications"
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff"
 import FingerprintIcon from "@mui/icons-material/Fingerprint"
@@ -51,13 +50,20 @@ import AddIcon from "@mui/icons-material/Add"
 function Profile({setSnack}) {
   const { user } = useContext(Theme)
   const fileRef = useRef()
+  const local = !user ? getLocalSettings() : null
   const email = user?.email ?? ""
-  const [name, setName]     = useState(user?.user_metadata?.full_name  ?? "")
-  const [bio, setBio]       = useState(user?.user_metadata?.bio        ?? "")
+  const [name, setName]     = useState(user?.user_metadata?.full_name  ?? local?.full_name ?? "")
+  const [bio, setBio]       = useState(user?.user_metadata?.bio        ?? local?.bio        ?? "")
   const [avatar, setAvatar] = useState(user?.user_metadata?.avatar_url ?? "")
   const [saving, setSaving] = useState(false)
   const [file, setFile]     = useState(null)
   const save = async () => {
+    if (!user) {
+      saveLocalSettings({ full_name: name.trim(), bio: bio.trim() })
+      setSnack("Saved")
+      return
+    }
+    if (!navigator.onLine) return setSnack("No internet connection")
     setSaving(true)
     try {
       let avatar_url = avatar
@@ -71,28 +77,30 @@ function Profile({setSnack}) {
       }
       const { error } = await Supabase.auth.updateUser({ data: { full_name: name.trim(), bio: bio.trim(), avatar_url } })
       if (error) throw error
-      setSnack("Profile Saved")
-    } catch (err) {setSnack(err?.message ?? "Sorry, Internal Error")} finally {setSaving(false)}
+      setSnack("Saved")
+    } catch (err) {
+      setSnack(!navigator.onLine ? "No internet connection" : "Failed to save")
+    } finally {setSaving(false)}
   }
   return (<Stack sx={{ p: 2.5 }}>
     <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, alignSelf: "center", width: { xs: "100%", sm: 600 }, gap: 2.5, p: 2.5 }}>
       <Stack sx={{ flexDirection: "row", alignItems: "center" }}>
-        <Avatar src={avatar} onClick={() => fileRef.current.click()} sx={{ border: "2px solid", borderColor: "text.primary", cursor: "pointer", height: 72, width: 72 }}>{user?.user_metadata?.full_name?.[0]?.toUpperCase() ?? "?"}</Avatar>
+        <Avatar src={avatar} onClick={() => user && fileRef.current.click()} sx={{ border: "2px solid", borderColor: "text.primary", cursor: user ? "pointer" : "default", height: 72, width: 72 }}>{(user?.user_metadata?.full_name ?? name)?.[0]?.toUpperCase() ?? "?"}</Avatar>
         <Stack sx={{ px: 2.5 }}>
           <Typography variant="body2" sx={{ fontWeight: 600 }}>Profile Photo</Typography>
-          <Typography variant="caption" sx={{ color: "text.secondary" }}>Click to change | Max 2 MB</Typography>
+          <Typography variant="caption" sx={{ color: "text.secondary" }}>{user ? "Click to change | Max 2 MB" : "Sign in to add a photo"}</Typography>
         </Stack>
         <input hidden type="file" accept="image/*" ref={fileRef} onChange={e => {
           const file = e.target.files[0]
           if (!file) return
-          if (file.size > 2 * 1048576) return setSnack("File Too Large, MAX 2 MB")
-          if (file.type === "image/heic" || file.type === "image/heif") return setSnack("HEIC/HEIF Images Not Supported")
+          if (file.size > 2 * 1048576) return setSnack("File too large, max 2 MB")
+          if (file.type === "image/heic" || file.type === "image/heif") return setSnack("HEIC/HEIF not supported")
           setAvatar(URL.createObjectURL(file))
           setFile(file)
         }}/>
       </Stack>
       <TextField size="small" label="Full Name" value={name} onChange={e => setName(e.target.value)}/>
-      <TextField size="small" label="Email" value={email} disabled slotProps={{ input: { readOnly: true } }} helperText="Email cannot be changed"/>
+      <TextField size="small" label="Email" value={email} disabled slotProps={{ input: { readOnly: true } }} helperText={user ? "Email cannot be changed" : "Sign in to set an email"}/>
       <TextField size="small" label="Bio" value={bio} multiline rows={4} onChange={e => {if (e.target.value.length <= 160) setBio(e.target.value)}} helperText={bio.length !== 160 ? `${bio.length}/160` : "Max Character Limit Reached"}/>
       <Button disableElevation onClick={save} disabled={saving} variant={saving ? "outlined" : "contained"} sx={{ alignSelf: "end", minWidth: "25%", px: 2.5 }} startIcon={saving ? <CircularProgress size={14}/> : <SaveIcon/>}>
         {saving ? "Saving..." : "Save"}
@@ -344,9 +352,8 @@ function Preferences({setSnack}) {
     }, 250)
   }
   const save = async () => {
-    if (locationType === "gps"    && !coords) return setSnack("Please set your current location. Required for calculation")
-    if (locationType === "manual" && !city  ) return setSnack("Please select a city. Required for calculation")
-    setSaving(true)
+    if (locationType === "gps"    && !coords) return setSnack("Set your location")
+    if (locationType === "manual" && !city  ) return setSnack("Select a city")
     const payload = {
       ...(locationType === "gps" ? {city: null} : {city}),
       timeFormat, locationType, tz,
@@ -356,23 +363,18 @@ function Preferences({setSnack}) {
       // Guest mode — no account yet, keep settings on-device. These get merged
       // into the account automatically if/when this person signs up.
       saveLocalSettings(payload)
-      setSnack("Preferences Saved (offline — sign in to sync across devices)")
-      setSaving(false)
+      setSnack("Saved")
       return
     }
+    if (!navigator.onLine) return setSnack("No internet connection")
+    setSaving(true)
     try {
       const { error } = await Supabase.auth.updateUser({ data: payload })
       if (error) throw error
-      clearPendingUserSettings(user.id) // in case an older offline save was still queued
       api.post("/prayer/resync").catch(() => {}) // recompute waqts now instead of waiting for the hourly sync
-      setSnack("Preferences Saved")
+      setSnack("Saved")
     } catch (err) {
-      if (!navigator.onLine) {
-        savePendingUserSettings(user.id, payload)
-        setSnack("You're offline — saved on this device, will sync automatically once you're back online")
-      } else {
-        setSnack(err?.message ?? "Sorry, Internal Error")
-      }
+      setSnack(!navigator.onLine ? "No internet connection" : "Failed to save")
     } finally {setSaving(false)}
   }
   useEffect(() => {
@@ -634,18 +636,41 @@ function Security({setSnack}) {
   </Stack>)
 }
 
+function useOnline() {
+  const [online, setOnline] = useState(navigator.onLine)
+  const recheck = () => setOnline(navigator.onLine)
+  useEffect(() => {
+    window.addEventListener("online", recheck)
+    window.addEventListener("offline", recheck)
+    return () => {
+      window.removeEventListener("online", recheck)
+      window.removeEventListener("offline", recheck)
+    }
+  }, [])
+  return [online, recheck]
+}
+
+function OfflineTab({onRetry}) {
+  return (<Stack sx={{ p: 4, alignItems: "center", justifyContent: "center", gap: 1.5, height: "100%" }}>
+    <WifiOffIcon sx={{ fontSize: 40, color: "text.secondary" }}/>
+    <Typography variant="body2" sx={{ color: "text.secondary" }}>You're offline</Typography>
+    <Button size="small" variant="outlined" onClick={onRetry}>Retry</Button>
+  </Stack>)
+}
+
 export default function Settings() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useContext(Theme)
   const [snack, setSnack] = useState("")
-  const tabs = user ? ["profile", "notifications", "preferences", "security"] : ["preferences"]
+  const [online, recheck] = useOnline()
+  const tabs = user ? ["profile", "notifications", "preferences", "security"] : ["profile", "preferences"]
   const active = tabs.find(x => location.pathname.includes(x)) ?? tabs[0]
   const mobile = useMediaQuery(useTheme().breakpoints.down("sm"))
   return (<Stack direction={{ xs: "column", sm: "row" }} sx={{ height: "100%", overflow: "hidden" }}>
     <Stack sx={{ overflowY: "auto", minHeight: 0 }}>
       <Tabs orientation={mobile ? "horizontal" : "vertical"} variant={mobile ? "fullWidth" : "standard"} value={active} onChange={(_, x) => { if (x) navigate(`/settings/${x}`, { replace: !true }) }} sx={{ minHeight: 0, flexShrink: 0, "& .MuiTabs-scroller": { overflowY: mobile ? "visible" : "auto", minHeight: 0, }, "& .MuiTab-root": { py: mobile ? undefined : 2.5 } }}>
-        {user && <Tab value="profile" icon={<PersonIcon/>}/>}
+        <Tab value="profile" icon={<PersonIcon/>}/>
         {user && <Tab value="notifications" icon={<NotificationsIcon/>}/>}
         <Tab value="preferences" icon={<TuneIcon/>}/>
         {user && <Tab value="security" icon={<SecurityIcon/>}/>}
@@ -654,10 +679,10 @@ export default function Settings() {
     <Divider flexItem orientation={mobile ? "horizontal" : "vertical"}/>
     <Stack sx={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
       <Routes>
-        {user && <Route path="profile" element={<Profile setSnack={setSnack}/>}/>}
-        {user && <Route path="notifications" element={<Notifications setSnack={setSnack}/>}/>}
+        <Route path="profile" element={<Profile setSnack={setSnack}/>}/>
+        {user && <Route path="notifications" element={online ? <Notifications setSnack={setSnack}/> : <OfflineTab onRetry={recheck}/>}/>}
         <Route path="preferences" element={<Preferences setSnack={setSnack}/>}/>
-        {user && <Route path="security" element={<Security setSnack={setSnack}/>}/>}
+        {user && <Route path="security" element={online ? <Security setSnack={setSnack}/> : <OfflineTab onRetry={recheck}/>}/>}
         <Route path="*" element={<Preferences setSnack={setSnack}/>}/>
       </Routes>
     </Stack>
