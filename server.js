@@ -404,6 +404,19 @@ server.post("/webhook/telegram", async (req, res) => {
           text: !ok ? "Couldn't process — try again in the app" : action === "mark_prayed" ? "Marked as prayed ✅" : "We'll remind you again later ⏰"
         })
       })
+      // Strip the buttons off the tapped message regardless of outcome, so it can't be
+      // tapped again — the row's own `handled` flag already governs whether it does anything.
+      if (callback_query.message) {
+        await fetch(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/editMessageReplyMarkup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: callback_query.message.chat.id,
+            message_id: callback_query.message.message_id,
+            reply_markup: { inline_keyboard: [] }
+          })
+        }).catch(() => {})
+      }
       return
     }
     if (!message) return
