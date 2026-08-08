@@ -1,7 +1,9 @@
 import {
   useContext,
   useEffect,
-  useState
+  Suspense,
+  useState,
+  lazy
 } from "react"
 import {
   useLocation,
@@ -27,20 +29,22 @@ import {
 } from "@mui/material"
 import { subscribeWeb } from "@/firebase"
 import { Theme, getNativeFcmToken } from "@/main"
-import Installations from "@page/installations"
 import { App as Cap } from "@capacitor/app"
 import { Capacitor } from "@capacitor/core"
-import Onboarding from "@page/onboarding"
-import Dashboard from "@page/dashboard"
-import Settings from "@page/settings"
-import Forgot from "@page/forgot"
-import Tasbih from "@page/tasbih"
-import Verify from "@page/verify"
 import Supabase from "@/supabase"
-import About from "@page/about"
-import Qibla from "@page/qibla"
-import Auth from "@page/auth"
+import PageLoader from "@asset/loader"
 import api from "@/api"
+
+const Installations = lazy(() => import("@page/installations"))
+const Onboarding     = lazy(() => import("@page/onboarding"))
+const Dashboard      = lazy(() => import("@page/dashboard"))
+const Settings       = lazy(() => import("@page/settings"))
+const Forgot         = lazy(() => import("@page/forgot"))
+const Tasbih         = lazy(() => import("@page/tasbih"))
+const Verify         = lazy(() => import("@page/verify"))
+const About          = lazy(() => import("@page/about"))
+const Qibla          = lazy(() => import("@page/qibla"))
+const Auth           = lazy(() => import("@page/auth"))
 
 import PersonalVideoIcon from "@mui/icons-material/PersonalVideo"
 import LinearScaleIcon from "@mui/icons-material/LinearScale"
@@ -269,18 +273,20 @@ export default function App() {
           </Drawer>
         )}
         <Box sx={{ height: "100%", position: "relative" }}>
-          <Routes>
-            <Route path="/auth" element={user ? <Navigate to="/" replace/> : <Auth/>}/>
-            <Route path="/onboarding" element={<Onboarding/>}/>
-            <Route path="/forgot" element={<Forgot/>}/>
-            <Route path="/verify" element={<Verify/>}/>
-            <Route path="/settings/*" element={<Settings/>}/>
-            <Route path="/about" element={<About/>}/>
-            <Route path="/installations" element={<Installations/>}/>
-            <Route path="/qibla" element={<Qibla/>}/>
-            <Route path="/tasbih" element={<Tasbih/>}/>
-            <Route path="/*" element={<Dashboard/>}/>
-          </Routes>
+          <Suspense fallback={<PageLoader/>}>
+            <Routes>
+              <Route path="/auth" element={user ? <Navigate to="/" replace/> : <Auth/>}/>
+              <Route path="/onboarding" element={<Onboarding/>}/>
+              <Route path="/forgot" element={<Forgot/>}/>
+              <Route path="/verify" element={<Verify/>}/>
+              <Route path="/settings/*" element={<Settings/>}/>
+              <Route path="/about" element={<About/>}/>
+              <Route path="/installations" element={<Installations/>}/>
+              <Route path="/qibla" element={<Qibla/>}/>
+              <Route path="/tasbih" element={<Tasbih/>}/>
+              <Route path="/*" element={<Dashboard/>}/>
+            </Routes>
+          </Suspense>
         </Box>
       </Box>
     </Box>
