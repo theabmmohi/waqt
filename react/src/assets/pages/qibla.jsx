@@ -67,8 +67,8 @@ export default function Qibla() {
   const [comStatus, setComStatus]   = useState("idle")
   const [heading, setHeading]       = useState(0)
   const localMeta = getLocalSettings()
-  const [snack, setSnack]           = useState(() => !(user?.user_metadata?.coords ?? localMeta?.coords) ? "Set Your Location In Settings To Get Direction And Distance" : "")
-  const coords = user?.user_metadata?.coords ?? localMeta?.coords
+  const [snack, setSnack]           = useState(() => !(localMeta?.coords ?? user?.user_metadata?.coords) ? "Set Your Location In Settings To Get Direction And Distance" : "")
+  const coords = localMeta?.coords ?? user?.user_metadata?.coords
   const qibla = coords ? Math.round(AQ(new Coordinates(coords.lat, coords.lon))) : 0
   const dist  = coords ? haversine(Kaaba.lat, Kaaba.lon, coords.lat, coords.lon) : "0 km"
   const hasAbsoluteRef = useRef(false)

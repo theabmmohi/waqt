@@ -26,6 +26,7 @@ import Supabase from "@/supabase"
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff"
 import VisibilityIcon from "@mui/icons-material/Visibility"
 import GoogleIcon from "@mui/icons-material/Google"
+import PersonIcon from "@mui/icons-material/Person"
 import KeyIcon from "@mui/icons-material/Key"
 
 export default function Auth() {
@@ -116,6 +117,11 @@ export default function Auth() {
       if (native && data?.url) await Browser.open({ url: data.url })
     } catch (e) {show(titleCase(e.message))} finally {setGoogleLoading(false)}
   }
+  const handleGuest = () => {
+    localStorage.setItem("waqt-guest-mode", "1")
+    localStorage.setItem("waqt-needs-onboarding", "1")
+    navigate("/onboarding")
+  }
   return (
     <Box sx={{ maxWidth: 500, mx: "auto", p: 5 }}>
       <Typography variant="h5" sx={{ textAlign: "center", my: 2.5 }}>{isSignUp ? "Create Account" : "Sign In"}</Typography>
@@ -134,6 +140,7 @@ export default function Auth() {
         <Stack sx={{ width: "75%", gap: 2.5 }}>
           <Button variant="outlined" startIcon={googleLoading ? <CircularProgress size={14}/> : <GoogleIcon/>} onClick={handleGoogle} disabled={googleLoading} sx={{ color: "text.primary" }}>{googleLoading ? "Redirecting..." : "Google"}</Button>
           {!isSignUp && isPasskeySupported && (<Button variant="outlined" startIcon={passkeyLoading ? <CircularProgress size={14}/> : <KeyIcon/>} onClick={handlePasskey} disabled={passkeyLoading} sx={{ color: "text.primary" }}>{passkeyLoading ? "Verifying..." : "Passkey"}</Button>)}
+          {!isSignUp && (<Button variant="text" startIcon={<PersonIcon/>} onClick={handleGuest} sx={{ color: "text.secondary" }}>Continue as Guest</Button>)}
         </Stack>
         <Turnstile ref={turnstileRef} onVerify={setCaptchaToken} onError={() => { setCaptchaToken(null); turnstileRef.current?.reset() }}/>
         <Snackbar open={open} onClose={() => setOpen(false)} message={snack} autoHideDuration={snack ? Math.max(2500, snack.length * 100) : 2500} slots={{ transition: Slide }} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}/>

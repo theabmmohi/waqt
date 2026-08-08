@@ -22,6 +22,18 @@ export function saveLocalSettings(partial) {
   }
 }
 
+// Wholesale overwrite (not merge) — used when the cache should stop reflecting
+// guest-mode edits and start mirroring an actual account's saved preferences.
+export function replaceLocalSettings(source) {
+  try {
+    const next = pickSettingsFields(source)
+    localStorage.setItem(KEY, JSON.stringify(next))
+    return next
+  } catch {
+    return null
+  }
+}
+
 export function clearLocalSettings() {
   try {
     localStorage.removeItem(KEY)

@@ -77,6 +77,7 @@ function Profile({setSnack}) {
       }
       const { error } = await Supabase.auth.updateUser({ data: { full_name: name.trim(), bio: bio.trim(), avatar_url } })
       if (error) throw error
+      saveLocalSettings({ full_name: name.trim(), bio: bio.trim() })
       setSnack("Saved")
     } catch (err) {
       setSnack(!navigator.onLine ? "No internet connection" : "Failed to save")
@@ -371,6 +372,7 @@ function Preferences({setSnack}) {
     try {
       const { error } = await Supabase.auth.updateUser({ data: payload })
       if (error) throw error
+      saveLocalSettings(payload)
       api.post("/prayer/resync").catch(() => {}) // recompute waqts now instead of waiting for the hourly sync
       setSnack("Saved")
     } catch (err) {
@@ -379,7 +381,7 @@ function Preferences({setSnack}) {
   }
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
-    const data = user?.user_metadata ?? getLocalSettings()
+    const data = user ? (getLocalSettings() ?? user.user_metadata) : getLocalSettings()
     if (!data) return
     if (data.timeFormat)   setTimeFormat(data.timeFormat)
     if (data.locationType) setLocationType(data.locationType)

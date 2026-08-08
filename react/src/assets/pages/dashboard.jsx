@@ -41,7 +41,7 @@ export default function Dashboard() {
   const navigate   = useNavigate()
   const { user }   = useContext(Theme)
   const theme      = useTheme()
-  const meta       = user?.user_metadata ?? getLocalSettings()
+  const meta       = user ? (getLocalSettings() ?? user.user_metadata) : getLocalSettings()
   const fmt        = meta?.timeFormat ?? "12h"
   const tz         = meta?.tz || Intl.DateTimeFormat().resolvedOptions().timeZone
   const [snack, setSnack]         = useState(() => !meta?.coords ? (user ? "Set Your Location In Settings To Get Prayer Times" : "Set your location to get prayer times — sign in to sync it across devices") : "")

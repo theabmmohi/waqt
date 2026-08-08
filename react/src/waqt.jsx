@@ -30,6 +30,7 @@ import { Theme, getNativeFcmToken } from "@/main"
 import Installations from "@page/installations"
 import { App as Cap } from "@capacitor/app"
 import { Capacitor } from "@capacitor/core"
+import Onboarding from "@page/onboarding"
 import Dashboard from "@page/dashboard"
 import Settings from "@page/settings"
 import Forgot from "@page/forgot"
@@ -81,6 +82,7 @@ export default function App() {
         if (fcmToken) await api.post("/settings/notifications/webPush/unsubscribe", { fcmToken })
       }
     } finally {await Supabase.auth.signOut({ scope: "local" })}
+    localStorage.setItem("waqt-guest-mode", "1")
     closeDrawer()
     navigate("/")
   }
@@ -95,7 +97,23 @@ export default function App() {
     document.title = segments.length ? `${segments.join(" | ")} - Waqt` : "Waqt"
   }, [location.pathname])
   const isAuth = location.pathname === "/auth"
+  const isOnboarding = location.pathname === "/onboarding"
+  const hideChrome = isAuth || isOnboarding
   const rowDir = drawerPos === "r" ? "row-reverse" : "row"
+  useEffect(() => {
+    const publicPaths = ["/auth", "/forgot", "/verify", "/onboarding"]
+    // First launch (or post-logout) with no account and no guest choice made yet —
+    // gate everything behind the auth screen until they sign in or pick "Continue as Guest".
+    if (!user && localStorage.getItem("waqt-guest-mode") !== "1" && !publicPaths.includes(location.pathname)) {
+      navigate("/auth", { replace: true })
+      return
+    }
+    // Fresh guest / fresh account (from sign-up or first Google sign-in) — walk them
+    // through preferences once before they land on the dashboard.
+    if (localStorage.getItem("waqt-needs-onboarding") === "1" && !isAuth && !isOnboarding) {
+      navigate("/onboarding", { replace: true })
+    }
+  }, [user, location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return
     Promise.all([
@@ -125,7 +143,7 @@ export default function App() {
   }, [drawerOpen, drawerPos])
   return (
     <Box sx={{ flexDirection: "column", height: "100dvh", display: "flex", width: "100vw" }}>
-      {!isAuth && (
+      {!hideChrome && (
         <>
           <AppBar position="sticky" elevation={0} color="default" sx={{ zIndex: (x) => x.zIndex.drawer + 1 }}>
             <Toolbar>
@@ -160,7 +178,7 @@ export default function App() {
         </>
       )}
       <Box sx={{ position: "relative", overflowY: "auto", flex: 1 }}>
-        {!isAuth && (
+        {!hideChrome && (
           <Drawer disableScrollLock anchor={drawerPos === "r" ? "right" : "left"} open={drawerOpen} onClose={closeDrawer} sx={{ display: "flex", minWidth: "25vw", maxWidth: "75vw", "& .MuiDrawer-paper": { minWidth: "25vw", maxWidth: "75vw" } }}>
             <Toolbar/>
             <Divider/>
@@ -253,6 +271,7 @@ export default function App() {
         <Box sx={{ height: "100%", position: "relative" }}>
           <Routes>
             <Route path="/auth" element={user ? <Navigate to="/" replace/> : <Auth/>}/>
+            <Route path="/onboarding" element={<Onboarding/>}/>
             <Route path="/forgot" element={<Forgot/>}/>
             <Route path="/verify" element={<Verify/>}/>
             <Route path="/settings/*" element={<Settings/>}/>

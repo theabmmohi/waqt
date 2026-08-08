@@ -31,7 +31,7 @@ import api from "@/api"
 import App from "@/waqt"
 import {
   getLocalSettings,
-  clearLocalSettings,
+  replaceLocalSettings,
   pickSettingsFields
 } from "@/localSettings"
 import "@/style.css"
@@ -60,21 +60,26 @@ function isNewAccount(user) {
 async function syncGuestSettings(user) {
   const local = getLocalSettings()
   if (isNewAccount(user)) {
-    if (!local || !Object.keys(local).length) return
     // New account — merge local (pre-account) settings in, without clobbering
-    // any fields the account may already have (e.g. from OAuth profile data).
+    // any fields the account may already have (e.g. from OAuth profile data),
+    // then mirror the result into the local cache so it stays available offline.
+    // Fresh accounts always get a pass through onboarding, merged prefs or not,
+    // so every field gets explained at least once.
+    localStorage.setItem("waqt-needs-onboarding", "1")
     const merged = { ...pickSettingsFields(local), ...pickSettingsFields(user.user_metadata) }
+    if (!local || !Object.keys(local).length) { replaceLocalSettings(user.user_metadata); return }
     try {
       const { error } = await Supabase.auth.updateUser({ data: merged })
       if (error) throw error
-      clearLocalSettings()
+      replaceLocalSettings(merged)
     } catch (err) {
       console.error("Failed to merge guest settings into new account:", err)
     }
   } else {
     // Returning login — the account's own saved settings take precedence over
-    // whatever was set locally as a guest on this device.
-    clearLocalSettings()
+    // whatever was set locally as a guest on this device. Replace (not clear)
+    // the local cache so offline launches can still show correct prayer times.
+    replaceLocalSettings(user.user_metadata)
   }
 }
 
@@ -212,12 +217,15 @@ function React() {
         else window.addEventListener("load", res, { once: true })
       }),
       Supabase.auth.getSession().then(({ data }) => {
-        setUser(data?.session?.user ?? null)
+        const sessionUser = data?.session?.user ?? null
+        setUser(sessionUser)
+        if (sessionUser && navigator.onLine) replaceLocalSettings(sessionUser.user_metadata)
       }).catch(() => setUser(null))
     ]).then(done)
     const { data: listener } = Supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
       if (event === "SIGNED_IN" && session?.user) syncGuestSettings(session.user)
+      else if (session?.user && navigator.onLine) replaceLocalSettings(session.user.user_metadata)
     })
     const query = window.matchMedia("(prefers-color-scheme: dark)")
     const handler = (e) => setDark(e.matches)
