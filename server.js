@@ -282,57 +282,32 @@ cron.schedule("0 3 * * *", async () => {
 })
 
 // ── Daily Hadith ─────────────────────────────────────────────────────────
-// HadeethEnc.com organizes its whole corpus as a category tree; these 7 ids are the
-// root categories, and each one's /list endpoint returns every hadith in its subtree —
-// so paging through all 7 covers the entire encyclopedia without needing per-leaf calls.
-const HADITH_ROOT_CATEGORIES = [1, 2, 3, 4, 5, 6, 7]
+// Serially walks HadeethEnc's own hadith ids (1, 2, 3, ...) one per calendar day —
+// simple, and trivially unique for as long as the id sequence lasts, since we never
+// revisit an id until we've gone all the way through and wrapped back to 1.
 const HADITHENC_BASE = "https://hadeethenc.com/api/v1"
+const DHAKA_TZ = "Asia/Dhaka"
+const MAX_SKIP_AHEAD = 50 // consecutive missing ids before we assume we've hit the end and wrap
 
-// Grows the rotation pool by one page per run instead of crawling everything up front —
-// keeps each cron tick cheap and means the feature is usable (with whatever's been
-// collected so far) from day one rather than blocking on a single giant crawl.
-async function growHadithPool() {
-  const { data: state, error: stateErr } = await supabase.from("hadith_crawl_state").select("*").eq("id", true).maybeSingle()
-  if (stateErr || !state) return await notify(`⚠️ Error reading hadith crawl state:\n${stateErr?.message ?? "no row"}`)
-  if (state.done) return
-  const categoryId = HADITH_ROOT_CATEGORIES[state.category_index]
-  if (categoryId === undefined) {
-    await supabase.from("hadith_crawl_state").update({ done: true }).eq("id", true)
-    return await notify("✅ Hadith pool crawl complete — all root categories paged through.")
-  }
-  try {
-    const res = await fetch(`${HADITHENC_BASE}/hadeeths/list/?language=en&category_id=${categoryId}&page=${state.page}&per_page=100`)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const { data, meta } = await res.json()
-    const rows = (data ?? []).map(h => ({ hadeethenc_id: String(h.id) }))
-    if (rows.length) {
-      const { error: insErr } = await supabase.from("hadith_pool").upsert(rows, { onConflict: "hadeethenc_id", ignoreDuplicates: true })
-      if (insErr) await notify(`⚠️ Error inserting hadith pool page:\n${insErr.message}`)
-    }
-    const lastPage = Number(meta?.last_page ?? state.page)
-    const next = state.page >= lastPage
-      ? { category_index: state.category_index + 1, page: 1 }
-      : { category_index: state.category_index, page: state.page + 1 }
-    await supabase.from("hadith_crawl_state").update({ ...next, updated_at: new Date().toISOString() }).eq("id", true)
-  } catch (err) {
-    await notify(`⚠️ Error growing hadith pool (category ${categoryId}, page ${state.page}):\n${err.message}`)
-  }
+function todayInDhaka() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: DHAKA_TZ }).format(new Date()) // YYYY-MM-DD
 }
 
 // Fetches + merges the en and bn editions of one hadith (the en response also carries the
-// Arabic original in *_ar fields, so two calls covers all three languages), and caches the
-// result forever — HadeethEnc's terms require content not be altered, and re-fetching an
-// unchanging hadith on every rotation cycle would just be wasted calls.
-async function fetchAndCacheHadith(hadeethencId) {
+// Arabic original in *_ar fields, so two calls covers all three languages). Returns null if
+// this id doesn't exist (404), so the caller can move on to the next one.
+async function fetchHadith(hadeethencId) {
   const [enRes, bnRes] = await Promise.all([
     fetch(`${HADITHENC_BASE}/hadeeths/one/?language=en&id=${hadeethencId}`),
     fetch(`${HADITHENC_BASE}/hadeeths/one/?language=bn&id=${hadeethencId}`)
   ])
+  if (enRes.status === 404 || bnRes.status === 404) return null
   if (!enRes.ok || !bnRes.ok) throw new Error(`HTTP ${enRes.status}/${bnRes.status}`)
   const en = await enRes.json()
   const bn = await bnRes.json()
-  const row = {
-    hadeethenc_id: hadeethencId,
+  if (!en?.hadeeth && !bn?.hadeeth) return null
+  return {
+    hadeethenc_id: String(hadeethencId),
     reference: en.reference || bn.reference || null,
     attribution_en: en.attribution || null,
     grade_en: en.grade || null,
@@ -345,31 +320,51 @@ async function fetchAndCacheHadith(hadeethencId) {
     hadeeth_ar: en.hadeeth_ar || bn.hadeeth_ar || null,
     explanation_ar: en.explanation_ar || bn.explanation_ar || null
   }
-  const { error } = await supabase.from("hadiths_cache").upsert(row, { onConflict: "hadeethenc_id" })
-  if (error) await notify(`⚠️ Error caching hadith ${hadeethencId}:\n${error.message}`)
-  return row
 }
 
-// Same hadith for every user on a given day, rotating forward one step per calendar day
-// (not day-of-year, so it doesn't reset and repeat annually) through however much of the
-// pool has been crawled so far.
+// Walks forward from the cursor's next_id until it finds a real hadith (skipping any
+// gaps in HadeethEnc's numbering), stores it as today's (Dhaka calendar date) pick, and
+// advances the cursor by one for tomorrow. Wraps back to id 1 if MAX_SKIP_AHEAD consecutive
+// ids are missing — treated as having reached the end of the corpus.
+async function pickTodaysHadith() {
+  const date = todayInDhaka()
+  const { data: existing, error: existingErr } = await supabase.from("hadith_daily").select("*").eq("date", date).maybeSingle()
+  if (existingErr) { await notify(`⚠️ Error checking today's hadith row:\n${existingErr.message}`); return null }
+  if (existing) return existing // already picked for today (e.g. cron re-run after a restart)
+
+  const { data: cursor, error: cursorErr } = await supabase.from("hadith_cursor").select("*").eq("id", true).maybeSingle()
+  if (cursorErr || !cursor) { await notify(`⚠️ Error reading hadith cursor:\n${cursorErr?.message ?? "no row"}`); return null }
+
+  let id = cursor.next_id
+  for (let attempts = 0; attempts < MAX_SKIP_AHEAD; attempts++, id++) {
+    let hadith
+    try { hadith = await fetchHadith(id) }
+    catch (err) { await notify(`⚠️ Error fetching hadith id ${id}:\n${err.message}`); return null }
+    if (hadith) {
+      const { error: insErr } = await supabase.from("hadith_daily").insert({ ...hadith, date })
+      if (insErr) { await notify(`⚠️ Error saving today's hadith:\n${insErr.message}`); return null }
+      const { error: curErr } = await supabase.from("hadith_cursor").update({ next_id: id + 1, updated_at: new Date().toISOString() }).eq("id", true)
+      if (curErr) await notify(`⚠️ Error advancing hadith cursor:\n${curErr.message}`)
+      return { ...hadith, date }
+    }
+  }
+  // MAX_SKIP_AHEAD consecutive misses in a row — assume we've run past the end of the
+  // corpus and start over from the beginning next time, rather than skipping forever.
+  await supabase.from("hadith_cursor").update({ next_id: 1, updated_at: new Date().toISOString() }).eq("id", true)
+  await notify(`ℹ️ Hadith id sequence appears exhausted around ${cursor.next_id}–${id} — wrapped back to 1.`)
+  return null
+}
+
 async function getTodaysHadith() {
-  const { count, error: countErr } = await supabase.from("hadith_pool").select("*", { count: "exact", head: true })
-  if (countErr) { await notify(`⚠️ Error counting hadith pool:\n${countErr.message}`); return null }
-  if (!count) return null
-  const epochDay = Math.floor(Date.now() / 86400000)
-  const idx = epochDay % count
-  const { data: poolRow, error: poolErr } = await supabase.from("hadith_pool").select("hadeethenc_id").order("id", { ascending: true }).range(idx, idx).maybeSingle()
-  if (poolErr || !poolRow) { await notify(`⚠️ Error selecting today's hadith from pool:\n${poolErr?.message ?? "not found"}`); return null }
-  const { data: cached, error: cacheErr } = await supabase.from("hadiths_cache").select("*").eq("hadeethenc_id", poolRow.hadeethenc_id).maybeSingle()
-  if (cacheErr) { await notify(`⚠️ Error reading hadith cache:\n${cacheErr.message}`); return null }
-  if (cached) return cached
-  try { return await fetchAndCacheHadith(poolRow.hadeethenc_id) }
-  catch (err) { await notify(`⚠️ Error fetching hadith ${poolRow.hadeethenc_id} from HadeethEnc:\n${err.message}`); return null }
+  const date = todayInDhaka()
+  const { data, error } = await supabase.from("hadith_daily").select("*").eq("date", date).maybeSingle()
+  if (error) { await notify(`⚠️ Error reading today's hadith:\n${error.message}`); return null }
+  if (data) return data
+  return await pickTodaysHadith() // lazy fallback if the cron hasn't run yet today
 }
 
 async function broadcastDailyHadith() {
-  const hadith = await getTodaysHadith()
+  const hadith = await pickTodaysHadith()
   if (!hadith?.hadeeth_bn) return
   const title = "📖 আজকের হাদিস"
   const excerpt = hadith.hadeeth_bn.length > 120 ? `${hadith.hadeeth_bn.slice(0, 120)}...` : hadith.hadeeth_bn
@@ -425,10 +420,10 @@ let hadithRunning = false
 cron.schedule("0 8 * * *", async () => {
   if (hadithRunning) return await notify("⏭️ Skipped daily hadith run — previous run still in progress")
   hadithRunning = true
-  try { await growHadithPool(); await broadcastDailyHadith() }
+  try { await broadcastDailyHadith() }
   catch (err) { await notify(`⚠️ Error in daily hadith run:\n${err.message}`) }
   finally { hadithRunning = false }
-}, { timezone: "Asia/Dhaka" })
+}, { timezone: DHAKA_TZ })
 
 server.get("/hadith/today", async (req, res) => {
   try {
