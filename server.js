@@ -218,13 +218,13 @@ async function deliverWaqtReminder(row, channels) {
   const remainingMs = new Date(row.waqt_end).getTime() - Date.now()
   const urgent = remainingMs <= 30 * 60000
   const bnPrayer = BN_PRAYER[row.prayer] ?? row.prayer
-  const title = row.stage === "snooze" ? `রিমাইন্ডার: ${bnPrayer}` : `${bnPrayer}-এর সময় হয়েছে`
+  const title = row.stage === "snooze" ? `Reminder: ${row.prayer}` : `${row.prayer} Time`
   const body = urgent
     ? `আর মাত্র ${Math.max(1, Math.ceil(remainingMs / 60000))} মিনিট বাকি — এখনই নামাজ পড়ুন!`
     : (row.stage === "snooze" ? `আপনি কি ${bnPrayer} নামাজ পড়েছেন?` : `${bnPrayer}-এর সময় হয়েছে। Waqt খুলতে ট্যাপ করুন।`)
   const actions = [
-    { id: "mark_prayed", title: "নামাজ পড়েছি" },
-    ...(!urgent ? [{ id: "remind_later", title: "পরে মনে করিয়ে দিন (১৫ মিনিট)" }] : [])
+    { id: "mark_prayed", title: "Mark as Prayed" },
+    ...(!urgent ? [{ id: "remind_later", title: "Remind Later (15 min)" }] : [])
   ]
   const appTokens = channels.filter(c => c.type === "fcm" && c.metadata?.platform === "app").map(c => c.identifier)
   const webTokens = channels.filter(c => c.type === "fcm" && c.metadata?.platform === "web").map(c => c.identifier)
@@ -366,11 +366,11 @@ async function getTodaysHadith() {
 async function broadcastDailyHadith() {
   const hadith = await pickTodaysHadith()
   if (!hadith?.hadeeth_bn) return
-  const title = "📖 আজকের হাদিস"
+  const title = "📖 Hadith of the Day"
   const excerpt = hadith.hadeeth_bn.length > 120 ? `${hadith.hadeeth_bn.slice(0, 120)}...` : hadith.hadeeth_bn
   const actions = [
-    { id: "read", title: "পড়ুন", url: "/hadith" },
-    { id: "share", title: "শেয়ার", url: "/hadith?share=1" }
+    { id: "read", title: "Read", url: "/hadith" },
+    { id: "share", title: "Share", url: "/hadith?share=1" }
   ]
 
   // Only users who've opted in via the Notifications tab AND have at least one channel.
