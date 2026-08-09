@@ -36,6 +36,19 @@ export default function Notifications({setSnack}) {
   const [teleLinked, setTeleLinked]       = useState(false)
   const [showCon, setShowCon]             = useState(false)
   const [teleId, setTeleId]               = useState("")
+  const [hadithNotif, setHadithNotif]     = useState(user?.user_metadata?.hadithNotif === true)
+  const [hadithSaving, setHadithSaving]   = useState(false)
+  const toggleHadithNotif = async () => {
+    const next = !hadithNotif
+    setHadithSaving(true)
+    try {
+      const { error } = await Supabase.auth.updateUser({ data: { hadithNotif: next } })
+      if (error) throw error
+      setHadithNotif(next)
+    } catch (err) {
+      setSnack(err?.message ?? "Failed to save")
+    } finally { setHadithSaving(false) }
+  }
   const pollRef = useRef()
   const startPolling = () => {
     pollRef.current = setInterval(async () => {
@@ -178,6 +191,15 @@ export default function Notifications({setSnack}) {
           </Stack>
           <Stack sx={{ justifyContent: "center" }}>
             <Switch checked={browEnabled} onChange={toggleBrow} disabled={browLoading}/>
+          </Stack>
+        </Stack>
+        <Stack sx={{ flexDirection: "row", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>
+          <Stack sx={{ flex: 1 }}>
+            <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", fontWeight: 600, gap: 1 }}>📖 Daily Hadith</Typography>
+            <Typography variant="body2" color="text.secondary">A short hadith with explanation, once a day.</Typography>
+          </Stack>
+          <Stack sx={{ justifyContent: "center" }}>
+            <Switch checked={hadithNotif} onChange={toggleHadithNotif} disabled={hadithSaving}/>
           </Stack>
         </Stack>
         <Stack sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, gap: 2.5 }}>

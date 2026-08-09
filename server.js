@@ -65,6 +65,11 @@ const civilDate = (d, timeZone) => {
   return new Date(y, m - 1, dd, 12, 0, 0)
 }
 
+// English prayer names stay the internal/DB identifiers everywhere (calc logic, `row.prayer`,
+// the `prayer_logs`/`scheduled_notifications` tables) — this map only controls what's shown
+// to the user in notification text.
+const BN_PRAYER = { Fajr: "ফজর", Dhuhr: "যোহর", Asr: "আসর", Maghrib: "মাগরিব", Isha: "এশা" }
+
 function todaysWaqts(meta, dayOffset = 0) {
   if (!meta?.coords || !meta?.tz) return []
   const coords = new Coordinates(meta.coords.lat, meta.coords.lon)
@@ -212,13 +217,14 @@ async function deliverWaqtReminder(row, channels) {
   if (!channels?.length) return
   const remainingMs = new Date(row.waqt_end).getTime() - Date.now()
   const urgent = remainingMs <= 30 * 60000
-  const title = row.stage === "snooze" ? `Reminder: ${row.prayer}` : `${row.prayer} time has started`
+  const bnPrayer = BN_PRAYER[row.prayer] ?? row.prayer
+  const title = row.stage === "snooze" ? `রিমাইন্ডার: ${bnPrayer}` : `${bnPrayer}-এর সময় হয়েছে`
   const body = urgent
-    ? `${Math.max(1, Math.ceil(remainingMs / 60000))} min remaining — pray now!`
-    : (row.stage === "snooze" ? `Have you prayed ${row.prayer} yet?` : `It's time for ${row.prayer}. Tap to open Waqt.`)
+    ? `আর মাত্র ${Math.max(1, Math.ceil(remainingMs / 60000))} মিনিট বাকি — এখনই নামাজ পড়ুন!`
+    : (row.stage === "snooze" ? `আপনি কি ${bnPrayer} নামাজ পড়েছেন?` : `${bnPrayer}-এর সময় হয়েছে। Waqt খুলতে ট্যাপ করুন।`)
   const actions = [
-    { id: "mark_prayed", title: "Mark as Prayed" },
-    ...(!urgent ? [{ id: "remind_later", title: "Remind (15 min)" }] : [])
+    { id: "mark_prayed", title: "নামাজ পড়েছি" },
+    ...(!urgent ? [{ id: "remind_later", title: "পরে মনে করিয়ে দিন (১৫ মিনিট)" }] : [])
   ]
   const appTokens = channels.filter(c => c.type === "fcm" && c.metadata?.platform === "app").map(c => c.identifier)
   const webTokens = channels.filter(c => c.type === "fcm" && c.metadata?.platform === "web").map(c => c.identifier)
@@ -275,8 +281,162 @@ cron.schedule("0 3 * * *", async () => {
   try { await pruneEndedNotifications() } finally { pruning = false }
 })
 
+// ── Daily Hadith ─────────────────────────────────────────────────────────
+// HadeethEnc.com organizes its whole corpus as a category tree; these 7 ids are the
+// root categories, and each one's /list endpoint returns every hadith in its subtree —
+// so paging through all 7 covers the entire encyclopedia without needing per-leaf calls.
+const HADITH_ROOT_CATEGORIES = [1, 2, 3, 4, 5, 6, 7]
+const HADITHENC_BASE = "https://hadeethenc.com/api/v1"
 
+// Grows the rotation pool by one page per run instead of crawling everything up front —
+// keeps each cron tick cheap and means the feature is usable (with whatever's been
+// collected so far) from day one rather than blocking on a single giant crawl.
+async function growHadithPool() {
+  const { data: state, error: stateErr } = await supabase.from("hadith_crawl_state").select("*").eq("id", true).maybeSingle()
+  if (stateErr || !state) return await notify(`⚠️ Error reading hadith crawl state:\n${stateErr?.message ?? "no row"}`)
+  if (state.done) return
+  const categoryId = HADITH_ROOT_CATEGORIES[state.category_index]
+  if (categoryId === undefined) {
+    await supabase.from("hadith_crawl_state").update({ done: true }).eq("id", true)
+    return await notify("✅ Hadith pool crawl complete — all root categories paged through.")
+  }
+  try {
+    const res = await fetch(`${HADITHENC_BASE}/hadeeths/list/?language=en&category_id=${categoryId}&page=${state.page}&per_page=100`)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const { data, meta } = await res.json()
+    const rows = (data ?? []).map(h => ({ hadeethenc_id: String(h.id) }))
+    if (rows.length) {
+      const { error: insErr } = await supabase.from("hadith_pool").upsert(rows, { onConflict: "hadeethenc_id", ignoreDuplicates: true })
+      if (insErr) await notify(`⚠️ Error inserting hadith pool page:\n${insErr.message}`)
+    }
+    const lastPage = Number(meta?.last_page ?? state.page)
+    const next = state.page >= lastPage
+      ? { category_index: state.category_index + 1, page: 1 }
+      : { category_index: state.category_index, page: state.page + 1 }
+    await supabase.from("hadith_crawl_state").update({ ...next, updated_at: new Date().toISOString() }).eq("id", true)
+  } catch (err) {
+    await notify(`⚠️ Error growing hadith pool (category ${categoryId}, page ${state.page}):\n${err.message}`)
+  }
+}
 
+// Fetches + merges the en and bn editions of one hadith (the en response also carries the
+// Arabic original in *_ar fields, so two calls covers all three languages), and caches the
+// result forever — HadeethEnc's terms require content not be altered, and re-fetching an
+// unchanging hadith on every rotation cycle would just be wasted calls.
+async function fetchAndCacheHadith(hadeethencId) {
+  const [enRes, bnRes] = await Promise.all([
+    fetch(`${HADITHENC_BASE}/hadeeths/one/?language=en&id=${hadeethencId}`),
+    fetch(`${HADITHENC_BASE}/hadeeths/one/?language=bn&id=${hadeethencId}`)
+  ])
+  if (!enRes.ok || !bnRes.ok) throw new Error(`HTTP ${enRes.status}/${bnRes.status}`)
+  const en = await enRes.json()
+  const bn = await bnRes.json()
+  const row = {
+    hadeethenc_id: hadeethencId,
+    reference: en.reference || bn.reference || null,
+    attribution_en: en.attribution || null,
+    grade_en: en.grade || null,
+    hadeeth_en: en.hadeeth || null,
+    explanation_en: en.explanation || null,
+    attribution_bn: bn.attribution || null,
+    grade_bn: bn.grade || null,
+    hadeeth_bn: bn.hadeeth || null,
+    explanation_bn: bn.explanation || null,
+    hadeeth_ar: en.hadeeth_ar || bn.hadeeth_ar || null,
+    explanation_ar: en.explanation_ar || bn.explanation_ar || null
+  }
+  const { error } = await supabase.from("hadiths_cache").upsert(row, { onConflict: "hadeethenc_id" })
+  if (error) await notify(`⚠️ Error caching hadith ${hadeethencId}:\n${error.message}`)
+  return row
+}
+
+// Same hadith for every user on a given day, rotating forward one step per calendar day
+// (not day-of-year, so it doesn't reset and repeat annually) through however much of the
+// pool has been crawled so far.
+async function getTodaysHadith() {
+  const { count, error: countErr } = await supabase.from("hadith_pool").select("*", { count: "exact", head: true })
+  if (countErr) { await notify(`⚠️ Error counting hadith pool:\n${countErr.message}`); return null }
+  if (!count) return null
+  const epochDay = Math.floor(Date.now() / 86400000)
+  const idx = epochDay % count
+  const { data: poolRow, error: poolErr } = await supabase.from("hadith_pool").select("hadeethenc_id").order("id", { ascending: true }).range(idx, idx).maybeSingle()
+  if (poolErr || !poolRow) { await notify(`⚠️ Error selecting today's hadith from pool:\n${poolErr?.message ?? "not found"}`); return null }
+  const { data: cached, error: cacheErr } = await supabase.from("hadiths_cache").select("*").eq("hadeethenc_id", poolRow.hadeethenc_id).maybeSingle()
+  if (cacheErr) { await notify(`⚠️ Error reading hadith cache:\n${cacheErr.message}`); return null }
+  if (cached) return cached
+  try { return await fetchAndCacheHadith(poolRow.hadeethenc_id) }
+  catch (err) { await notify(`⚠️ Error fetching hadith ${poolRow.hadeethenc_id} from HadeethEnc:\n${err.message}`); return null }
+}
+
+async function broadcastDailyHadith() {
+  const hadith = await getTodaysHadith()
+  if (!hadith?.hadeeth_bn) return
+  const title = "📖 আজকের হাদিস"
+  const excerpt = hadith.hadeeth_bn.length > 120 ? `${hadith.hadeeth_bn.slice(0, 120)}...` : hadith.hadeeth_bn
+  const actions = [
+    { id: "read", title: "পড়ুন", url: "/hadith" },
+    { id: "share", title: "শেয়ার", url: "/hadith?share=1" }
+  ]
+
+  // Only users who've opted in via the Notifications tab AND have at least one channel.
+  const optedInIds = new Set()
+  let page = 1
+  while (true) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 200 })
+    if (error) { await notify(`⚠️ Error listing users for hadith broadcast:\n${error.message}`); break }
+    for (const user of data.users) if (user.user_metadata?.hadithNotif === true) optedInIds.add(user.id)
+    if (data.users.length < 200) break
+    page++
+  }
+  if (!optedInIds.size) return
+
+  const { data: channels, error: chErr } = await supabase.from("notification_channels").select("*").in("user_id", [...optedInIds])
+  if (chErr) return await notify(`⚠️ Error fetching channels for hadith broadcast:\n${chErr.message}`)
+  const channelsByUser = new Map()
+  for (const c of channels ?? []) {
+    if (!channelsByUser.has(c.user_id)) channelsByUser.set(c.user_id, [])
+    channelsByUser.get(c.user_id).push(c)
+  }
+
+  await Promise.allSettled([...channelsByUser.entries()].map(async ([userId, userChannels]) => {
+    const appTokens = userChannels.filter(c => c.type === "fcm" && c.metadata?.platform === "app").map(c => c.identifier)
+    const webTokens = userChannels.filter(c => c.type === "fcm" && c.metadata?.platform === "web").map(c => c.identifier)
+    const teleChat = userChannels.find(c => c.type === "telegram")?.identifier
+    for (const tokens of [appTokens, webTokens]) {
+      if (!tokens.length) continue
+      const res = await sendPush(tokens, { title, body: excerpt, url: "/hadith", actions })
+      if (res.invalidTokens?.length) await supabase.from("notification_channels").delete().eq("type", "fcm").in("identifier", res.invalidTokens)
+      if (res.successCount > 0) return
+    }
+    if (teleChat) {
+      await fetch(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: teleChat, text: `📖 *${title}*\n${excerpt}`, parse_mode: "Markdown",
+          reply_markup: { inline_keyboard: [actions.map(a => ({ text: a.title, url: `${APP_ORIGIN}${a.url}` }))] }
+        })
+      })
+    }
+  }))
+}
+
+let hadithRunning = false
+cron.schedule("0 8 * * *", async () => {
+  if (hadithRunning) return await notify("⏭️ Skipped daily hadith run — previous run still in progress")
+  hadithRunning = true
+  try { await growHadithPool(); await broadcastDailyHadith() }
+  catch (err) { await notify(`⚠️ Error in daily hadith run:\n${err.message}`) }
+  finally { hadithRunning = false }
+})
+
+server.get("/hadith/today", async (req, res) => {
+  try {
+    const hadith = await getTodaysHadith()
+    if (!hadith) return res.json({ success: false, message: "No hadith available yet" })
+    res.json({ success: true, hadith })
+  } catch (err) { res.json({ success: false, message: err?.message ?? "Server Error" }) }
+})
 
 
 async function sendPush(tokens, { title, body, url = "/", actions = [], prayer, waqtEnd }) {

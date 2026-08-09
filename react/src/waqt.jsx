@@ -36,6 +36,7 @@ import PageLoader from "@asset/loader"
 import api from "@/api"
 
 const Installations = lazy(() => import("@page/installations"))
+const Hadith         = lazy(() => import("@page/hadith"))
 const Onboarding     = lazy(() => import("@page/onboarding"))
 const Dashboard      = lazy(() => import("@page/dashboard"))
 const Settings       = lazy(() => import("@page/settings"))
@@ -48,6 +49,7 @@ const Auth           = lazy(() => import("@page/auth"))
 
 import PersonalVideoIcon from "@mui/icons-material/PersonalVideo"
 import LinearScaleIcon from "@mui/icons-material/LinearScale"
+import MenuBookIcon from "@mui/icons-material/MenuBook"
 import DashboardIcon from "@mui/icons-material/Dashboard"
 import LightModeIcon from "@mui/icons-material/LightMode"
 import DarkModeIcon from "@mui/icons-material/DarkMode"
@@ -94,6 +96,7 @@ export default function App() {
     { icon: <DashboardIcon/>, label: "Dashboard", route: "/" },
     { icon: <LinearScaleIcon sx={{ transform: "rotate(-45deg)" }}/>, label: "Tasbih", route: "/tasbih" },
     { icon: <GpsFixedIcon/>, label: "Qibla", route: "/qibla" },
+    { icon: <MenuBookIcon/>, label: "Hadith", route: "/hadith" },
   ]
   useEffect(() => {
     const segments = location.pathname.split("/").filter(Boolean)
@@ -284,6 +287,7 @@ export default function App() {
               <Route path="/installations" element={<Installations/>}/>
               <Route path="/qibla" element={<Qibla/>}/>
               <Route path="/tasbih" element={<Tasbih/>}/>
+              <Route path="/hadith" element={<Hadith/>}/>
               <Route path="/*" element={<Dashboard/>}/>
             </Routes>
           </Suspense>
