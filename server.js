@@ -428,7 +428,7 @@ cron.schedule("0 8 * * *", async () => {
   try { await growHadithPool(); await broadcastDailyHadith() }
   catch (err) { await notify(`⚠️ Error in daily hadith run:\n${err.message}`) }
   finally { hadithRunning = false }
-})
+}, { timezone: "Asia/Dhaka" })
 
 server.get("/hadith/today", async (req, res) => {
   try {
