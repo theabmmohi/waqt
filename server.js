@@ -395,19 +395,8 @@ async function broadcastDailyHadith() {
     { id: "share", title: "Share", url: "/hadith?share=1" }
   ]
 
-  // Only users who've opted in via the Notifications tab AND have at least one channel.
-  const optedInIds = new Set()
-  let page = 1
-  while (true) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 200 })
-    if (error) { await notify(`⚠️ Error listing users for hadith broadcast:\n${error.message}`); break }
-    for (const user of data.users) if (user.user_metadata?.hadithNotif === true) optedInIds.add(user.id)
-    if (data.users.length < 200) break
-    page++
-  }
-  if (!optedInIds.size) return
-
-  const { data: channels, error: chErr } = await supabase.from("notification_channels").select("*").in("user_id", [...optedInIds])
+  // Everyone who has any notification channel registered (same audience as prayer reminders).
+  const { data: channels, error: chErr } = await supabase.from("notification_channels").select("*")
   if (chErr) return await notify(`⚠️ Error fetching channels for hadith broadcast:\n${chErr.message}`)
   const channelsByUser = new Map()
   for (const c of channels ?? []) {
