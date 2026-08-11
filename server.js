@@ -224,7 +224,7 @@ async function deliverWaqtReminder(row, channels) {
     : (row.stage === "snooze" ? `আপনি কি ${bnPrayer} নামাজ পড়েছেন?` : `${bnPrayer}-এর সময় হয়েছে। Waqt খুলতে ট্যাপ করুন।`)
   const actions = [
     { id: "mark_prayed", title: "Mark as Prayed" },
-    ...(!urgent ? [{ id: "remind_later", title: "Remind Later (15 min)" }] : [])
+    ...(!urgent ? [{ id: "remind_later", title: "Remind Later" }] : [])
   ]
   const appTokens = channels.filter(c => c.type === "fcm" && c.metadata?.platform === "app").map(c => c.identifier)
   const webTokens = channels.filter(c => c.type === "fcm" && c.metadata?.platform === "web").map(c => c.identifier)
