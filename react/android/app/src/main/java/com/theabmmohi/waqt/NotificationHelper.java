@@ -56,7 +56,7 @@ public class NotificationHelper {
     if (actionsJson != null) {
       try {
         JSONArray actions = new JSONArray(actionsJson);
-        for (int i = 0; i < Math.min(actions.length(), 2); i++) {
+        for (int i = 0; i < Math.min(actions.length(), 3); i++) {
           JSONObject action = actions.getJSONObject(i);
           String api = action.optString("api", null);
           PendingIntent actionPI;

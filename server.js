@@ -65,11 +65,6 @@ const civilDate = (d, timeZone) => {
   return new Date(y, m - 1, dd, 12, 0, 0)
 }
 
-// English prayer names stay the internal/DB identifiers everywhere (calc logic, `row.prayer`,
-// the `prayer_logs`/`scheduled_notifications` tables) — this map only controls what's shown
-// to the user in notification text.
-const BN_PRAYER = { Fajr: "ফজর", Dhuhr: "যোহর", Asr: "আসর", Maghrib: "মাগরিব", Isha: "এশা" }
-
 function todaysWaqts(meta, dayOffset = 0) {
   if (!meta?.coords || !meta?.tz) return []
   const coords = new Coordinates(meta.coords.lat, meta.coords.lon)
@@ -217,11 +212,10 @@ async function deliverWaqtReminder(row, channels) {
   if (!channels?.length) return
   const remainingMs = new Date(row.waqt_end).getTime() - Date.now()
   const urgent = remainingMs <= 30 * 60000
-  const bnPrayer = BN_PRAYER[row.prayer] ?? row.prayer
   const title = row.stage === "snooze" ? `Reminder: ${row.prayer}` : `${row.prayer} Time`
   const body = urgent
-    ? `আর মাত্র ${Math.max(1, Math.ceil(remainingMs / 60000))} মিনিট বাকি — এখনই নামাজ পড়ুন!`
-    : (row.stage === "snooze" ? `আপনি কি ${bnPrayer} নামাজ পড়েছেন?` : `${bnPrayer}-এর সময় হয়েছে। Waqt খুলতে ট্যাপ করুন।`)
+    ? `${Math.max(1, Math.ceil(remainingMs / 60000))} min remaining — pray now!`
+    : (row.stage === "snooze" ? `Have you prayed ${row.prayer} yet?` : `It's time for ${row.prayer}. Tap to open Waqt.`)
   const actions = [
     { id: "mark_prayed", title: "Mark as Prayed" },
     ...(!urgent ? [{ id: "remind_later", title: "Remind Later" }] : [])
@@ -387,12 +381,13 @@ async function getTodaysHadith() {
 
 async function broadcastDailyHadith() {
   const hadith = await pickTodaysHadith()
-  if (!hadith?.hadeeth_bn) return
+  if (!hadith?.hadeeth_en) return
   const title = "📖 Hadith of the Day"
-  const excerpt = hadith.hadeeth_bn.length > 120 ? `${hadith.hadeeth_bn.slice(0, 120)}...` : hadith.hadeeth_bn
+  const excerpt = hadith.hadeeth_en.length > 120 ? `${hadith.hadeeth_en.slice(0, 120)}...` : hadith.hadeeth_en
   const actions = [
     { id: "read", title: "Read", url: "/hadith" },
-    { id: "share", title: "Share", url: "/hadith?share=1" }
+    { id: "share", title: "Share", url: "/hadith?share=1" },
+    { id: "bn", title: "See in Bengali", url: "/hadith" }
   ]
 
   // Everyone who has any notification channel registered (same audience as prayer reminders).

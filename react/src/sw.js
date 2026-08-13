@@ -46,7 +46,7 @@ onBackgroundMessage(messaging, (payload) => {
     renotify: false,
     icon: "/icon.png",
     badge: "/icon.png",
-    actions: actions.slice(0, 2).map(a => ({ action: a.id, title: a.title })),
+    actions: actions.slice(0, 3).map(a => ({ action: a.id, title: a.title })),
     data: { url: url ?? payload.fcmOptions?.link ?? "/", actionsMeta: actions }
   })
 })
