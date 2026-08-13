@@ -385,9 +385,8 @@ async function broadcastDailyHadith() {
   const title = "📖 Hadith of the Day"
   const excerpt = hadith.hadeeth_en.length > 120 ? `${hadith.hadeeth_en.slice(0, 120)}...` : hadith.hadeeth_en
   const actions = [
-    { id: "read", title: "Read", url: "/hadith" },
-    { id: "share", title: "Share", url: "/hadith?share=1" },
-    { id: "bn", title: "See in Bengali", url: "/hadith" }
+    { id: "bn", title: "See in Bengali", url: "/hadith" },
+    { id: "share", title: "Share", url: "/hadith?share=1" }
   ]
 
   // Everyone who has any notification channel registered (same audience as prayer reminders).

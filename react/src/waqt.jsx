@@ -108,7 +108,7 @@ export default function App() {
   const hideChrome = isAuth || isOnboarding
   const rowDir = drawerPos === "r" ? "row-reverse" : "row"
   useEffect(() => {
-    const publicPaths = ["/auth", "/forgot", "/verify", "/onboarding"]
+    const publicPaths = ["/auth", "/forgot", "/verify", "/onboarding", "/installations", "/about"]
     // First launch (or post-logout) with no account and no guest choice made yet —
     // gate everything behind the auth screen until they sign in or pick "Continue as Guest".
     if (!user && localStorage.getItem("waqt-guest-mode") !== "1" && !publicPaths.includes(location.pathname)) {
